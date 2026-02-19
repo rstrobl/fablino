@@ -348,6 +348,11 @@ GROSSE OHREN (6–9 Jahre):
 
   const systemPrompt = `Du bist ein preisgekrönter deutscher Kinderhörspiel-Autor. Schreibe brillante, lustige, liebevolle Hörspiele für Kinder.
 
+⛔ ABSOLUT VERBOTEN — LAUTMALEREI IM DIALOG:
+Kein Charakter darf Lautmalerei sprechen. NIEMALS: Hihihi, Hahaha, Buhuhu, Ächz, Seufz, Grr, Brumm, Miau, Wuff, Wiehern, Schnurr, Piep, Kicher, Prust, Uff, Autsch, Hmpf, Pah, Tss, Juhu, Juchhu, Hurra.
+Stattdessen beschreibt der ERZÄHLER die Emotion oder den Laut: "Der Drache musste so sehr lachen, dass ihm Rauch aus der Nase kam." — NICHT der Drache selbst sagt "Hihihi".
+Dies gilt OHNE AUSNAHME für ALLE Charaktere, auch für Tiere und Kreaturen.
+
 GRUNDTON: Abenteuerlich, witzig, kindgerecht. KEINE Gewalt. Immer ein gutes Ende.
 ${ageRules}
 
@@ -359,7 +364,7 @@ ALLGEMEINE REGELN:
 - Tiere sprechen nur wenn sie als "creature" getaggt sind — sonst beschreibt der Erzähler ihre Laute
 - Die erste Zeile muss sofort fesseln — kein "Es war einmal" Langeweile
 - KEINE Sound-Effekte (SFX) — nur Stimmen und Dialog
-- KEINE Lautmalerei im Dialog — kein HAHAHA, Hihihi, Buhuhu, Ächz, Seufz, Wiehern, Miau, Wuff etc. Emotionen und Tierlaute werden vom ERZÄHLER beschrieben ("Der Drache lachte so laut, dass der Berg wackelte", "Das Pferd wieherte fröhlich"). Die Charaktere sprechen normal in ganzen Sätzen.
+- Emotionen und Tierlaute werden vom ERZÄHLER beschrieben ("Der Drache lachte so laut, dass der Berg wackelte", "Das Pferd wieherte fröhlich"). Die Charaktere sprechen normal in ganzen Sätzen. (Siehe ABSOLUT VERBOTEN oben!)
 - KEINE konkreten Zeitangaben (keine "eine Stunde später", "nach 30 Minuten", "um 3 Uhr"). Stattdessen: "Kurze Zeit später", "Als die Sonne unterging", "Nach einer langen Reise"
 - Kinder sind die Helden, nicht Erwachsene — Kinder lösen das Problem
 - Keine Belehrung, keine Moral-Keule — Story first
@@ -445,6 +450,20 @@ app.post('/api/generate', (req, res) => {
       jobs[id].progress = 'Skript wird geschrieben...';
       if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY nicht konfiguriert');
       const script = await generateScript(prompt, ageGroup || '5-7', characters);
+
+      // Post-processing: remove onomatopoeia from non-narrator lines
+      const onomatopoeiaPattern = /\b(H[aie]h[aie]h?[aie]?|Buhuhu|Hihihi|Ächz|Seufz|Grr+|Brumm+|Miau|Wuff|Schnurr|Piep|Prust|Uff|Autsch|Hmpf|Pah|Tss|Juhu|Juchhu|Hurra|Wiehern?)\b\.{0,3}\s*/gi;
+      for (const scene of script.scenes) {
+        for (const line of scene.lines) {
+          if (line.speaker !== 'Erzähler') {
+            const cleaned = line.text.replace(onomatopoeiaPattern, '').replace(/^\.\.\.\s*/, '').replace(/\s{2,}/g, ' ').trim();
+            if (cleaned && cleaned !== line.text) {
+              console.log(`[post-process] Removed onomatopoeia from ${line.speaker}: "${line.text}" → "${cleaned}"`);
+              line.text = cleaned;
+            }
+          }
+        }
+      }
 
       // Preview mode: stop here and let user confirm
       const voiceMap = assignVoices(script.characters);
