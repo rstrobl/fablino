@@ -138,6 +138,22 @@ function App() {
         setProgress(0)
         return
       }
+      // Story not in featured list — fetch directly by ID
+      fetch(`${BASE_URL}/api/story/${storyId}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(story => {
+          if (story) {
+            setCurrentStory(story)
+            setView('player')
+            setIsPlaying(false)
+            setProgress(0)
+          } else {
+            setView('home')
+            setCurrentStory(null)
+          }
+        })
+        .catch(() => { setView('home'); setCurrentStory(null) })
+      return
     }
     setView('home')
     setCurrentStory(null)
