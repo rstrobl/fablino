@@ -70,19 +70,8 @@ const EL_VOICES = {
 // SFX cache to avoid regenerating identical effects
 const sfxCache = new Map();
 
-const MOOD_DESCRIPTIONS = {
-  witzig: 'Absurd, lustig, Slapstick, Wortspiele, überraschende Pointen.',
-  gruselig: 'Leicht unheimlich, Spannung, mysteriöse Atmosphäre — aber IMMER ein gutes Ende!',
-  abenteuerlich: 'Mutige Helden, gefährliche Reisen, Rätsel lösen, Schätze finden.',
-  gutenacht: 'Sanft, beruhigend, poetisch, langsames Tempo, perfekt zum Einschlafen. Leise Töne, warme Bilder, sanftes Ende.',
-};
-
-const MOOD_VOICE_SETTINGS = {
-  witzig: { stability: 0.2, similarity_boost: 0.85, style: 0.6, use_speaker_boost: true },
-  gruselig: { stability: 0.35, similarity_boost: 0.8, style: 0.5, use_speaker_boost: true },
-  abenteuerlich: { stability: 0.25, similarity_boost: 0.85, style: 0.6, use_speaker_boost: true },
-  gutenacht: { stability: 0.55, similarity_boost: 0.7, style: 0.2, use_speaker_boost: true },
-};
+// Default voice settings for all stories
+const DEFAULT_VOICE_SETTINGS = { stability: 0.25, similarity_boost: 0.85, style: 0.5, use_speaker_boost: true };
 
 const FIXED_VOICES = {};
 
@@ -168,7 +157,6 @@ async function getStories() {
       voiceMap,
       prompt: row.prompt,
       ageGroup: row.age_group,
-      mood: row.mood,
       createdAt: row.created_at,
       audioUrl: `/api/audio/${row.id}`,
     };
@@ -180,8 +168,8 @@ async function insertStory(story, script, voiceMap) {
   try {
     await client.query('BEGIN');
     await client.query(
-      'INSERT INTO stories (id, title, prompt, mood, age_group, created_at, audio_path) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-      [story.id, story.title, story.prompt, story.mood, story.ageGroup, story.createdAt, `audio/${story.id}.mp3`]
+      'INSERT INTO stories (id, title, prompt, age_group, created_at, audio_path) VALUES ($1,$2,$3,$4,$5,$6)',
+      [story.id, story.title, story.prompt, story.ageGroup, story.createdAt, `audio/${story.id}.mp3`]
     );
     for (const char of script.characters) {
       await client.query(
@@ -327,7 +315,7 @@ function assignVoices(characters) {
 }
 
 // --- Script generation via Claude API ---
-async function generateScript(prompt, ageGroup, mood, characters) {
+async function generateScript(prompt, ageGroup, characters) {
   const ageRules = ageGroup === '3-5' ? `
 KLEINE OHREN (3–5 Jahre):
 - Kurze Sätze. Lautmalerei. Wiederholungen ("Klopf, klopf, klopf!")
@@ -352,7 +340,7 @@ GROSSE OHREN (6–9 Jahre):
 
   const systemPrompt = `Du bist ein preisgekrönter deutscher Kinderhörspiel-Autor. Schreibe brillante, lustige, liebevolle Hörspiele für Kinder.
 
-Stimmung: ${mood} — ${MOOD_DESCRIPTIONS[mood] || ''}
+GRUNDTON: Abenteuerlich, witzig, kindgerecht. KEINE Gewalt. Immer ein gutes Ende.
 ${ageRules}
 
 ALLGEMEINE REGELN:
@@ -434,7 +422,7 @@ setInterval(() => {
 // --- Routes ---
 
 app.post('/api/generate', (req, res) => {
-  const { prompt, ageGroup, mood, characters } = req.body;
+  const { prompt, ageGroup, characters } = req.body;
   if (!prompt) return res.status(400).json({ error: 'Prompt ist erforderlich' });
 
   const id = uuidv4();
@@ -445,7 +433,7 @@ app.post('/api/generate', (req, res) => {
     try {
       jobs[id].progress = 'Skript wird geschrieben...';
       if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY nicht konfiguriert');
-      const script = await generateScript(prompt, ageGroup || '5-7', mood || 'witzig', characters);
+      const script = await generateScript(prompt, ageGroup || '5-7', characters);
 
       // Preview mode: stop here and let user confirm
       const voiceMap = assignVoices(script.characters);
@@ -455,7 +443,6 @@ app.post('/api/generate', (req, res) => {
         voiceMap,
         prompt,
         ageGroup: ageGroup || '5-7',
-        mood: mood || 'witzig',
       };
     } catch (err) {
       console.error('Script generation error:', err);
@@ -472,7 +459,7 @@ app.post('/api/generate/:id/confirm', (req, res) => {
     return res.status(404).json({ error: 'Kein Skript zur Bestätigung gefunden' });
   }
 
-  const { script, voiceMap, prompt, ageGroup, mood } = job;
+  const { script, voiceMap, prompt, ageGroup } = job;
   jobs[id] = { status: 'generating_audio', progress: 'Stimmen werden eingesprochen...', title: script.title };
   res.json({ status: 'confirmed' });
 
@@ -481,7 +468,7 @@ app.post('/api/generate/:id/confirm', (req, res) => {
     fs.mkdirSync(linesDir, { recursive: true });
 
     try {
-      const voiceSettings = MOOD_VOICE_SETTINGS[mood] || MOOD_VOICE_SETTINGS.witzig;
+      const voiceSettings = DEFAULT_VOICE_SETTINGS;
       const segments = [];
       let lineIdx = 0;
       const allLines = script.scenes.flatMap(s => s.lines);
@@ -508,7 +495,6 @@ app.post('/api/generate/:id/confirm', (req, res) => {
         title: script.title,
         prompt,
         ageGroup,
-        mood,
         createdAt: new Date().toISOString(),
       };
       await insertStory(story, script, voiceMap);
@@ -589,7 +575,6 @@ app.get('/api/story/:id', async (req, res) => {
       voiceMap,
       prompt: row.prompt,
       ageGroup: row.age_group,
-      mood: row.mood,
       createdAt: row.created_at,
       audioUrl: `/api/audio/${row.id}`,
       lines: linesRes.rows,
@@ -626,8 +611,7 @@ app.patch('/api/stories/:id/voice', async (req, res) => {
     );
     if (!allLines.length) return res.json({ status: 'no_lines', message: 'No lines in DB to regenerate' });
 
-    // Get voice settings for mood
-    const voiceSettings = MOOD_VOICE_SETTINGS[story.mood || 'witzig'] || MOOD_VOICE_SETTINGS.witzig;
+    const voiceSettings = DEFAULT_VOICE_SETTINGS;
     const linesDir = path.join(AUDIO_DIR, 'lines', storyId);
     fs.mkdirSync(linesDir, { recursive: true });
 

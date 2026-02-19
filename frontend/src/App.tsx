@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   Headphones, Sparkles, Wand2, BookOpen, Play, Pause, Download,
   Share2, ChevronLeft, Heart, Clock, Music, Package, Link2, Check,
-  Smile, Ghost, Sword, Moon, Shuffle, AlertCircle
+  Shuffle, AlertCircle
 } from 'lucide-react'
 import './App.css'
 
@@ -13,7 +13,6 @@ interface Story {
   voiceMap: Record<string, string>
   prompt: string
   ageGroup: string
-  mood: string
   createdAt: string
   audioUrl: string
 }
@@ -21,7 +20,6 @@ interface Story {
 interface ScriptLine {
   speaker: string
   text: string
-  sfx?: string
 }
 
 interface ScriptScene {
@@ -64,20 +62,6 @@ const RANDOM_PROMPTS = [
 
 type View = 'home' | 'loading' | 'preview' | 'player'
 
-const MOODS = [
-  { key: 'witzig', icon: Smile, label: 'Lustig' },
-  { key: 'abenteuerlich', icon: Sword, label: 'Abenteuer' },
-  { key: 'gutenacht', icon: Moon, label: 'Zum Einschlafen' },
-  { key: 'gruselig', icon: Ghost, label: 'Gruselig' },
-] as const
-
-const MOOD_LOADING_MESSAGES: Record<string, string[]> = {
-  witzig: ['Die Pointen werden geschärft...', 'Die Lachmuskeln werden aufgewärmt...'],
-  gruselig: ['Die Schatten werden länger...', 'Mysteriöse Geräusche werden gesammelt...'],
-  abenteuerlich: ['Die Schatzkarte wird gezeichnet...', 'Mutige Helden werden rekrutiert...'],
-  gutenacht: ['Die Sterne werden angezündet...', 'Das Mondlicht wird sanft gedimmt...'],
-}
-
 const GENERIC_LOADING = [
   'Die Charaktere werden erfunden...',
   'Die Stimmen werden eingesprochen...',
@@ -85,17 +69,6 @@ const GENERIC_LOADING = [
   'Das Hörspiel wird zusammengesetzt...',
   'Noch ein bisschen Magie...',
 ]
-
-const MOOD_COLORS: Record<string, { bg: string; color: string }> = {
-  witzig: { bg: '#FFF8E1', color: '#FFB300' },
-  gruselig: { bg: '#F3E5F5', color: '#AB47BC' },
-  abenteuerlich: { bg: '#FBE9E7', color: '#FF7043' },
-  gutenacht: { bg: '#E3F2FD', color: '#7986CB' },
-}
-
-function getMoodInfo(moodKey: string) {
-  return MOODS.find(m => m.key === moodKey) || MOODS[0]
-}
 
 const BASE_URL = 'https://fablino.de'
 
@@ -130,7 +103,6 @@ function App() {
   const [heroName, setHeroName] = useState('')
   const [heroAge, setHeroAge] = useState('')
   const [sideCharacters, setSideCharacters] = useState<SideCharacter[]>([])
-  const [mood, setMood] = useState('witzig')
   const [currentStory, setCurrentStory] = useState<Story | null>(null)
   const [stories, setStories] = useState<Story[]>([])
   const [loadingMsg, setLoadingMsg] = useState(0)
@@ -240,8 +212,7 @@ function App() {
     if (!heroName.trim()) return
     const finalPrompt = prompt.trim() || RANDOM_PROMPTS[Math.floor(Math.random() * RANDOM_PROMPTS.length)]
     setError('')
-    const msgs = [...(MOOD_LOADING_MESSAGES[mood] || []), ...GENERIC_LOADING]
-    setLoadingMessages(msgs)
+    setLoadingMessages(GENERIC_LOADING)
     setLoadingMsg(0)
     setView('loading')
     const heroAgeNum = parseInt(heroAge) || 5
@@ -254,7 +225,7 @@ function App() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: finalPrompt, ageGroup: derivedAgeGroup, mood, characters })
+        body: JSON.stringify({ prompt: finalPrompt, ageGroup: derivedAgeGroup, characters })
       })
       if (!res.ok) {
         const err = await res.json()
@@ -472,27 +443,6 @@ function App() {
               </button>
             </div>
 
-            <div className="options">
-              <div className="option-group">
-                <label>Stimmung</label>
-                <div className="mood-chips">
-                  {MOODS.map(m => {
-                    const Icon = m.icon
-                    return (
-                      <button
-                        key={m.key}
-                        className={`mood-chip ${mood === m.key ? 'active' : ''}`}
-                        data-mood={m.key}
-                        onClick={() => setMood(m.key)}
-                      >
-                        <Icon size={16} /> {m.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-
             <button className="generate-btn" onClick={generate} disabled={!heroName.trim()}>
               <Sparkles size={20} /> Hörspiel zaubern!
             </button>
@@ -508,11 +458,9 @@ function App() {
               </div>
               <div className="story-grid">
                 {stories.map(s => {
-                  const mi = getMoodInfo(s.mood)
-                  const MoodIcon = mi.icon
                   const dur = storyDurations[s.id]
                   return (
-                    <div key={s.id} className="story-card" data-mood={s.mood} onClick={() => playStory(s)}>
+                    <div key={s.id} className="story-card" onClick={() => playStory(s)}>
                       <div className="story-icon-row">
                         <Music size={20} />
                         <Headphones size={20} />
@@ -520,11 +468,6 @@ function App() {
                       <h3>{s.title}</h3>
                       <p className="story-prompt">{s.prompt}</p>
                       <div className="story-meta-row">
-                        {s.mood && (
-                          <span className="mood-badge" data-mood={s.mood}>
-                            <MoodIcon size={12} /> {mi.label}
-                          </span>
-                        )}
                         {dur && <span className="story-meta"><Clock size={12} /> {fmt(dur)}</span>}
                       </div>
                       <div className="card-actions">
@@ -563,9 +506,6 @@ function App() {
 
       {/* ===== PREVIEW ===== */}
       {view === 'preview' && previewScript && (() => {
-        const mi = getMoodInfo(mood)
-        const MoodIcon = mi.icon
-        const moodColor = MOOD_COLORS[mood] || MOOD_COLORS.witzig
         const totalLines = previewScript.scenes.reduce((sum, s) => sum + s.lines.length, 0)
         return (
           <main className="preview">
@@ -581,9 +521,6 @@ function App() {
             <h3 className="preview-title">{previewScript.title}</h3>
 
             <div className="preview-meta">
-              <span className="player-mood" style={{ background: moodColor.bg, color: moodColor.color }}>
-                <MoodIcon size={16} /> {mi.label}
-              </span>
               <span className="preview-stat">{previewScript.characters.length} Charaktere</span>
               <span className="preview-stat">{previewScript.scenes.length} Szenen</span>
               <span className="preview-stat">{totalLines} Zeilen</span>
@@ -605,7 +542,6 @@ function App() {
                     <div key={li} className={`preview-line ${line.speaker === 'Erzähler' ? 'narrator' : ''}`}>
                       <span className="line-speaker">{line.speaker}</span>
                       <span className="line-text">{line.text}</span>
-                      {line.sfx && <span className="line-sfx">🔊 {line.sfx}</span>}
                     </div>
                   ))}
                 </div>
@@ -626,9 +562,6 @@ function App() {
 
       {/* ===== PLAYER ===== */}
       {view === 'player' && currentStory && (() => {
-        const mi = getMoodInfo(currentStory.mood)
-        const MoodIcon = mi.icon
-        const moodColor = MOOD_COLORS[currentStory.mood] || MOOD_COLORS.witzig
         return (
           <main className="player">
             <button className="back-btn" onClick={() => { goHome(); setPrompt('') }}>
@@ -637,11 +570,6 @@ function App() {
 
             <h2>{currentStory.title}</h2>
             <p className="player-prompt">„{currentStory.prompt}"</p>
-            {currentStory.mood && (
-              <div className="player-mood" style={{ background: moodColor.bg, color: moodColor.color }}>
-                <MoodIcon size={16} /> {mi.label}
-              </div>
-            )}
             <div className="characters">
               {currentStory.characters.map(c => (
                 <span key={c.name} className="char-badge">{c.name}</span>
