@@ -24,15 +24,22 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 // PostgreSQL connection
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
-// ElevenLabs voice pool
+// ElevenLabs voice pool — categorized by role type
 const EL_VOICES = {
-  narrator: 'GoXyzBapJk3AoCJoMQl9',
-  male: [
+  narrator: 'GoXyzBapJk3AoCJoMQl9',  // Daniel
+  child_m: [
+    'Ewvy14akxdhONg4fmNry',  // Finnegan - children's story voice (primary child male)
+    'LRpNiUBlcqgIsKUzcrlN',  // Georg - Funny and Emotional
+  ],
+  child_f: [
+    'xOKkuQfZt5N7XfbFdn9W',  // Lucy Fennek - warm children's narrator
+    'VD1if7jDVYtAKs4P0FIY',  // Milly Maple - bright, cheerful
+  ],
+  adult_m: [
     '6n4YmXLiuP4C7cZqYOJl',  // Finn - Fresh and Conversational (professional)
     'MbbPUteESkJWr4IAaW35',  // Felix - Direct and Clear (high_quality)
     'IWm8DnJ4NGjFI7QAM5lM',  // Stephan - Warm and Friendly (professional)
     'MJ0RnG71ty4LH3dvNfSd',  // Leon - Soothing and Grounded (high_quality)
-    // Georg moved to creature pool
     'h1IssowVS2h4nL5ZbkkK',  // The Fox - Strict & Dominating (high_quality)
     'eWmswbut7I70CIuRsFwP',  // Frankie Slim - Slick & Mischievous (high_quality)
     '3kaQumuvT4NtcZsw8RVS',  // Commander Brake - Strict & Dominant (high_quality)
@@ -41,17 +48,17 @@ const EL_VOICES = {
     'U0W3edavfdI8ibPeeteQ',  // Freddie Flip - Sweet and Friendly (high_quality)
     'f2yUVfK5jdm78zlpcZ8C',  // Albert - Cheerful, Playful and Fun (high_quality)
   ],
-  female: [
+  adult_f: [
     'cgSgspJ2msm6clMCkdW9',
     'pFZP5JQG7iQjIQuC4Bku',
     'FGY2WhTYpPnrIDTdsKH5',
     'hpp4J3VqNfWAUOO0d1Us',
   ],
   creature: [
-    'Ewvy14akxdhONg4fmNry',  // Finnegan - children's story actress
-    'xOKkuQfZt5N7XfbFdn9W',  // Lucy Fennek - warm children's narrator
-    'VD1if7jDVYtAKs4P0FIY',  // Milly Maple - bright, cheerful
-    'LRpNiUBlcqgIsKUzcrlN',  // Georg - Funny and Emotional (better for creatures/kids)
+    'LRpNiUBlcqgIsKUzcrlN',  // Georg - Funny and Emotional (great for creatures)
+    'eWmswbut7I70CIuRsFwP',  // Frankie Slim - Slick & Mischievous
+    'UFO0Yv86wqRxAt1DmXUu',  // Sarcastic and Sultry Villain
+    '8tJgFGd1nr7H5KLTvjjt',  // Captain Comedy - Vibrant
   ],
 };
 
@@ -213,22 +220,28 @@ async function combineAudio(segments, outputPath) {
 
 function assignVoices(characters) {
   const voiceMap = {};
-  let maleIdx = 0, femaleIdx = 0, creatureIdx = 0;
-  const childKeywords = ['klein', 'jung', 'kind', 'baby', 'mädchen', 'junge', 'little'];
+  let childMIdx = 0, childFIdx = 0, adultMIdx = 0, adultFIdx = 0, creatureIdx = 0;
   for (const char of characters) {
     if (FIXED_VOICES[char.name]) {
       voiceMap[char.name] = FIXED_VOICES[char.name];
     } else if (char.name === 'Erzähler') {
       voiceMap[char.name] = EL_VOICES.narrator;
-    } else if (char.gender === 'female' || char.gender === 'weiblich') {
-      voiceMap[char.name] = EL_VOICES.female[femaleIdx % EL_VOICES.female.length];
-      femaleIdx++;
-    } else if (char.gender === 'child' || char.gender === 'creature' || childKeywords.some(kw => (char.name || '').toLowerCase().includes(kw))) {
+    } else if (char.gender === 'child_m') {
+      voiceMap[char.name] = EL_VOICES.child_m[childMIdx % EL_VOICES.child_m.length];
+      childMIdx++;
+    } else if (char.gender === 'child_f') {
+      voiceMap[char.name] = EL_VOICES.child_f[childFIdx % EL_VOICES.child_f.length];
+      childFIdx++;
+    } else if (char.gender === 'adult_f') {
+      voiceMap[char.name] = EL_VOICES.adult_f[adultFIdx % EL_VOICES.adult_f.length];
+      adultFIdx++;
+    } else if (char.gender === 'creature') {
       voiceMap[char.name] = EL_VOICES.creature[creatureIdx % EL_VOICES.creature.length];
       creatureIdx++;
     } else {
-      voiceMap[char.name] = EL_VOICES.male[maleIdx % EL_VOICES.male.length];
-      maleIdx++;
+      // default: adult_m (covers 'adult_m', 'male', and any unrecognized)
+      voiceMap[char.name] = EL_VOICES.adult_m[adultMIdx % EL_VOICES.adult_m.length];
+      adultMIdx++;
     }
   }
   return voiceMap;
@@ -268,7 +281,8 @@ ALLGEMEINE REGELN:
 - Jede Zeile max 2 Sätze (für TTS-Qualität)
 - Jeder Charakter hat ein Erkennungsmerkmal (Catchphrase, Sprachstil, Tick)
 - Die erste Zeile muss sofort fesseln — kein "Es war einmal" Langeweile
-- Sound-Design denken: SFX-Hinweise an Schlüsselstellen (Tür knarrt, Donner, Lachen)
+- KEINE Sound-Effekte (SFX) — nur Stimmen und Dialog
+- KEINE Lautmalerei für Emotionen im Dialog (kein HAHAHA, Hihihi, Buhuhu, Ächz, Seufz etc.) — Emotionen werden vom ERZÄHLER beschrieben ("Der Drache lachte so laut, dass der Berg wackelte"), die Charaktere selbst sprechen normal
 - Kinder sind die Helden, nicht Erwachsene — Kinder lösen das Problem
 - Keine Belehrung, keine Moral-Keule — Story first
 - Deutsche Settings/Kultur bevorzugt, aber Fantasie-Welten genauso OK
@@ -281,9 +295,18 @@ ${characters?.sideCharacters?.length ? `Folgende Personen sollen auch vorkommen:
 Antworte NUR mit validem JSON (kein Markdown, kein \`\`\`):
 {
   "title": "Kreativer Titel",
-  "characters": [{ "name": "Name", "gender": "male|female|creature" }],
-  "scenes": [{ "lines": [{ "speaker": "Name", "text": "Dialog", "sfx": "optional" }] }]
-}`;
+  "characters": [{ "name": "Name", "gender": "child_m|child_f|adult_m|adult_f|creature" }],
+  "scenes": [{ "lines": [{ "speaker": "Name", "text": "Dialog" }] }]
+}
+
+WICHTIG zu gender:
+- child_m = männliches Kind/Junge
+- child_f = weibliches Kind/Mädchen
+- adult_m = erwachsener Mann (Papa, König, Bäcker, etc.)
+- adult_f = erwachsene Frau (Mama, Hexe, Lehrerin, etc.)
+- creature = Fabelwesen, Tiere, Drachen, etc.
+- Der Erzähler hat IMMER gender "adult_m" (wird automatisch zugewiesen)
+- KEINE SFX — lasse das "sfx" Feld komplett weg`;
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -376,21 +399,10 @@ app.post('/api/generate/:id/confirm', (req, res) => {
       const voiceSettings = MOOD_VOICE_SETTINGS[mood] || MOOD_VOICE_SETTINGS.witzig;
       const segments = [];
       let lineIdx = 0;
-      let sfxIdx = 0;
       const allLines = script.scenes.flatMap(s => s.lines);
       const totalLines = allLines.length;
-      const sfxCount = allLines.filter(l => l.sfx).length;
       for (let i = 0; i < allLines.length; i++) {
         const line = allLines[i];
-
-        // Generate SFX before the line if present
-        if (line.sfx) {
-          const sfxPath = path.join(linesDir, `sfx_${sfxIdx}.mp3`);
-          jobs[id].progress = `Sound-Effekte: ${sfxIdx + 1}/${sfxCount}`;
-          const result = await generateSFX(line.sfx, sfxPath);
-          if (result) segments.push(sfxPath);
-          sfxIdx++;
-        }
 
         const voice = voiceMap[line.speaker] || EL_VOICES.narrator;
         const ttsPath = path.join(linesDir, `line_${lineIdx}.mp3`);
