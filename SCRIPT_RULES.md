@@ -33,7 +33,8 @@
 - **Keine Belehrung, keine Moral-Keule** — Story first
 - **Deutsche Settings/Kultur** bevorzugt, aber Fantasie-Welten genauso OK
 - **Diversität natürlich einbauen** — verschiedene Familienmodelle, Namen, Hintergründe — ohne es zu betonen
-- **KEINE Lautmalerei für Emotionen** — kein HAHAHA, Hihihi, Buhuhu, Seufz etc. im Dialog. TTS kann das nicht. Emotionen werden vom **Erzähler beschrieben** ("Der Drache lachte so laut, dass der Berg wackelte"), Charaktere sprechen normal.
+- **KEINE Lautmalerei im Dialog** — kein HAHAHA, Hihihi, Buhuhu, Seufz, Wiehern, Miau, Wuff etc. TTS kann das nicht. Emotionen und Tierlaute werden vom **Erzähler beschrieben** ("Der Drache lachte so laut, dass der Berg wackelte", "Das Pferd wieherte fröhlich"). Charaktere sprechen in ganzen Sätzen.
+- **KEINE konkreten Zeitangaben** — nicht "eine Stunde später", "nach 30 Minuten". Stattdessen: "Kurze Zeit später", "Als die Sonne unterging", "Nach einer langen Reise".
 
 ## Voice Mapping
 - **Georg - Funny and Emotional**: NUR für Kinder/Kreaturen/Fabelwesen, NICHT für erwachsene Männer

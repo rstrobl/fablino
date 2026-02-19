@@ -49,8 +49,7 @@ const EL_VOICES = {
     'h1IssowVS2h4nL5ZbkkK',  // The Fox — streng, dominant, Bösewicht
   ],
   adult_f: [
-    'Qd7hDo3tdwmASCs5vLEB',  // Elli — warm, mütterlich, liebevoll
-    'VD1if7jDVYtAKs4P0FIY',  // Milly Maple — hell, fröhlich
+    '3t6439mGAsHvQFPpoPdf',  // Raya — warm, natürlich, Mama-Typ
     'XNYSrtboH10kulPETnVC',  // Celestine Hohenstein — arrogant, hochnäsig, Königin/Stiefmutter
   ],
   elder_f: [
@@ -98,8 +97,7 @@ const TRAIT_VOICE_MAP = {
     'streng,dominant':                 'h1IssowVS2h4nL5ZbkkK',  // The Fox
   },
   adult_f: {
-    'warm,liebevoll,mütterlich':       'Qd7hDo3tdwmASCs5vLEB',  // Elli
-    'fröhlich,hell':                   'VD1if7jDVYtAKs4P0FIY',  // Milly Maple
+    'warm,liebevoll,mütterlich':       '3t6439mGAsHvQFPpoPdf',  // Raya
     'arrogant,hochnäsig,streng':       'XNYSrtboH10kulPETnVC',  // Celestine Hohenstein
   },
   elder_f: {
@@ -157,6 +155,7 @@ async function getStories() {
       voiceMap,
       prompt: row.prompt,
       ageGroup: row.age_group,
+      featured: row.featured,
       createdAt: row.created_at,
       audioUrl: `/api/audio/${row.id}`,
     };
@@ -214,7 +213,16 @@ async function generateTTS(text, voiceId, outputPath, voiceSettings = { stabilit
     throw new Error(`ElevenLabs ${response.status}: ${errText}`);
   }
   const buffer = Buffer.from(await response.arrayBuffer());
-  fs.writeFileSync(outputPath, buffer);
+  // Write raw TTS output, then normalize volume per line
+  const rawPath = outputPath.replace('.mp3', '_raw.mp3');
+  fs.writeFileSync(rawPath, buffer);
+  try {
+    await execAsync(`ffmpeg -y -i "${rawPath}" -af "loudnorm=I=-16:TP=-1.5:LRA=11" -q:a 2 "${outputPath}" 2>/dev/null`);
+    fs.unlinkSync(rawPath);
+  } catch {
+    // If normalization fails, use raw file
+    fs.renameSync(rawPath, outputPath);
+  }
 }
 
 async function generateSFX(description, outputPath) {
@@ -247,7 +255,7 @@ async function generateSFX(description, outputPath) {
 
 async function combineAudio(segments, outputPath) {
   const silencePath = path.join(AUDIO_DIR, `silence_${Date.now()}.mp3`);
-  await execAsync(`ffmpeg -y -f lavfi -i "anullsrc=r=44100:cl=mono" -t 0.3 -q:a 9 "${silencePath}" 2>/dev/null`);
+  await execAsync(`ffmpeg -y -f lavfi -i "anullsrc=r=44100:cl=mono" -t 0.5 -q:a 9 "${silencePath}" 2>/dev/null`);
   const listPath = path.join(AUDIO_DIR, `list_${Date.now()}.txt`);
   let listContent = '';
   for (let i = 0; i < segments.length; i++) {
@@ -318,7 +326,7 @@ function assignVoices(characters) {
 async function generateScript(prompt, ageGroup, characters) {
   const ageRules = ageGroup === '3-5' ? `
 KLEINE OHREN (3–5 Jahre):
-- Kurze Sätze. Lautmalerei. Wiederholungen ("Klopf, klopf, klopf!")
+- Kurze Sätze. Wiederholungen ("Klopf, klopf, klopf!"). Klangwörter nur im Erzählertext.
 - KEINE Zahlen, Maßeinheiten, Zeitangaben, abstrakte Konzepte
 - Emotionen benennen: "Da wurde der Igel ganz traurig" (Kinder lernen Gefühle einzuordnen)
 - Max 4 Charaktere (zu viele Stimmen verwirren)
@@ -346,10 +354,13 @@ ${ageRules}
 ALLGEMEINE REGELN:
 - Ein "Erzähler" MUSS immer dabei sein — er ist die verbindende Stimme des Hörspiels
 - Jede Zeile max 2 Sätze (für TTS-Qualität)
-- Jeder Charakter hat ein Erkennungsmerkmal (Catchphrase, Sprachstil, Tick)
+- Jeder Charakter hat ein subtiles Erkennungsmerkmal (Sprachstil, typische Redewendung) — aber nicht in jeder Zeile wiederholen
+- Jeder genannte Charakter muss mindestens 2 Zeilen sprechen (sonst weglassen)
+- Tiere sprechen nur wenn sie als "creature" getaggt sind — sonst beschreibt der Erzähler ihre Laute
 - Die erste Zeile muss sofort fesseln — kein "Es war einmal" Langeweile
 - KEINE Sound-Effekte (SFX) — nur Stimmen und Dialog
-- KEINE Lautmalerei für Emotionen im Dialog (kein HAHAHA, Hihihi, Buhuhu, Ächz, Seufz etc.) — Emotionen werden vom ERZÄHLER beschrieben ("Der Drache lachte so laut, dass der Berg wackelte"), die Charaktere selbst sprechen normal
+- KEINE Lautmalerei im Dialog — kein HAHAHA, Hihihi, Buhuhu, Ächz, Seufz, Wiehern, Miau, Wuff etc. Emotionen und Tierlaute werden vom ERZÄHLER beschrieben ("Der Drache lachte so laut, dass der Berg wackelte", "Das Pferd wieherte fröhlich"). Die Charaktere sprechen normal in ganzen Sätzen.
+- KEINE konkreten Zeitangaben (keine "eine Stunde später", "nach 30 Minuten", "um 3 Uhr"). Stattdessen: "Kurze Zeit später", "Als die Sonne unterging", "Nach einer langen Reise"
 - Kinder sind die Helden, nicht Erwachsene — Kinder lösen das Problem
 - Keine Belehrung, keine Moral-Keule — Story first
 - Deutsche Settings/Kultur bevorzugt, aber Fantasie-Welten genauso OK
@@ -551,10 +562,23 @@ app.get('/api/audio/:id', (req, res) => {
 
 app.get('/api/stories', async (req, res) => {
   try {
+    const all = req.query.all === 'true'; // ?all=true shows all, otherwise only featured
     const stories = await getStories();
-    res.json(stories);
+    res.json(all ? stories : stories.filter(s => s.featured));
   } catch (err) {
     console.error('Failed to get stories:', err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Toggle featured status
+app.patch('/api/stories/:id/featured', async (req, res) => {
+  try {
+    const { featured } = req.body;
+    await pool.query('UPDATE stories SET featured = $1 WHERE id = $2', [!!featured, req.params.id]);
+    res.json({ status: 'ok', featured: !!featured });
+  } catch (err) {
+    console.error('Failed to toggle featured:', err);
     res.status(500).json({ error: 'DB error' });
   }
 });
