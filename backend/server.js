@@ -361,7 +361,7 @@ ALLGEMEINE REGELN:
 - Jede Zeile max 2 Sätze (für TTS-Qualität)
 - Jeder Charakter hat ein subtiles Erkennungsmerkmal (Sprachstil, typische Redewendung) — aber nicht in jeder Zeile wiederholen
 - Jeder genannte Charakter muss mindestens 2 Zeilen sprechen (sonst weglassen)
-- Jeder Charakter muss bei seinem ERSTEN Auftritt vom Erzähler kurz vorgestellt werden (Name + Rolle/Beziehung zum Helden). Die Beschreibung soll zur aktuellen Handlung passen.
+- BEVOR ein Charakter zum ersten Mal spricht, MUSS der Erzähler ihn in einer eigenen Zeile vorstellen (Name + wer er/sie ist). Erst Erzähler-Einführung, DANN die erste Sprechzeile des Charakters. Keine Ausnahme!
 - Tiere sprechen nur wenn sie als "creature" getaggt sind — sonst beschreibt der Erzähler ihre Laute
 - Die erste Zeile muss sofort fesseln — kein "Es war einmal" Langeweile
 - KEINE Sound-Effekte (SFX) — nur Stimmen und Dialog
