@@ -199,7 +199,7 @@ async function insertStory(story, script, voiceMap) {
 
 // --- TTS ---
 
-async function generateTTS(text, voiceId, outputPath, voiceSettings = { stability: 0.5, similarity_boost: 0.75 }, { previous_text, next_text } = {}) {
+async function generateTTS(text, voiceId, outputPath, voiceSettings = { stability: 0.3, similarity_boost: 0.75 }, { previous_text, next_text } = {}) {
   const body = { text, model_id: 'eleven_multilingual_v2', voice_settings: voiceSettings };
   if (previous_text) body.previous_text = previous_text;
   if (next_text) body.next_text = next_text;
@@ -361,6 +361,7 @@ ALLGEMEINE REGELN:
 - Jede Zeile max 2 Sätze (für TTS-Qualität)
 - Jeder Charakter hat ein subtiles Erkennungsmerkmal (Sprachstil, typische Redewendung) — aber nicht in jeder Zeile wiederholen
 - Jeder genannte Charakter muss mindestens 2 Zeilen sprechen (sonst weglassen)
+- Jeder Charakter muss bei seinem ERSTEN Auftritt vom Erzähler kurz vorgestellt werden (Name + eine Eigenschaft/Rolle). Beispiel: "In der Küche stand Iris, Konstantins große Schwester. Sie war die Schlaueste in der ganzen Familie." — Das gibt jeder Figur einen eigenen Moment.
 - Tiere sprechen nur wenn sie als "creature" getaggt sind — sonst beschreibt der Erzähler ihre Laute
 - Die erste Zeile muss sofort fesseln — kein "Es war einmal" Langeweile
 - KEINE Sound-Effekte (SFX) — nur Stimmen und Dialog
