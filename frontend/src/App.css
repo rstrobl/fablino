@@ -956,30 +956,38 @@ textarea::placeholder { color: var(--text-muted); }
 /* Script View */
 .script-view {
   margin-top: 1rem;
-  padding: 1rem;
-  background: rgba(255,255,255,0.05);
-  border-radius: 12px;
-  max-height: 400px;
+  padding: 1.25rem;
+  background: var(--bg-elevated);
+  border-radius: 16px;
+  max-height: 500px;
   overflow-y: auto;
+  border: 1px solid rgba(0,0,0,0.06);
 }
 .script-line {
-  margin-bottom: 0.75rem;
-  line-height: 1.5;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+.script-line:last-child {
+  margin-bottom: 0;
 }
 .script-line.narrator {
   font-style: italic;
-  opacity: 0.8;
+  color: var(--text-secondary);
 }
 .script-speaker {
   font-weight: 700;
   margin-right: 0.4rem;
-  color: #16A34A;
+  color: var(--primary);
 }
 .script-line.narrator .script-speaker {
-  color: #888;
+  color: var(--text-muted);
 }
 .script-text {
-  color: #eee;
+  color: var(--text);
+}
+.script-line.narrator .script-text {
+  color: var(--text-secondary);
 }
 .script-toggle {
   gap: 0.5rem;
