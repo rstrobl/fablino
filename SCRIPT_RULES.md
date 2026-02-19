@@ -1,0 +1,40 @@
+# Fablino Script Rules
+
+## Alterskategorien
+
+### 🧸 Kleine Ohren (3–5 Jahre)
+- **Sprache:** Kurze Sätze. Lautmalerei. Wiederholungen ("Klopf, klopf, klopf!")
+- **Keine** Zahlen, Maßeinheiten, Zeitangaben, abstrakte Konzepte
+- **Emotionen benennen:** "Da wurde der Igel ganz traurig" (Kinder lernen Gefühle einzuordnen)
+- **Max 4 Charaktere** (zu viele Stimmen verwirren)
+- **Klare Gut/Böse-Struktur**, aber Böse wird nie bestraft — sondern versteht es am Ende
+- **Happy End ist Pflicht**
+- **Länge:** 10–20 Zeilen, ~3 Minuten
+- **Erzähler führt stärker** — bindet Szenen zusammen
+- **Keine Ironie, kein Sarkasmus** — wird nicht verstanden
+
+### 🚀 Große Ohren (6–9 Jahre)
+- **Komplexere Plots:** Rätsel, Wendungen, Geheimnisse
+- **Humor:** Wortspiele, absurde Situationen, Slapstick
+- **Einfache Zahlen/Fakten OK** wenn sie der Story dienen
+- **Bis 6 Charaktere**, Nebenfiguren möglich
+- **Moral darf subtil sein** — nicht mit dem Holzhammer
+- **Offene Enden möglich** (Cliffhanger für Fortsetzungen!)
+- **Länge:** 20–35 Zeilen, ~5–7 Minuten
+- **Erzähler minimal** — Dialog trägt die Story
+- **Leichte Grusel-Elemente OK** (aber immer aufgelöst)
+
+## Allgemeine Regeln
+- **Jede Zeile max 2 Sätze** (für TTS-Qualität)
+- **Jeder Charakter hat ein Erkennungsmerkmal** (Catchphrase, Sprachstil, Tick)
+- **Die erste Zeile muss sofort fesseln** — kein "Es war einmal" Langeweile
+- **Sound-Design denken:** SFX-Hinweise an Schlüsselstellen (Tür knarrt, Donner, Lachen)
+- **Kinder sind die Helden**, nicht Erwachsene — Kinder lösen das Problem
+- **Keine Belehrung, keine Moral-Keule** — Story first
+- **Deutsche Settings/Kultur** bevorzugt, aber Fantasie-Welten genauso OK
+- **Diversität natürlich einbauen** — verschiedene Familienmodelle, Namen, Hintergründe — ohne es zu betonen
+
+## Voice Mapping
+- **Georg - Funny and Emotional**: NUR für Kinder/Kreaturen/Fabelwesen, NICHT für erwachsene Männer
+- Männliche Stimmen: konversationell, HD, deutsch
+- Blacklisted: Julian (Ij3D7RBMzlWQDt3CctjK), Peter (wDnxGeJ6u1xICsO4Agdh), Opa Johann (R3XXDwKMU2YHwBcuYUH3), alte Charly (YQ9Q2ORpGKe5Kyr5k57o)
