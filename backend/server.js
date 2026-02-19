@@ -92,7 +92,7 @@ const TRAIT_VOICE_MAP = {
     'ruhig,freundlich':                'wloRHjPaKZv3ucH7TQOT',  // Jorin
     'verrückt,lustig,albern':          '8tJgFGd1nr7H5KLTvjjt',  // Captain Comedy
     'cool,locker,modern':              '6n4YmXLiuP4C7cZqYOJl',  // Finn
-    'verschmitzt,gerissen':            'eWmswbut7I70CIuRsFwP',  // Frankie Slim
+    'verschmitzt,gerissen,gelangweilt': 'eWmswbut7I70CIuRsFwP',  // Frankie Slim — gelangweilte Männerstimme
     'sarkastisch,durchtrieben':        'UFO0Yv86wqRxAt1DmXUu',  // Sarcastic Villain
     'streng,dominant':                 'h1IssowVS2h4nL5ZbkkK',  // The Fox
   },
@@ -105,10 +105,10 @@ const TRAIT_VOICE_MAP = {
   },
   elder_m: {},
   creature: {
-    'lustig,freundlich,emotional':     'LRpNiUBlcqgIsKUzcrlN',  // Georg
-    'verschmitzt,gerissen,schlau':     'eWmswbut7I70CIuRsFwP',  // Frankie Slim
+    'lustig,freundlich,emotional,albern,liebevoll,warm,fröhlich': 'LRpNiUBlcqgIsKUzcrlN',  // Georg — default für Drachen, Trolle, freundliche Kreaturen
     'durchtrieben,sarkastisch,böse':   'UFO0Yv86wqRxAt1DmXUu',  // Sarcastic Villain
-    'verrückt,chaotisch,lustig':       '8tJgFGd1nr7H5KLTvjjt',  // Captain Comedy
+    'verrückt,chaotisch':              '8tJgFGd1nr7H5KLTvjjt',  // Captain Comedy
+    'verschmitzt,gerissen,schlau':     'eWmswbut7I70CIuRsFwP',  // Frankie Slim — nur für wirklich gerissene Kreaturen
   },
 };
 
