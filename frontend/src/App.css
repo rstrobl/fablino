@@ -1072,3 +1072,15 @@ textarea::placeholder { color: var(--text-muted); }
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Voice Select */
+.voice-select {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}

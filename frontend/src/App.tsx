@@ -115,7 +115,12 @@ function App() {
   const [previewAudio, setPreviewAudio] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [lineSettings, setLineSettings] = useState<Record<number, { voiceId?: string; stability?: number; style?: number; similarity_boost?: number; use_speaker_boost?: boolean }>>({})
+  const [voiceDirectory, setVoiceDirectory] = useState<Record<string, { name: string; desc: string; category: string }>>({})
   const previewAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    fetch(`${BASE_URL}/api/voices`).then(r => r.json()).then(setVoiceDirectory).catch(() => {})
+  }, [])
   const [progress, setProgress] = useState(0)
   const [audioDuration, setAudioDuration] = useState(0)
   const [showTonieModal, setShowTonieModal] = useState(false)
@@ -683,13 +688,18 @@ function App() {
                       {isEditing && (
                         <div className="line-editor">
                           <div className="editor-row">
-                            <label>Voice ID:</label>
-                            <input
-                              type="text"
+                            <label>Stimme:</label>
+                            <select
                               value={voiceId}
                               onChange={e => setLineSettings(prev => ({ ...prev, [i]: { ...prev[i], voiceId: e.target.value } }))}
-                              placeholder="ElevenLabs Voice ID"
-                            />
+                              className="voice-select"
+                            >
+                              {Object.entries(voiceDirectory).map(([id, v]) => (
+                                <option key={id} value={id}>
+                                  {v.name} — {v.desc} ({v.category})
+                                </option>
+                              ))}
+                            </select>
                           </div>
                           <div className="editor-row">
                             <label>Stability: {(settings.stability ?? 0.5).toFixed(1)}</label>

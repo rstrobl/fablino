@@ -573,17 +573,34 @@ app.post('/api/preview-line', async (req, res) => {
   }
 });
 
-// Get all available voices for the UI
+// Voice directory with names for UI
+const VOICE_DIRECTORY = {
+  'GoXyzBapJk3AoCJoMQl9': { name: 'Daniel', desc: 'neutral, professionell', category: 'narrator' },
+  'Ewvy14akxdhONg4fmNry': { name: 'Finnegan', desc: 'neugierig, aufgeweckt, mutig', category: 'child_m' },
+  'LRpNiUBlcqgIsKUzcrlN': { name: 'Georg', desc: 'lustig, emotional, albern', category: 'child_m' },
+  '8RjxcQ6tY1F2YZiIvWqY': { name: 'Jasper', desc: 'schüchtern, zurückhaltend', category: 'child_m' },
+  '9sjP3TfMlzEjAa6uXh3A': { name: 'Kelly', desc: 'fröhlich, lebhaft', category: 'child_f' },
+  'xOKkuQfZt5N7XfbFdn9W': { name: 'Lucy Fennek', desc: 'warm, einfühlsam', category: 'child_f' },
+  'VD1if7jDVYtAKs4P0FIY': { name: 'Milly Maple', desc: 'hell, quirlig', category: 'child_f' },
+  'g1jpii0iyvtRs8fqXsd1': { name: 'Helmut Epic', desc: 'episch, kräftig', category: 'adult_m' },
+  'ruSJRhA64v8HAqiqKXVw': { name: 'Thomas', desc: 'laut, neutral', category: 'adult_m' },
+  'Tsns2HvNFKfGiNjllgqo': { name: 'Sven', desc: 'emotional, nett', category: 'adult_m' },
+  'wloRHjPaKZv3ucH7TQOT': { name: 'Jorin', desc: 'ruhig, freundlich', category: 'adult_m' },
+  'dFA3XRddYScy6ylAYTIO': { name: 'Helmut', desc: 'sanft, märchenhaft', category: 'adult_m' },
+  'tqsaTjde7edL1GHtFchL': { name: 'Ben Smile', desc: 'warmherzig, vertrauenswürdig', category: 'adult_m' },
+  '8tJgFGd1nr7H5KLTvjjt': { name: 'Captain Comedy', desc: 'verrückt, Spaßvogel', category: 'adult_m' },
+  '6n4YmXLiuP4C7cZqYOJl': { name: 'Finn', desc: 'locker, modern, cool', category: 'adult_m' },
+  'eWmswbut7I70CIuRsFwP': { name: 'Frankie Slim', desc: 'gelangweilt, verschmitzt', category: 'adult_m' },
+  'UFO0Yv86wqRxAt1DmXUu': { name: 'Sarcastic Villain', desc: 'sarkastisch, durchtrieben', category: 'adult_m' },
+  'h1IssowVS2h4nL5ZbkkK': { name: 'The Fox', desc: 'streng, dominant', category: 'adult_m' },
+  '3t6439mGAsHvQFPpoPdf': { name: 'Raya', desc: 'warm, natürlich, Mama-Typ', category: 'adult_f' },
+  'XNYSrtboH10kulPETnVC': { name: 'Celestine', desc: 'arrogant, hochnäsig', category: 'adult_f' },
+  'RMDEjuHXo5bcQLkbu6MB': { name: 'Janine', desc: 'verspielt, expressiv', category: 'adult_f' },
+  'VNHNa6nN6yJdVF3YRyuF': { name: 'Hilde', desc: 'liebevolle Oma', category: 'elder_f' },
+};
+
 app.get('/api/voices', (req, res) => {
-  const allVoices = {};
-  for (const [category, voices] of Object.entries(VOICE_POOLS)) {
-    for (const voiceId of voices) {
-      // Find voice name from comments in code — return ID and category
-      if (!allVoices[voiceId]) allVoices[voiceId] = { id: voiceId, categories: [] };
-      allVoices[voiceId].categories.push(category);
-    }
-  }
-  res.json({ voices: Object.values(allVoices), pools: VOICE_POOLS });
+  res.json(VOICE_DIRECTORY);
 });
 
 app.get('/api/status/:id', (req, res) => {
