@@ -87,9 +87,9 @@ const TRAIT_VOICE_MAP = {
     'fröhlich,quirlig,lustig':      'VD1if7jDVYtAKs4P0FIY',  // Milly Maple
   },
   adult_m: {
-    'warm,liebevoll,vertrauenswürdig': 'tqsaTjde7edL1GHtFchL',  // Ben Smile
+    'warm,liebevoll,ruhig,freundlich,vertrauenswürdig': 'wloRHjPaKZv3ucH7TQOT',  // Jorin — Default Papa-Stimme
     'sanft,märchenhaft,liebevoll':     'dFA3XRddYScy6ylAYTIO',  // Helmut
-    'ruhig,freundlich':                'wloRHjPaKZv3ucH7TQOT',  // Jorin
+    'stolz,fröhlich':                  'tqsaTjde7edL1GHtFchL',  // Ben Smile
     'verrückt,lustig,albern':          '8tJgFGd1nr7H5KLTvjjt',  // Captain Comedy
     'cool,locker,modern':              '6n4YmXLiuP4C7cZqYOJl',  // Finn
     'verschmitzt,gerissen,gelangweilt': 'eWmswbut7I70CIuRsFwP',  // Frankie Slim — gelangweilte Männerstimme
