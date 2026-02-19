@@ -87,8 +87,11 @@ const TRAIT_VOICE_MAP = {
     'fröhlich,quirlig,lustig':      'VD1if7jDVYtAKs4P0FIY',  // Milly Maple
   },
   adult_m: {
-    'warm,liebevoll,ruhig,freundlich,vertrauenswürdig,stolz,fröhlich': 'wloRHjPaKZv3ucH7TQOT',  // Jorin — Default Papa-Stimme
-    'sanft,märchenhaft':               'dFA3XRddYScy6ylAYTIO',  // Helmut
+    'warm,liebevoll,stolz,fröhlich,episch,kräftig,märchenhaft': 'g1jpii0iyvtRs8fqXsd1',  // Helmut Epic — Default Papa-Stimme
+    'laut,neutral':                    'ruSJRhA64v8HAqiqKXVw',  // Thomas
+    'emotional,nett,freundlich,ruhig': 'Tsns2HvNFKfGiNjllgqo',  // Sven
+    'vertrauenswürdig,sanft':          'wloRHjPaKZv3ucH7TQOT',  // Jorin
+    'sanft,liebevoll':                 'dFA3XRddYScy6ylAYTIO',  // Helmut (sanft)
     'dominant,streng,autoritär':       'tqsaTjde7edL1GHtFchL',  // Ben Smile
     'verrückt,lustig,albern':          '8tJgFGd1nr7H5KLTvjjt',  // Captain Comedy
     'cool,locker,modern':              '6n4YmXLiuP4C7cZqYOJl',  // Finn
