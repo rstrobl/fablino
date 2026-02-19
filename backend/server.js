@@ -350,7 +350,7 @@ GROSSE OHREN (6–9 Jahre):
 
 ⛔ ABSOLUT VERBOTEN — LAUTMALEREI IM DIALOG:
 Kein Charakter darf Lautmalerei sprechen. NIEMALS: Hihihi, Hahaha, Buhuhu, Ächz, Seufz, Grr, Brumm, Miau, Wuff, Wiehern, Schnurr, Piep, Kicher, Prust, Uff, Autsch, Hmpf, Pah, Tss, Juhu, Juchhu, Hurra.
-Stattdessen beschreibt der ERZÄHLER die Emotion oder den Laut: "Der Drache musste so sehr lachen, dass ihm Rauch aus der Nase kam." — NICHT der Drache selbst sagt "Hihihi".
+Stattdessen beschreibt der ERZÄHLER die Emotion oder den Laut. Charaktere sprechen nur in normalen, ganzen Sätzen.
 Dies gilt OHNE AUSNAHME für ALLE Charaktere, auch für Tiere und Kreaturen.
 
 GRUNDTON: Abenteuerlich, witzig, kindgerecht. KEINE Gewalt. Immer ein gutes Ende.
@@ -361,11 +361,11 @@ ALLGEMEINE REGELN:
 - Jede Zeile max 2 Sätze (für TTS-Qualität)
 - Jeder Charakter hat ein subtiles Erkennungsmerkmal (Sprachstil, typische Redewendung) — aber nicht in jeder Zeile wiederholen
 - Jeder genannte Charakter muss mindestens 2 Zeilen sprechen (sonst weglassen)
-- Jeder Charakter muss bei seinem ERSTEN Auftritt vom Erzähler kurz vorgestellt werden (Name + Rolle/Beziehung zum Helden). Die Beschreibung soll zur Handlung passen, NICHT generisch sein. NIEMALS das Beispiel aus diesem Prompt kopieren — erfinde eine passende Einführung!
+- Jeder Charakter muss bei seinem ERSTEN Auftritt vom Erzähler kurz vorgestellt werden (Name + Rolle/Beziehung zum Helden). Die Beschreibung soll zur aktuellen Handlung passen.
 - Tiere sprechen nur wenn sie als "creature" getaggt sind — sonst beschreibt der Erzähler ihre Laute
 - Die erste Zeile muss sofort fesseln — kein "Es war einmal" Langeweile
 - KEINE Sound-Effekte (SFX) — nur Stimmen und Dialog
-- Emotionen und Tierlaute werden vom ERZÄHLER beschrieben ("Der Drache lachte so laut, dass der Berg wackelte", "Das Pferd wieherte fröhlich"). Die Charaktere sprechen normal in ganzen Sätzen. (Siehe ABSOLUT VERBOTEN oben!)
+- Emotionen und Tierlaute werden vom ERZÄHLER beschrieben, nicht von den Charakteren selbst. (Siehe ABSOLUT VERBOTEN oben!)
 - KEINE konkreten Zeitangaben (keine "eine Stunde später", "nach 30 Minuten", "um 3 Uhr"). Stattdessen: "Kurze Zeit später", "Als die Sonne unterging", "Nach einer langen Reise"
 - Kinder sind die Helden, nicht Erwachsene — Kinder lösen das Problem
 - Keine Belehrung, keine Moral-Keule — Story first
