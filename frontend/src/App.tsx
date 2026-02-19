@@ -111,6 +111,11 @@ function App() {
   const [error, setError] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
   const [showScript, setShowScript] = useState(false)
+  const [editingLine, setEditingLine] = useState<number | null>(null)
+  const [previewAudio, setPreviewAudio] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [lineSettings, setLineSettings] = useState<Record<number, { voiceId?: string; stability?: number; style?: number; similarity_boost?: number; use_speaker_boost?: boolean }>>({})
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null)
   const [progress, setProgress] = useState(0)
   const [audioDuration, setAudioDuration] = useState(0)
   const [showTonieModal, setShowTonieModal] = useState(false)
@@ -661,12 +666,107 @@ function App() {
 
             {showScript && currentStory.lines && (
               <div className="script-view">
-                {currentStory.lines.map((line: any, i: number) => (
-                  <div key={i} className={`script-line ${line.speaker === 'Erzähler' ? 'narrator' : 'character'}`}>
-                    <span className="script-speaker">{line.speaker}:</span>
-                    <span className="script-text">{line.text}</span>
-                  </div>
-                ))}
+                {currentStory.lines.map((line: any, i: number) => {
+                  const isEditing = editingLine === i
+                  const settings = lineSettings[i] || {}
+                  const voiceId = settings.voiceId || (currentStory.voiceMap && currentStory.voiceMap[line.speaker]) || ''
+                  return (
+                    <div key={i}>
+                      <div
+                        className={`script-line ${line.speaker === 'Erzähler' ? 'narrator' : 'character'} ${isEditing ? 'editing' : ''}`}
+                        onClick={() => setEditingLine(isEditing ? null : i)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <span className="script-speaker">{line.speaker}:</span>
+                        <span className="script-text">{line.text}</span>
+                      </div>
+                      {isEditing && (
+                        <div className="line-editor">
+                          <div className="editor-row">
+                            <label>Voice ID:</label>
+                            <input
+                              type="text"
+                              value={voiceId}
+                              onChange={e => setLineSettings(prev => ({ ...prev, [i]: { ...prev[i], voiceId: e.target.value } }))}
+                              placeholder="ElevenLabs Voice ID"
+                            />
+                          </div>
+                          <div className="editor-row">
+                            <label>Stability: {(settings.stability ?? 0.5).toFixed(1)}</label>
+                            <input type="range" min="0" max="1" step="0.1"
+                              value={settings.stability ?? 0.5}
+                              onChange={e => setLineSettings(prev => ({ ...prev, [i]: { ...prev[i], stability: parseFloat(e.target.value) } }))}
+                            />
+                          </div>
+                          <div className="editor-row">
+                            <label>Style: {(settings.style ?? 1.0).toFixed(1)}</label>
+                            <input type="range" min="0" max="1" step="0.1"
+                              value={settings.style ?? 1.0}
+                              onChange={e => setLineSettings(prev => ({ ...prev, [i]: { ...prev[i], style: parseFloat(e.target.value) } }))}
+                            />
+                          </div>
+                          <div className="editor-row">
+                            <label>Similarity: {(settings.similarity_boost ?? 0.75).toFixed(2)}</label>
+                            <input type="range" min="0" max="1" step="0.05"
+                              value={settings.similarity_boost ?? 0.75}
+                              onChange={e => setLineSettings(prev => ({ ...prev, [i]: { ...prev[i], similarity_boost: parseFloat(e.target.value) } }))}
+                            />
+                          </div>
+                          <div className="editor-row">
+                            <label>
+                              <input type="checkbox"
+                                checked={settings.use_speaker_boost ?? false}
+                                onChange={e => setLineSettings(prev => ({ ...prev, [i]: { ...prev[i], use_speaker_boost: e.target.checked } }))}
+                              /> Speaker Boost
+                            </label>
+                          </div>
+                          <button
+                            className="preview-btn"
+                            disabled={previewLoading}
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              setPreviewLoading(true)
+                              try {
+                                const prevText = i > 0 ? currentStory.lines!.slice(Math.max(0, i - 2), i).map((l: any) => l.text).join(' ') : undefined
+                                const nextText = i < currentStory.lines!.length - 1 ? currentStory.lines![i + 1].text : undefined
+                                const resp = await fetch(`${BASE_URL}/api/preview-line`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    text: line.text,
+                                    voiceId,
+                                    voiceSettings: {
+                                      stability: settings.stability ?? 0.5,
+                                      style: settings.style ?? 1.0,
+                                      similarity_boost: settings.similarity_boost ?? 0.75,
+                                      use_speaker_boost: settings.use_speaker_boost ?? false,
+                                    },
+                                    previous_text: prevText,
+                                    next_text: nextText,
+                                  }),
+                                })
+                                if (resp.ok) {
+                                  const blob = await resp.blob()
+                                  const url = URL.createObjectURL(blob)
+                                  if (previewAudio) URL.revokeObjectURL(previewAudio)
+                                  setPreviewAudio(url)
+                                  if (previewAudioRef.current) {
+                                    previewAudioRef.current.src = url
+                                    previewAudioRef.current.play()
+                                  }
+                                }
+                              } catch (err) { console.error(err) }
+                              setPreviewLoading(false)
+                            }}
+                          >
+                            {previewLoading ? '⏳ Generiere...' : '▶ Vorhören'}
+                          </button>
+                          <audio ref={previewAudioRef} />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
 

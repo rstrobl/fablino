@@ -550,6 +550,42 @@ app.post('/api/generate/:id/confirm', (req, res) => {
   })();
 });
 
+// Preview a single line with custom voice/parameters
+app.post('/api/preview-line', async (req, res) => {
+  const { text, voiceId, voiceSettings } = req.body;
+  if (!text || !voiceId) return res.status(400).json({ error: 'text and voiceId required' });
+  try {
+    const settings = {
+      stability: voiceSettings?.stability ?? 0.5,
+      similarity_boost: voiceSettings?.similarity_boost ?? 0.75,
+      style: voiceSettings?.style ?? 1.0,
+      use_speaker_boost: voiceSettings?.use_speaker_boost ?? false,
+    };
+    const tmpPath = path.join(AUDIO_DIR, `preview_${Date.now()}.mp3`);
+    await generateTTS(text, voiceId, tmpPath, settings, {
+      previous_text: req.body.previous_text,
+      next_text: req.body.next_text,
+    });
+    res.sendFile(tmpPath, () => { try { fs.unlinkSync(tmpPath); } catch(e) {} });
+  } catch (err) {
+    console.error('Preview error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all available voices for the UI
+app.get('/api/voices', (req, res) => {
+  const allVoices = {};
+  for (const [category, voices] of Object.entries(VOICE_POOLS)) {
+    for (const voiceId of voices) {
+      // Find voice name from comments in code — return ID and category
+      if (!allVoices[voiceId]) allVoices[voiceId] = { id: voiceId, categories: [] };
+      allVoices[voiceId].categories.push(category);
+    }
+  }
+  res.json({ voices: Object.values(allVoices), pools: VOICE_POOLS });
+});
+
 app.get('/api/status/:id', (req, res) => {
   const job = jobs[req.params.id];
   if (!job) return res.status(404).json({ status: 'not_found' });
