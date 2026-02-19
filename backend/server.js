@@ -25,40 +25,45 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
 // ElevenLabs voice pool — categorized by role type
+// Each voice has a character description to help with matching
 const EL_VOICES = {
-  narrator: 'GoXyzBapJk3AoCJoMQl9',  // Daniel
+  narrator: 'GoXyzBapJk3AoCJoMQl9',  // Daniel — neutral, professionell
   child_m: [
-    'Ewvy14akxdhONg4fmNry',  // Finnegan - children's story voice (primary child male)
-    'LRpNiUBlcqgIsKUzcrlN',  // Georg - Funny and Emotional
+    'Ewvy14akxdhONg4fmNry',  // Finnegan — neugierig, aufgeweckt, mutig
+    'LRpNiUBlcqgIsKUzcrlN',  // Georg — lustig, emotional, albern
+    '8RjxcQ6tY1F2YZiIvWqY',  // Jasper — schüchtern, zurückhaltend, leise
   ],
   child_f: [
-    'xOKkuQfZt5N7XfbFdn9W',  // Lucy Fennek - warm children's narrator
-    'VD1if7jDVYtAKs4P0FIY',  // Milly Maple - bright, cheerful
+    '9sjP3TfMlzEjAa6uXh3A',  // Kelly — fröhlich, lebhaft
+    'xOKkuQfZt5N7XfbFdn9W',  // Lucy Fennek — warm, einfühlsam
+    'VD1if7jDVYtAKs4P0FIY',  // Milly Maple — hell, fröhlich, quirlig
   ],
   adult_m: [
-    '6n4YmXLiuP4C7cZqYOJl',  // Finn - Fresh and Conversational (professional)
-    'MbbPUteESkJWr4IAaW35',  // Felix - Direct and Clear (high_quality)
-    'IWm8DnJ4NGjFI7QAM5lM',  // Stephan - Warm and Friendly (professional)
-    'MJ0RnG71ty4LH3dvNfSd',  // Leon - Soothing and Grounded (high_quality)
-    'h1IssowVS2h4nL5ZbkkK',  // The Fox - Strict & Dominating (high_quality)
-    'eWmswbut7I70CIuRsFwP',  // Frankie Slim - Slick & Mischievous (high_quality)
-    '3kaQumuvT4NtcZsw8RVS',  // Commander Brake - Strict & Dominant (high_quality)
-    '8tJgFGd1nr7H5KLTvjjt',  // Captain Comedy - Vibrant and Wonderful (high_quality)
-    'UFO0Yv86wqRxAt1DmXUu',  // Sarcastic and Sultry Villain (high_quality)
-    'U0W3edavfdI8ibPeeteQ',  // Freddie Flip - Sweet and Friendly (high_quality)
-    'f2yUVfK5jdm78zlpcZ8C',  // Albert - Cheerful, Playful and Fun (high_quality)
+    'tqsaTjde7edL1GHtFchL',  // Ben Smile — warmherzig, vertrauenswürdig, Vater-Typ
+    'dFA3XRddYScy6ylAYTIO',  // Helmut — sanft, märchenhaft, liebevoll
+    'wloRHjPaKZv3ucH7TQOT',  // Jorin — ruhig, freundlich
+    '8tJgFGd1nr7H5KLTvjjt',  // Captain Comedy — durchgeknallt, verrückt, Spaßvogel
+    '6n4YmXLiuP4C7cZqYOJl',  // Finn — locker, modern, cool
+    'eWmswbut7I70CIuRsFwP',  // Frankie Slim — gerissen, verschmitzt, Trickster
+    'UFO0Yv86wqRxAt1DmXUu',  // Sarcastic Villain — sarkastisch, durchtrieben, Bösewicht
+    'h1IssowVS2h4nL5ZbkkK',  // The Fox — streng, dominant, Bösewicht
   ],
   adult_f: [
-    'cgSgspJ2msm6clMCkdW9',
-    'pFZP5JQG7iQjIQuC4Bku',
-    'FGY2WhTYpPnrIDTdsKH5',
-    'hpp4J3VqNfWAUOO0d1Us',
+    'Qd7hDo3tdwmASCs5vLEB',  // Elli — warm, mütterlich, liebevoll
+    'VD1if7jDVYtAKs4P0FIY',  // Milly Maple — hell, fröhlich
+    'XNYSrtboH10kulPETnVC',  // Celestine Hohenstein — arrogant, hochnäsig, Königin/Stiefmutter
+  ],
+  elder_f: [
+    'VNHNa6nN6yJdVF3YRyuF',  // Hilde — liebevolle Oma, warmherzig
+  ],
+  elder_m: [
+    // TODO: Opa-Stimme finden
   ],
   creature: [
-    'LRpNiUBlcqgIsKUzcrlN',  // Georg - Funny and Emotional (great for creatures)
-    'eWmswbut7I70CIuRsFwP',  // Frankie Slim - Slick & Mischievous
-    'UFO0Yv86wqRxAt1DmXUu',  // Sarcastic and Sultry Villain
-    '8tJgFGd1nr7H5KLTvjjt',  // Captain Comedy - Vibrant
+    'LRpNiUBlcqgIsKUzcrlN',  // Georg — lustig, emotional, freundliche Drachen/Trolle
+    'eWmswbut7I70CIuRsFwP',  // Frankie Slim — verschmitzt, schlaue Füchse/Kobolde
+    'UFO0Yv86wqRxAt1DmXUu',  // Sarcastic Villain — durchtrieben, böse Zauberer/Drachen
+    '8tJgFGd1nr7H5KLTvjjt',  // Captain Comedy — verrückt, chaotische Kreaturen
   ],
 };
 
@@ -79,10 +84,66 @@ const MOOD_VOICE_SETTINGS = {
   gutenacht: { stability: 0.55, similarity_boost: 0.7, style: 0.2, use_speaker_boost: true },
 };
 
-const FIXED_VOICES = {
-  'Charly': 'RMDEjuHXo5bcQLkbu6MB',
-  'Kimo': 'Ewvy14akxdhONg4fmNry',
+const FIXED_VOICES = {};
+
+// Trait-to-voice mapping: maps personality traits to preferred voice IDs per category
+const TRAIT_VOICE_MAP = {
+  child_m: {
+    'mutig,neugierig,aufgeweckt':   'Ewvy14akxdhONg4fmNry',  // Finnegan
+    'lustig,albern,fröhlich':       'LRpNiUBlcqgIsKUzcrlN',  // Georg
+    'schüchtern,ruhig,leise':       '8RjxcQ6tY1F2YZiIvWqY',  // Jasper
+  },
+  child_f: {
+    'fröhlich,lebhaft,mutig':       '9sjP3TfMlzEjAa6uXh3A',  // Kelly
+    'warm,liebevoll,einfühlsam':    'xOKkuQfZt5N7XfbFdn9W',  // Lucy Fennek
+    'fröhlich,quirlig,lustig':      'VD1if7jDVYtAKs4P0FIY',  // Milly Maple
+  },
+  adult_m: {
+    'warm,liebevoll,vertrauenswürdig': 'tqsaTjde7edL1GHtFchL',  // Ben Smile
+    'sanft,märchenhaft,liebevoll':     'dFA3XRddYScy6ylAYTIO',  // Helmut
+    'ruhig,freundlich':                'wloRHjPaKZv3ucH7TQOT',  // Jorin
+    'verrückt,lustig,albern':          '8tJgFGd1nr7H5KLTvjjt',  // Captain Comedy
+    'cool,locker,modern':              '6n4YmXLiuP4C7cZqYOJl',  // Finn
+    'verschmitzt,gerissen':            'eWmswbut7I70CIuRsFwP',  // Frankie Slim
+    'sarkastisch,durchtrieben':        'UFO0Yv86wqRxAt1DmXUu',  // Sarcastic Villain
+    'streng,dominant':                 'h1IssowVS2h4nL5ZbkkK',  // The Fox
+  },
+  adult_f: {
+    'warm,liebevoll,mütterlich':       'Qd7hDo3tdwmASCs5vLEB',  // Elli
+    'fröhlich,hell':                   'VD1if7jDVYtAKs4P0FIY',  // Milly Maple
+    'arrogant,hochnäsig,streng':       'XNYSrtboH10kulPETnVC',  // Celestine Hohenstein
+  },
+  elder_f: {
+    'warm,liebevoll':                  'VNHNa6nN6yJdVF3YRyuF',  // Hilde
+  },
+  elder_m: {},
+  creature: {
+    'lustig,freundlich,emotional':     'LRpNiUBlcqgIsKUzcrlN',  // Georg
+    'verschmitzt,gerissen,schlau':     'eWmswbut7I70CIuRsFwP',  // Frankie Slim
+    'durchtrieben,sarkastisch,böse':   'UFO0Yv86wqRxAt1DmXUu',  // Sarcastic Villain
+    'verrückt,chaotisch,lustig':       '8tJgFGd1nr7H5KLTvjjt',  // Captain Comedy
+  },
 };
+
+// Find best voice match based on character traits
+function matchVoiceByTraits(gender, traits, usedVoices) {
+  const traitMap = TRAIT_VOICE_MAP[gender];
+  if (!traitMap || !traits?.length) return null;
+
+  let bestMatch = null;
+  let bestScore = 0;
+
+  for (const [traitStr, voiceId] of Object.entries(traitMap)) {
+    if (usedVoices.has(voiceId)) continue; // avoid duplicates
+    const voiceTraits = traitStr.split(',');
+    const score = traits.filter(t => voiceTraits.some(vt => vt.includes(t) || t.includes(vt))).length;
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = voiceId;
+    }
+  }
+  return bestMatch;
+}
 
 // --- DB helpers ---
 
@@ -220,28 +281,46 @@ async function combineAudio(segments, outputPath) {
 
 function assignVoices(characters) {
   const voiceMap = {};
-  let childMIdx = 0, childFIdx = 0, adultMIdx = 0, adultFIdx = 0, creatureIdx = 0;
+  const usedVoices = new Set();
+  const counters = { child_m: 0, child_f: 0, adult_m: 0, adult_f: 0, elder_m: 0, elder_f: 0, creature: 0 };
+
   for (const char of characters) {
     if (FIXED_VOICES[char.name]) {
       voiceMap[char.name] = FIXED_VOICES[char.name];
+      usedVoices.add(FIXED_VOICES[char.name]);
     } else if (char.name === 'Erzähler') {
       voiceMap[char.name] = EL_VOICES.narrator;
-    } else if (char.gender === 'child_m') {
-      voiceMap[char.name] = EL_VOICES.child_m[childMIdx % EL_VOICES.child_m.length];
-      childMIdx++;
-    } else if (char.gender === 'child_f') {
-      voiceMap[char.name] = EL_VOICES.child_f[childFIdx % EL_VOICES.child_f.length];
-      childFIdx++;
-    } else if (char.gender === 'adult_f') {
-      voiceMap[char.name] = EL_VOICES.adult_f[adultFIdx % EL_VOICES.adult_f.length];
-      adultFIdx++;
-    } else if (char.gender === 'creature') {
-      voiceMap[char.name] = EL_VOICES.creature[creatureIdx % EL_VOICES.creature.length];
-      creatureIdx++;
+      usedVoices.add(EL_VOICES.narrator);
     } else {
-      // default: adult_m (covers 'adult_m', 'male', and any unrecognized)
-      voiceMap[char.name] = EL_VOICES.adult_m[adultMIdx % EL_VOICES.adult_m.length];
-      adultMIdx++;
+      const gender = char.gender || 'adult_m';
+      // Try trait-based matching first
+      const traitMatch = matchVoiceByTraits(gender, char.traits, usedVoices);
+      if (traitMatch) {
+        voiceMap[char.name] = traitMatch;
+      } else {
+        // Fallback: sequential assignment from pool
+        const pool = EL_VOICES[gender];
+        if (pool?.length) {
+          // Find first unused voice in pool
+          let voice = null;
+          for (let i = 0; i < pool.length; i++) {
+            const idx = (counters[gender] + i) % pool.length;
+            if (!usedVoices.has(pool[idx])) {
+              voice = pool[idx];
+              counters[gender] = idx + 1;
+              break;
+            }
+          }
+          voiceMap[char.name] = voice || pool[counters[gender] % pool.length];
+        } else {
+          // Empty pool (e.g. elder_m) — fallback to adult equivalent
+          const fallback = gender === 'elder_m' ? 'adult_m' : gender === 'elder_f' ? 'adult_f' : 'adult_m';
+          const fbPool = EL_VOICES[fallback];
+          voiceMap[char.name] = fbPool[counters[fallback] % fbPool.length];
+          counters[fallback]++;
+        }
+      }
+      usedVoices.add(voiceMap[char.name]);
     }
   }
   return voiceMap;
@@ -295,7 +374,7 @@ ${characters?.sideCharacters?.length ? `Folgende Personen sollen auch vorkommen:
 Antworte NUR mit validem JSON (kein Markdown, kein \`\`\`):
 {
   "title": "Kreativer Titel",
-  "characters": [{ "name": "Name", "gender": "child_m|child_f|adult_m|adult_f|creature" }],
+  "characters": [{ "name": "Name", "gender": "child_m|child_f|adult_m|adult_f|elder_m|elder_f|creature", "traits": ["trait1", "trait2"] }],
   "scenes": [{ "lines": [{ "speaker": "Name", "text": "Dialog" }] }]
 }
 
@@ -304,9 +383,15 @@ WICHTIG zu gender:
 - child_f = weibliches Kind/Mädchen
 - adult_m = erwachsener Mann (Papa, König, Bäcker, etc.)
 - adult_f = erwachsene Frau (Mama, Hexe, Lehrerin, etc.)
+- elder_m = älterer Mann (Opa, alter Zauberer, weiser Mann)
+- elder_f = ältere Frau (Oma, weise Frau, Hexe)
 - creature = Fabelwesen, Tiere, Drachen, etc.
 - Der Erzähler hat IMMER gender "adult_m" (wird automatisch zugewiesen)
-- KEINE SFX — lasse das "sfx" Feld komplett weg`;
+- KEINE SFX — lasse das "sfx" Feld komplett weg
+
+WICHTIG zu traits (1-3 pro Charakter):
+Wähle aus: mutig, neugierig, schüchtern, lustig, albern, fröhlich, warm, liebevoll, streng, arrogant, verschmitzt, gerissen, verrückt, cool, ruhig, dominant, sarkastisch, durchtrieben, sanft, märchenhaft
+Die traits beschreiben die PERSÖNLICHKEIT des Charakters und werden für die Stimmzuordnung genutzt.`;
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
