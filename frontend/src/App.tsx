@@ -15,6 +15,7 @@ interface Story {
   ageGroup: string
   createdAt: string
   audioUrl: string
+  lines?: { speaker: string; text: string }[]
 }
 
 interface ScriptLine {
@@ -109,6 +110,7 @@ function App() {
   const [loadingMessages, setLoadingMessages] = useState<string[]>(GENERIC_LOADING)
   const [error, setError] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
+  const [showScript, setShowScript] = useState(false)
   const [progress, setProgress] = useState(0)
   const [audioDuration, setAudioDuration] = useState(0)
   const [showTonieModal, setShowTonieModal] = useState(false)
@@ -651,7 +653,24 @@ function App() {
               </button>
             </div>
 
-            <button className="new-btn" onClick={() => { goHome(); setPrompt('') }}>
+            <div className="divider" />
+
+            <button className="action-btn script-toggle" onClick={() => setShowScript(!showScript)} style={{ width: '100%', justifyContent: 'center' }}>
+              <BookOpen size={16} /> {showScript ? 'Skript ausblenden' : 'Skript anzeigen'}
+            </button>
+
+            {showScript && currentStory.lines && (
+              <div className="script-view">
+                {currentStory.lines.map((line: any, i: number) => (
+                  <div key={i} className={`script-line ${line.speaker === 'Erzähler' ? 'narrator' : 'character'}`}>
+                    <span className="script-speaker">{line.speaker}:</span>
+                    <span className="script-text">{line.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button className="new-btn" onClick={() => { goHome(); setPrompt(''); setShowScript(false) }}>
               <Wand2 size={18} /> Neues Hörspiel
             </button>
           </main>

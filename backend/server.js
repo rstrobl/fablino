@@ -199,7 +199,7 @@ async function insertStory(story, script, voiceMap) {
 
 // --- TTS ---
 
-async function generateTTS(text, voiceId, outputPath, voiceSettings = { stability: 0.3, similarity_boost: 0.75 }, { previous_text, next_text } = {}) {
+async function generateTTS(text, voiceId, outputPath, voiceSettings = { stability: 0.1, similarity_boost: 0.75 }, { previous_text, next_text } = {}) {
   const body = { text, model_id: 'eleven_multilingual_v2', voice_settings: voiceSettings };
   if (previous_text) body.previous_text = previous_text;
   if (next_text) body.next_text = next_text;

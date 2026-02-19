@@ -952,3 +952,35 @@ textarea::placeholder { color: var(--text-muted); }
   .action-btn { padding: 0.5rem 0.85rem; font-size: 0.8rem; }
   .story-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; }
 }
+
+/* Script View */
+.script-view {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+.script-line {
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+.script-line.narrator {
+  font-style: italic;
+  opacity: 0.8;
+}
+.script-speaker {
+  font-weight: 700;
+  margin-right: 0.4rem;
+  color: #16A34A;
+}
+.script-line.narrator .script-speaker {
+  color: #888;
+}
+.script-text {
+  color: #eee;
+}
+.script-toggle {
+  gap: 0.5rem;
+}
