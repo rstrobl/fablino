@@ -9,7 +9,7 @@
 - **Max 6 Charaktere** (inkl. Erzähler)
 - **Klare Gut/Böse-Struktur**, aber Böse wird nie bestraft — sondern versteht es am Ende
 - **Happy End ist Pflicht**
-- **Länge:** 25–40 Zeilen, ~5–8 Minuten
+- **Länge:** 40–60 Zeilen, ~6–10 Minuten
 - **Erzähler führt stärker** — bindet Szenen zusammen
 - **Keine Ironie, kein Sarkasmus** — wird nicht verstanden
 
@@ -20,7 +20,7 @@
 - **Bis 6 Charaktere**, Nebenfiguren möglich
 - **Moral darf subtil sein** — nicht mit dem Holzhammer
 - **Offene Enden möglich** (Cliffhanger für Fortsetzungen!)
-- **Länge:** 40–60 Zeilen, ~8–12 Minuten
+- **Länge:** 60–80 Zeilen, ~10–15 Minuten
 - **Erzähler minimal** — Dialog trägt die Story
 - **Leichte Grusel-Elemente OK** (aber immer aufgelöst)
 
