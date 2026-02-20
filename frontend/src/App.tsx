@@ -139,6 +139,35 @@ function App() {
 
   const navigateFromUrl = useCallback((storiesList?: Story[]) => {
     const list = storiesList || stories
+
+    // Handle /preview/:jobId URLs
+    const previewMatch = window.location.pathname.match(/\/preview\/([a-f0-9-]+)/)
+    if (previewMatch) {
+      const jobId = previewMatch[1]
+      fetch(`${BASE_URL}/api/status/${jobId}`)
+        .then(r => r.ok ? r.json() : { status: 'not_found' })
+        .then(job => {
+          if (job.status === 'preview') {
+            setPreviewScript(job.script as ScriptPreview)
+            setPreviewJobId(jobId)
+            setView('preview')
+          } else if (job.status === 'done') {
+            const story = job.story as Story
+            window.history.replaceState({}, '', `/story/${story.id}`)
+            setCurrentStory(story)
+            setStories(prev => prev.find(s => s.id === story.id) ? prev : [story, ...prev])
+            setView('player')
+            setIsPlaying(false)
+            setProgress(0)
+          } else {
+            setError(job.status === 'error' ? ((job.error as string) || 'Fehler bei der Generierung') : 'Vorschau nicht gefunden')
+            setView('home')
+          }
+        })
+        .catch(() => { setError('Vorschau konnte nicht geladen werden'); setView('home') })
+      return
+    }
+
     const pathMatch = window.location.pathname.match(/\/story\/([a-f0-9-]+)/)
     const storyId = pathMatch ? pathMatch[1] : new URLSearchParams(window.location.search).get('story')
     if (storyId) {
@@ -324,11 +353,13 @@ function App() {
 
       const job = await pollJob(previewJobId)
       if (job.status === 'done') {
-        setCurrentStory(job.story as Story)
-        setStories(prev => [job.story as Story, ...prev])
+        const story = job.story as Story
+        setCurrentStory(story)
+        setStories(prev => [story, ...prev])
         setView('player')
         setIsPlaying(false)
         setProgress(0)
+        window.history.pushState({}, '', `/story/${story.id}`)
       } else if (job.status === 'error') {
         throw new Error((job.error as string) || 'Audio-Generierung fehlgeschlagen')
       }
