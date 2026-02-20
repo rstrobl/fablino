@@ -1,10 +1,70 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   Headphones, Sparkles, Wand2, BookOpen, Play, Pause, Download,
-  Share2, ChevronLeft, Heart, Clock, Music, Package, Link2, Check,
+  Share2, ChevronLeft, Heart, Clock, Music, Link2, Check,
+  // @ts-ignore
   Shuffle, AlertCircle
 } from 'lucide-react'
 import './App.css'
+
+const CHAR_EMOJI: Record<string, string> = {
+  child_m: '👦',
+  child_f: '👧',
+  adult_m: '👨',
+  adult_f: '👩',
+  elder_m: '👴',
+  elder_f: '👵',
+  creature: '🐾',
+  male: '👨',
+  female: '👩',
+  männlich: '👨',
+  weiblich: '👩',
+}
+
+function charEmoji(name: string, gender: string, _index: number): string {
+  if (name.toLowerCase() === 'erzähler') return '📖'
+  if (gender === 'creature') {
+    const n = name.toLowerCase()
+    if (n.includes('drach') || n.includes('dragon')) return '🐉'
+    if (n.includes('fuchs') || n.includes('fox')) return '🦊'
+    if (n.includes('bär') || n.includes('bear')) return '🐻'
+    if (n.includes('wolf')) return '🐺'
+    if (n.includes('löwe') || n.includes('lion')) return '🦁'
+    if (n.includes('frosch') || n.includes('frog')) return '🐸'
+    if (n.includes('einhorn') || n.includes('unicorn')) return '🦄'
+    if (n.includes('katze') || n.includes('cat')) return '🐱'
+    if (n.includes('hund') || n.includes('dog')) return '🐶'
+    if (n.includes('vogel') || n.includes('bird')) return '🐦'
+    if (n.includes('eule') || n.includes('owl')) return '🦉'
+    if (n.includes('hase') || n.includes('rabbit')) return '🐰'
+    if (n.includes('maus') || n.includes('mouse')) return '🐭'
+    if (n.includes('igel')) return '🦔'
+    if (n.includes('schlange') || n.includes('snake')) return '🐍'
+    if (n.includes('fisch') || n.includes('fish')) return '🐟'
+    return '🐉'
+  }
+  return CHAR_EMOJI[gender] || '✨'
+}
+
+// Convert emoji to Twemoji CDN URL
+function emojiToTwemoji(emoji: string): string {
+  const codepoints = [...emoji]
+    .map(c => c.codePointAt(0)!.toString(16))
+    .filter(cp => cp !== 'fe0f') // remove variation selector
+    .join('-')
+  return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg`
+}
+
+function TwemojiIcon({ emoji, size = 20 }: { emoji: string; size?: number }) {
+  return (
+    <img
+      src={emojiToTwemoji(emoji)}
+      alt={emoji}
+      style={{ width: size, height: size, verticalAlign: 'middle', display: 'inline-block' }}
+      draggable={false}
+    />
+  )
+}
 
 interface Story {
   id: string
@@ -39,6 +99,7 @@ interface SideCharacter {
   name: string
 }
 
+// @ts-ignore: kept for full app mode
 const SIDE_ROLES = [
   { key: 'mama', label: '👩 Mama', icon: '👩' },
   { key: 'papa', label: '👨 Papa', icon: '👨' },
@@ -62,7 +123,7 @@ const RANDOM_PROMPTS = [
   'Ein Wettrennen durch die Wolken',
 ]
 
-type View = 'home' | 'loading' | 'preview' | 'player'
+type View = 'home' | 'loading' | 'preview' | 'player' | 'waitlist'
 
 const GENERIC_LOADING = [
   'Die Charaktere werden erfunden...',
@@ -111,25 +172,32 @@ function App() {
   const [loadingMessages, setLoadingMessages] = useState<string[]>(GENERIC_LOADING)
   const [error, setError] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
-  const [showScript, setShowScript] = useState(false)
-  const [editingLine, setEditingLine] = useState<number | null>(null)
-  const [previewAudio, setPreviewAudio] = useState<string | null>(null)
-  const [previewLoading, setPreviewLoading] = useState(false)
-  const [lineSettings, setLineSettings] = useState<Record<number, { voiceId?: string; stability?: number; style?: number; similarity_boost?: number; use_speaker_boost?: boolean }>>({})
-  const [voiceDirectory, setVoiceDirectory] = useState<Record<string, { name: string; desc: string; category: string }>>({})
-  const previewAudioRef = useRef<HTMLAudioElement | null>(null)
-
-  useEffect(() => {
-    fetch(`${BASE_URL}/api/voices`).then(r => r.json()).then(setVoiceDirectory).catch(() => {})
-  }, [])
   const [progress, setProgress] = useState(0)
   const [audioDuration, setAudioDuration] = useState(0)
-  const [showTonieModal, setShowTonieModal] = useState(false)
   const [copied, setCopied] = useState(false)
   const [storyDurations, setStoryDurations] = useState<Record<string, number>>({})
   const [previewScript, setPreviewScript] = useState<ScriptPreview | null>(null)
   const [previewJobId, setPreviewJobId] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const [waitlistEmail, setWaitlistEmail] = useState('')
+  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false)
+  const [waitlistMsg, setWaitlistMsg] = useState('')
+  const [waitlistLoading, setWaitlistLoading] = useState(false)
+  const [reservedStoryId, setReservedStoryId] = useState<string | null>(null)
+  const [waitlistChecked, setWaitlistChecked] = useState<string | null>(null)
+
+  // Check waitlist registration for stories without audio
+  useEffect(() => {
+    if (!currentStory || currentStory.audioUrl || waitlistSubmitted) return;
+    if (waitlistChecked === currentStory.id) return;
+    setWaitlistChecked(currentStory.id);
+    fetch(`/api/waitlist/${currentStory.id}`).then(r => r.json()).then(d => {
+      if (d.registered) {
+        setWaitlistSubmitted(true);
+        setWaitlistMsg('Du bist bereits vorgemerkt! Wir melden uns, sobald dein Hörspiel bereit ist.');
+      }
+    }).catch(() => {});
+  }, [currentStory, waitlistSubmitted, waitlistChecked])
   const audioRef = useRef<HTMLAudioElement>(null)
 
   const WAVE_COUNT = 40
@@ -140,6 +208,9 @@ function App() {
 
   const navigateFromUrl = useCallback((storiesList?: Story[]) => {
     const list = storiesList || stories
+
+    // Don't interfere with loading
+    if (view === 'loading') return
 
     // Handle /preview/:jobId URLs
     const previewMatch = window.location.pathname.match(/\/preview\/([a-f0-9-]+)/)
@@ -197,7 +268,8 @@ function App() {
         .catch(() => { setView('home'); setCurrentStory(null) })
       return
     }
-    setView('home')
+    // Only set home if we're not already in a user-initiated view
+    setView(prev => (prev === 'loading' || prev === 'preview') ? prev : 'home')
     setCurrentStory(null)
   }, [stories])
 
@@ -212,7 +284,8 @@ function App() {
     const onPopState = () => navigateFromUrl()
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
-  }, [navigateFromUrl])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     stories.forEach(s => {
@@ -226,7 +299,8 @@ function App() {
         }
       }
     })
-  }, [stories, storyDurations])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stories])
 
   useEffect(() => {
     if (view !== 'loading') return
@@ -234,14 +308,17 @@ function App() {
     return () => clearInterval(iv)
   }, [view, loadingMessages])
 
+  // @ts-ignore: kept for full app mode
   const addSideCharacter = () => {
     setSideCharacters(prev => [...prev, { role: 'mama', name: '' }])
   }
 
+  // @ts-ignore: kept for full app mode
   const removeSideCharacter = (index: number) => {
     setSideCharacters(prev => prev.filter((_, i) => i !== index))
   }
 
+  // @ts-ignore: kept for full app mode
   const updateSideCharacter = (index: number, field: 'role' | 'name', value: string) => {
     setSideCharacters(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c))
   }
@@ -261,11 +338,43 @@ function App() {
     }
   }
 
+  // @ts-ignore: kept for full app mode
   const randomPrompt = () => {
     const p = RANDOM_PROMPTS[Math.floor(Math.random() * RANDOM_PROMPTS.length)]
     setPrompt(p)
   }
 
+  const submitWaitlist = async () => {
+    if (!waitlistEmail.includes('@')) return
+    setWaitlistLoading(true)
+    const sid = reservedStoryId || currentStory?.id || null
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: waitlistEmail,
+          heroName: heroName.trim() || currentStory?.title || undefined,
+          heroAge: heroAge.trim() || undefined,
+          prompt: prompt.trim() || currentStory?.prompt || undefined,
+          storyId: sid
+        })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setWaitlistSubmitted(true)
+        setWaitlistMsg(data.message)
+      } else {
+        setError(data.error || 'Fehler')
+      }
+    } catch {
+      setError('Verbindungsfehler. Bitte versuche es später noch mal.')
+    } finally {
+      setWaitlistLoading(false)
+    }
+  }
+
+  // @ts-ignore: kept for when waitlist mode is disabled
   const generate = async () => {
     if (!heroName.trim()) return
     const finalPrompt = prompt.trim() || RANDOM_PROMPTS[Math.floor(Math.random() * RANDOM_PROMPTS.length)]
@@ -401,30 +510,10 @@ function App() {
     }
   }
 
-  const shareWhatsApp = (story: Story) => {
-    const url = storyUrl(story.id)
-    const text = encodeURIComponent(`Hör mal! "${story.title}" — ein magisches Hörspiel von Fablino!\n${url}`)
-    window.open(`https://wa.me/?text=${text}`, '_blank')
-  }
-
-  const shareTelegram = (story: Story) => {
-    const url = storyUrl(story.id)
-    const text = encodeURIComponent(`"${story.title}" — Fablino!`)
-    window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${text}`, '_blank')
-  }
-
   const copyLink = (story: Story) => {
     navigator.clipboard.writeText(storyUrl(story.id))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }
-
-  const downloadTonie = (story: Story) => {
-    const a = document.createElement('a')
-    a.href = story.audioUrl
-    a.download = `${story.title}.mp3`
-    a.click()
-    setShowTonieModal(true)
   }
 
   const progressPct = audioDuration > 0 ? progress / audioDuration : 0
@@ -435,7 +524,7 @@ function App() {
         <div className="header-logo">
           <img src="/logo.png" alt="Fablino" className="logo" />
         </div>
-        <p className="tagline">Personalisierte KI-Hörspiele für kleine Ohren</p>
+{/* tagline removed — hero section covers it */}
       </header>
 
       {/* ===== HOME ===== */}
@@ -445,18 +534,18 @@ function App() {
             <h2>
               <span className="highlight">Dein Kind wird zum Helden</span>
             </h2>
-            <p>Personalisierte KI-Hörspiele, in denen dein Kind die Hauptrolle spielt — in wenigen Minuten gezaubert.</p>
+            <p>Einzigartige Hörspiele, in denen dein Kind die Hauptrolle spielt — mit echten Stimmen, individuell für dein Kind.</p>
           </div>
 
           <div className="creator">
             <div className="creator-header">
               <Wand2 size={22} />
-              <h2>Neues Hörspiel erstellen</h2>
+              <h2>Dein Hörspiel</h2>
             </div>
 
             {/* Hero character */}
             <div className="character-section">
-              <label>👤 Dein Held</label>
+              <label>Dein Held</label>
               <div className="hero-fields">
                 <input
                   type="text"
@@ -475,48 +564,37 @@ function App() {
               </div>
             </div>
 
-            {/* Side characters */}
-            <div className="character-section">
-              {sideCharacters.length > 0 && (
-                <div className="side-characters">
-                  {sideCharacters.map((sc, i) => (
-                    <div key={i} className="side-char-row">
-                      <select value={sc.role} onChange={e => updateSideCharacter(i, 'role', e.target.value)}>
-                        {SIDE_ROLES.map(r => (
-                          <option key={r.key} value={r.key}>{r.label}</option>
-                        ))}
-                      </select>
-                      <input
-                        type="text"
-                        value={sc.name}
-                        onChange={e => updateSideCharacter(i, 'name', e.target.value)}
-                        placeholder="Name"
-                      />
-                      <button className="remove-char-btn" onClick={() => removeSideCharacter(i)}>✕</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <button className="add-char-btn" onClick={addSideCharacter}>
-                + Noch jemand hinzufügen
-              </button>
-            </div>
+            {/* About the child */}
+            <label>Erzähl uns von deinem Kind</label>
+            <textarea
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              placeholder="Liebt Dinosaurier und Ritter, beste Freundin heißt Mila, und Hund Bello soll auch vorkommen..."
+              rows={3}
+            />
 
-            {/* Story prompt */}
-            <label>Was soll passieren?</label>
-            <div className="prompt-section">
-              <textarea
-                value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                placeholder="Ein mutiger Hase, der einen Schatz im verzauberten Wald sucht..."
-                rows={3}
-              />
-              <button className="random-btn" onClick={randomPrompt} title="Überrasch mich!">
-                <Shuffle size={16} /> Überrasch mich!
-              </button>
-            </div>
-
-            <button className="generate-btn" onClick={generate} disabled={!heroName.trim()}>
+            <button
+              className="generate-btn"
+              onClick={async () => {
+                if (!heroName.trim() || !heroAge.trim()) return;
+                setWaitlistSubmitted(false); setWaitlistMsg(''); setError('');
+                try {
+                  const res = await fetch('/api/reserve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ heroName: heroName.trim(), heroAge: heroAge.trim(), prompt: prompt.trim() || undefined })
+                  });
+                  const data = await res.json();
+                  if (data.storyId) {
+                    setReservedStoryId(data.storyId);
+                    setCurrentStory({ id: data.storyId, title: `${heroName.trim()}s Hörspiel`, characters: [], voiceMap: {}, prompt: prompt.trim(), summary: JSON.stringify({ heroName: heroName.trim(), heroAge: heroAge.trim(), prompt: prompt.trim() || null }), ageGroup: (parseInt(heroAge) || 5) <= 5 ? '3-5' : '6-9', createdAt: new Date().toISOString(), audioUrl: '' } as Story);
+                    window.history.pushState({}, '', `/story/${data.storyId}`);
+                    setView('player');
+                  }
+                } catch { setError('Verbindungsfehler. Bitte versuche es später noch mal.'); }
+              }}
+              disabled={!heroName.trim() || !heroAge.trim()}
+            >
               <Sparkles size={20} /> Hörspiel zaubern!
             </button>
 
@@ -543,14 +621,6 @@ function App() {
                       <div className="story-meta-row">
                         {dur && <span className="story-meta"><Clock size={12} /> {fmt(dur)}</span>}
                       </div>
-                      <div className="card-actions">
-                        <button onClick={e => { e.stopPropagation(); shareWhatsApp(s) }} title="WhatsApp">
-                          <Share2 size={14} /> Teilen
-                        </button>
-                        <a href={s.audioUrl} download={`${s.title}.mp3`} onClick={e => e.stopPropagation()} title="Download">
-                          <Download size={14} /> MP3
-                        </a>
-                      </div>
                     </div>
                   )
                 })}
@@ -559,7 +629,7 @@ function App() {
           )}
 
           <div className="footer">
-            Fablino — Personalisierte KI-Hörspiele mit <Heart size={14} /> gemacht
+            Fablino — Magische Hörspiele mit <Heart size={14} /> gemacht
           </div>
         </main>
       )}
@@ -600,9 +670,9 @@ function App() {
             </div>
 
             <div className="preview-characters">
-              {previewScript.characters.map(c => (
+              {previewScript.characters.map((c, i) => (
                 <span key={c.name} className="char-badge">
-                  {c.gender === 'female' || c.gender === 'weiblich' ? '👩' : c.gender === 'creature' ? '🐾' : '👨'} {c.name}
+                  <TwemojiIcon emoji={charEmoji(c.name, c.gender, i)} size={18} /> {c.name}
                 </span>
               ))}
             </div>
@@ -633,15 +703,89 @@ function App() {
         )
       })()}
 
+      {/* waitlist view removed — integrated into player */}
+
       {/* ===== PLAYER ===== */}
       {view === 'player' && currentStory && (() => {
+        const hasAudio = !!currentStory.audioUrl;
+
+        // No audio = waitlist mode
+        if (!hasAudio) {
+          let meta: { heroName?: string; heroAge?: string; prompt?: string } = {};
+          try {
+            const parsed = currentStory.summary ? JSON.parse(currentStory.summary) : {};
+            if (parsed && typeof parsed === 'object' && parsed.heroName) meta = parsed;
+          } catch { /* summary is not JSON meta, ignore */ }
+          return (
+          <main className="player">
+            <div className="waitlist-header">
+              <Sparkles size={28} />
+              <h2>Fast geschafft!</h2>
+            </div>
+
+            <div className="waitlist-summary-card">
+              <div className="waitlist-summary-title">Dein Hörspiel-Wunsch</div>
+              <div className="waitlist-summary-hero"><TwemojiIcon emoji="🦸" size={22} /> {meta.heroName || currentStory.title}{meta.heroAge ? `, ${meta.heroAge} Jahre` : ''}</div>
+              {meta.prompt && <div className="waitlist-summary-prompt">„{meta.prompt}"</div>}
+            </div>
+
+            {!waitlistSubmitted ? (
+              <div className="waitlist-inline">
+                <p className="waitlist-page-desc">
+                  Gib uns deine Email und wir schicken dir dein Hörspiel zu, sobald es fertig gezaubert ist.
+                </p>
+                <label className="waitlist-label">Deine Email-Adresse</label>
+                <input
+                  type="email"
+                  value={waitlistEmail}
+                  onChange={e => setWaitlistEmail(e.target.value)}
+                  placeholder="name@beispiel.de"
+                  className="waitlist-email-input"
+                  autoFocus
+                  onKeyDown={e => { if (e.key === 'Enter' && waitlistEmail.includes('@')) submitWaitlist() }}
+                />
+                <button
+                  className="generate-btn"
+                  onClick={submitWaitlist}
+                  disabled={!waitlistEmail.includes('@') || waitlistLoading}
+                >
+                  <Sparkles size={20} /> {waitlistLoading ? 'Wird gesendet...' : 'Benachrichtige mich!'}
+                </button>
+                {error && <p className="error"><AlertCircle size={16} /> {error}</p>}
+              </div>
+            ) : (
+              <div className="waitlist-success">
+                <TwemojiIcon emoji="🎉" size={40} />
+                <h3>Du bist dabei!</h3>
+                <p>{waitlistMsg}</p>
+              </div>
+            )}
+
+            {stories.length > 0 && (
+              <div className="waitlist-stories-hint">
+                <p>In der Zwischenzeit — hör doch mal rein:</p>
+                <div className="story-grid">
+                  {stories.slice(0, 3).map(s => (
+                    <div key={s.id} className="story-card" onClick={() => playStory(s)}>
+                      <div className="story-icon-row"><Music size={20} /><Headphones size={20} /></div>
+                      <h3>{s.title}</h3>
+                      <p className="story-prompt">{s.summary || s.prompt}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          </main>
+        );}
+
         return (
           <main className="player">
             <h2>{currentStory.title}</h2>
             <p className="player-prompt">„{currentStory.summary || currentStory.prompt}"</p>
             <div className="characters">
-              {currentStory.characters.map(c => (
-                <span key={c.name} className="char-badge">{c.name}</span>
+              {currentStory.characters.map((c, i) => (
+                <span key={c.name} className="char-badge"><TwemojiIcon emoji={charEmoji(c.name, c.gender, i)} size={18} /> {c.name}</span>
               ))}
             </div>
 
@@ -676,175 +820,28 @@ function App() {
               <span>{fmt(audioDuration)}</span>
             </div>
 
-            <div className="action-row">
-              <button className="action-btn tonie" onClick={() => downloadTonie(currentStory)}>
-                <Package size={16} /> Für Toniebox
-              </button>
-            </div>
-
-            <div className="divider" />
-
-            <div className="action-row">
-              {typeof navigator.share === 'function' && (
-                <button className="action-btn share" onClick={() => shareNative(currentStory)}>
-                  <Share2 size={16} /> Teilen
+            <div className="player-actions">
+              {typeof navigator.share === 'function' ? (
+                <button className="action-btn-small" onClick={() => shareNative(currentStory)}>
+                  <Share2 size={14} /> Teilen
+                </button>
+              ) : (
+                <button className={`action-btn-small ${copied ? 'copied' : ''}`} onClick={() => copyLink(currentStory)}>
+                  {copied ? <><Check size={14} /> Kopiert!</> : <><Link2 size={14} /> Link kopieren</>}
                 </button>
               )}
-              <button className="action-btn wa" onClick={() => shareWhatsApp(currentStory)}>
-                WhatsApp
-              </button>
-              <button className="action-btn tg" onClick={() => shareTelegram(currentStory)}>
-                Telegram
-              </button>
-              <button className={`action-btn copy ${copied ? 'copied' : ''}`} onClick={() => copyLink(currentStory)}>
-                {copied ? <><Check size={16} /> Kopiert!</> : <><Link2 size={16} /> Link</>}
-              </button>
+              <a className="action-btn-small" href={currentStory.audioUrl} download={`${currentStory.title}.mp3`}>
+                <Download size={14} /> MP3
+              </a>
             </div>
 
-            <div className="divider" />
-
-            <button className="action-btn script-toggle" onClick={() => setShowScript(!showScript)} style={{ width: '100%', justifyContent: 'center' }}>
-              <BookOpen size={16} /> {showScript ? 'Skript ausblenden' : 'Skript anzeigen'}
-            </button>
-
-            {showScript && currentStory.lines && (
-              <div className="script-view">
-                {currentStory.lines.map((line: any, i: number) => {
-                  const isEditing = editingLine === i
-                  const settings = lineSettings[i] || {}
-                  const voiceId = settings.voiceId || (currentStory.voiceMap && currentStory.voiceMap[line.speaker]) || ''
-                  return (
-                    <div key={i}>
-                      <div
-                        className={`script-line ${line.speaker === 'Erzähler' ? 'narrator' : 'character'} ${isEditing ? 'editing' : ''}`}
-                        onClick={() => setEditingLine(isEditing ? null : i)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <span className="script-speaker">{line.speaker}:</span>
-                        <span className="script-text">{line.text}</span>
-                      </div>
-                      {isEditing && (
-                        <div className="line-editor">
-                          <div className="editor-row">
-                            <label>Stimme:</label>
-                            <select
-                              value={voiceId}
-                              onChange={e => setLineSettings(prev => ({ ...prev, [i]: { ...prev[i], voiceId: e.target.value } }))}
-                              className="voice-select"
-                            >
-                              {Object.entries(voiceDirectory).map(([id, v]) => (
-                                <option key={id} value={id}>
-                                  {v.name} — {v.desc} ({v.category})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="editor-row">
-                            <label>Stability: {(settings.stability ?? 0.5).toFixed(1)}</label>
-                            <input type="range" min="0" max="1" step="0.1"
-                              value={settings.stability ?? 0.5}
-                              onChange={e => setLineSettings(prev => ({ ...prev, [i]: { ...prev[i], stability: parseFloat(e.target.value) } }))}
-                            />
-                          </div>
-                          <div className="editor-row">
-                            <label>Style: {(settings.style ?? 1.0).toFixed(1)}</label>
-                            <input type="range" min="0" max="1" step="0.1"
-                              value={settings.style ?? 1.0}
-                              onChange={e => setLineSettings(prev => ({ ...prev, [i]: { ...prev[i], style: parseFloat(e.target.value) } }))}
-                            />
-                          </div>
-                          <div className="editor-row">
-                            <label>Similarity: {(settings.similarity_boost ?? 0.75).toFixed(2)}</label>
-                            <input type="range" min="0" max="1" step="0.05"
-                              value={settings.similarity_boost ?? 0.75}
-                              onChange={e => setLineSettings(prev => ({ ...prev, [i]: { ...prev[i], similarity_boost: parseFloat(e.target.value) } }))}
-                            />
-                          </div>
-                          <div className="editor-row">
-                            <label>
-                              <input type="checkbox"
-                                checked={settings.use_speaker_boost ?? false}
-                                onChange={e => setLineSettings(prev => ({ ...prev, [i]: { ...prev[i], use_speaker_boost: e.target.checked } }))}
-                              /> Speaker Boost
-                            </label>
-                          </div>
-                          <button
-                            className="preview-btn"
-                            disabled={previewLoading}
-                            onClick={async (e) => {
-                              e.stopPropagation()
-                              setPreviewLoading(true)
-                              try {
-                                const prevText = i > 0 ? currentStory.lines!.slice(Math.max(0, i - 2), i).map((l: any) => l.text).join(' ') : undefined
-                                const nextText = i < currentStory.lines!.length - 1 ? currentStory.lines![i + 1].text : undefined
-                                const resp = await fetch(`${BASE_URL}/api/preview-line`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    text: line.text,
-                                    voiceId,
-                                    voiceSettings: {
-                                      stability: settings.stability ?? 0.5,
-                                      style: settings.style ?? 1.0,
-                                      similarity_boost: settings.similarity_boost ?? 0.75,
-                                      use_speaker_boost: settings.use_speaker_boost ?? false,
-                                    },
-                                    previous_text: prevText,
-                                    next_text: nextText,
-                                  }),
-                                })
-                                if (resp.ok) {
-                                  const blob = await resp.blob()
-                                  const url = URL.createObjectURL(blob)
-                                  if (previewAudio) URL.revokeObjectURL(previewAudio)
-                                  setPreviewAudio(url)
-                                  if (previewAudioRef.current) {
-                                    previewAudioRef.current.src = url
-                                    previewAudioRef.current.play()
-                                  }
-                                }
-                              } catch (err) { console.error(err) }
-                              setPreviewLoading(false)
-                            }}
-                          >
-                            {previewLoading ? '⏳ Generiere...' : '▶ Vorhören'}
-                          </button>
-                          <audio ref={previewAudioRef} />
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-
-            <button className="new-btn" onClick={() => { goHome(); setPrompt(''); setShowScript(false) }}>
-              <Wand2 size={18} /> Neues Hörspiel
+            <button className="new-btn" onClick={() => { goHome(); setPrompt('') }}>
+              <Wand2 size={18} /> Neues Hörspiel zaubern
             </button>
           </main>
         )
       })()}
 
-      {/* ===== Toniebox Modal ===== */}
-      {showTonieModal && (
-        <div className="modal-overlay" onClick={() => setShowTonieModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <Package size={24} />
-              <h3>Toniebox-Anleitung</h3>
-            </div>
-            <ul className="modal-steps">
-              <li><span className="step-num">1</span> Öffne die <strong>mytonies App</strong> auf deinem Handy</li>
-              <li><span className="step-num">2</span> Wähle deinen <strong>Kreativ-Tonie</strong> aus</li>
-              <li><span className="step-num">3</span> Lade die heruntergeladene <strong>MP3-Datei</strong> hoch</li>
-              <li><span className="step-num">4</span> Stelle den Tonie auf die Box — <strong>fertig!</strong></li>
-            </ul>
-            <button className="modal-close" onClick={() => setShowTonieModal(false)}>
-              <Check size={18} /> Verstanden!
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

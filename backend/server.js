@@ -70,7 +70,7 @@ const EL_VOICES = {
 const sfxCache = new Map();
 
 // Default voice settings for all stories
-const DEFAULT_VOICE_SETTINGS = { stability: 0.25, similarity_boost: 0.85, style: 0.5, use_speaker_boost: true };
+const DEFAULT_VOICE_SETTINGS = { stability: 0.35, similarity_boost: 0.75, style: 0.6, use_speaker_boost: false };
 
 const FIXED_VOICES = {};
 
@@ -161,7 +161,7 @@ async function getStories() {
       ageGroup: row.age_group,
       featured: row.featured,
       createdAt: row.created_at,
-      audioUrl: `/api/audio/${row.id}`,
+      audioUrl: row.audio_path ? `/api/audio/${row.id}` : null,
     };
   });
 }
@@ -203,7 +203,7 @@ async function insertStory(story, script, voiceMap) {
 
 // --- TTS ---
 
-async function generateTTS(text, voiceId, outputPath, voiceSettings = { stability: 0.5, similarity_boost: 0.75, style: 1.0, use_speaker_boost: false }, { previous_text, next_text } = {}) {
+async function generateTTS(text, voiceId, outputPath, voiceSettings = { stability: 0.35, similarity_boost: 0.75, style: 0.6, use_speaker_boost: false }, { previous_text, next_text } = {}) {
   const body = { text, model_id: 'eleven_multilingual_v2', voice_settings: voiceSettings };
   if (previous_text) body.previous_text = previous_text;
   if (next_text) body.next_text = next_text;
@@ -221,23 +221,8 @@ async function generateTTS(text, voiceId, outputPath, voiceSettings = { stabilit
   const rawPath = outputPath.replace('.mp3', '_raw.mp3');
   fs.writeFileSync(rawPath, buffer);
   try {
-    // Step 1: Normalize volume
-    const normPath = outputPath.replace('.mp3', '_norm.mp3');
-    await execAsync(`ffmpeg -y -i "${rawPath}" -af "loudnorm=I=-16:TP=-1.5:LRA=11" -q:a 2 "${normPath}" 2>/dev/null`);
+    await execAsync(`ffmpeg -y -i "${rawPath}" -af "loudnorm=I=-16:TP=-1.5:LRA=11" -q:a 2 "${outputPath}" 2>/dev/null`);
     fs.unlinkSync(rawPath);
-    // Step 2: Trim trailing silence + apply fade-out to remove ElevenLabs artifacts
-    // silenceremove removes trailing silence below -35dB, then 150ms fade-out for clean ending
-    await execAsync(`ffmpeg -y -i "${normPath}" -af "silenceremove=stop_periods=1:stop_duration=0.15:stop_threshold=-35dB,afade=t=out:st=0:d=0.15:curve=log" -q:a 2 "${outputPath}" 2>/dev/null`);
-    // Fix fade-out start to actual end: re-probe and apply
-    const probeOut = await execAsync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${outputPath}"`);
-    const dur = parseFloat(probeOut.stdout.trim()) || 0;
-    if (dur > 0.3) {
-      const fadeStart = Math.max(0, dur - 0.15);
-      const fadedPath = outputPath.replace('.mp3', '_faded.mp3');
-      await execAsync(`ffmpeg -y -i "${outputPath}" -af "afade=t=out:st=${fadeStart}:d=0.15:curve=log" -q:a 2 "${fadedPath}" 2>/dev/null`);
-      fs.renameSync(fadedPath, outputPath);
-    }
-    try { fs.unlinkSync(normPath); } catch {}
   } catch {
     // If processing fails, use raw file
     if (fs.existsSync(rawPath)) fs.renameSync(rawPath, outputPath);
@@ -287,7 +272,7 @@ async function combineAudio(segments, outputPath) {
   const probeOut = await execAsync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${tmpConcat}"`);
   const dur = parseFloat(probeOut.stdout.trim()) || 10;
   const fadeOutStart = Math.max(0, dur - 1);
-  await execAsync(`ffmpeg -y -i "${tmpConcat}" -af "loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=in:d=0.5,afade=t=out:st=${fadeOutStart}:d=1" -q:a 2 "${outputPath}"`);
+  await execAsync(`ffmpeg -y -i "${tmpConcat}" -af "afade=t=in:d=0.5,afade=t=out:st=${fadeOutStart}:d=1" -q:a 2 "${outputPath}"`);
   try { fs.unlinkSync(tmpConcat); } catch {}
   try { fs.unlinkSync(silencePath); fs.unlinkSync(listPath); } catch {}
 }
@@ -628,8 +613,17 @@ app.get('/api/status/:id', (req, res) => {
   res.json(job);
 });
 
-app.get('/api/audio/:id', (req, res) => {
-  const filePath = path.join(AUDIO_DIR, `${req.params.id}.mp3`);
+app.get('/api/audio/:id', async (req, res) => {
+  let filePath = path.join(AUDIO_DIR, `${req.params.id}.mp3`);
+  // If file doesn't exist, check DB for actual audio_path
+  if (!fs.existsSync(filePath)) {
+    try {
+      const { rows } = await pool.query('SELECT audio_path FROM stories WHERE id = $1', [req.params.id]);
+      if (rows.length && rows[0].audio_path) {
+        filePath = path.resolve(path.join('..', rows[0].audio_path));
+      }
+    } catch {}
+  }
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Audio nicht gefunden' });
   const stat = fs.statSync(filePath);
   const fileSize = stat.size;
@@ -696,7 +690,7 @@ app.get('/api/story/:id', async (req, res) => {
       summary: row.summary,
       ageGroup: row.age_group,
       createdAt: row.created_at,
-      audioUrl: `/api/audio/${row.id}`,
+      audioUrl: row.audio_path ? `/api/audio/${row.id}` : null,
       lines: linesRes.rows,
     });
   } catch (err) {
@@ -767,42 +761,140 @@ app.patch('/api/stories/:id/voice', async (req, res) => {
   }
 });
 
-app.get('/share/:id', async (req, res) => {
+// OG meta tags for crawlers (WhatsApp, Telegram, Twitter, Facebook)
+// Serves both /share/:id and /og/story/:id (nginx proxies crawlers here)
+async function serveOgPage(req, res) {
   try {
-    const { rows } = await pool.query('SELECT * FROM stories WHERE id = $1', [req.params.id]);
+    const storyId = req.params.id;
+    const { rows } = await pool.query('SELECT * FROM stories WHERE id = $1', [storyId]);
     if (!rows.length) return res.status(404).send('<h1>Geschichte nicht gefunden</h1>');
     const story = rows[0];
     const chars = await pool.query('SELECT name FROM characters WHERE story_id = $1', [story.id]);
     const charNames = chars.rows.map(c => c.name).join(', ');
-    const desc = `Ein Hörspiel mit ${charNames} — für ${story.age_group}-Jährige`;
-    const audioUrl = `https://fablino.de/api/audio/${story.id}`;
-    const shareUrl = `https://fablino.de/share/${story.id}`;
-    const appUrl = `https://fablino.de/story/${story.id}`;
+    const summary = story.summary || 'Ein personalisiertes Hörspiel für kleine Ohren';
+    const desc = `🎧 ${summary}`;
+    const storyUrl = `https://fablino.de/story/${story.id}`;
     const ogImage = `https://fablino.de/logo.png`;
+    // Escape HTML entities in dynamic content
+    const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(`<!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>${story.title} — Fablino</title>
-<meta property="og:title" content="${story.title} — Fablino">
-<meta property="og:description" content="${desc}">
+<title>🎧 ${esc(story.title)}</title>
+<meta property="og:title" content="🎧 ${esc(story.title)}">
+<meta property="og:description" content="${esc(desc)}">
 <meta property="og:image" content="${ogImage}">
-<meta property="og:audio" content="${audioUrl}">
-<meta property="og:type" content="music.song">
-<meta property="og:url" content="${shareUrl}">
-<meta property="og:site_name" content="Fablino">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${storyUrl}">
+<meta property="og:site_name" content="Fablino · Hörspiele">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="${story.title} — Fablino">
-<meta name="twitter:description" content="${desc}">
+<meta name="twitter:title" content="${esc(story.title)} — Fablino">
+<meta name="twitter:description" content="${esc(desc)}">
 <meta name="twitter:image" content="${ogImage}">
-<meta http-equiv="refresh" content="0;url=${appUrl}">
-<script>window.location.replace("${appUrl}");</script>
+<meta http-equiv="refresh" content="0;url=${storyUrl}">
+<script>window.location.replace("${storyUrl}");</script>
 </head>
-<body><p>Weiterleitung zu <a href="${appUrl}">Fablino</a>...</p></body>
+<body><p>Weiterleitung zu <a href="${storyUrl}">Fablino</a>...</p></body>
 </html>`);
   } catch (err) {
     res.status(500).send('<h1>Fehler</h1>');
+  }
+}
+
+app.get('/share/:id', serveOgPage);
+app.get('/og/story/:id', serveOgPage);
+
+// Reserve a story slot (placeholder for waitlist)
+app.post('/api/reserve', async (req, res) => {
+  try {
+    const { heroName, heroAge, prompt } = req.body;
+    const id = uuidv4();
+    const title = heroName ? `${heroName}s Hörspiel` : 'Dein Hörspiel';
+    const ageGroup = (parseInt(heroAge) || 5) <= 5 ? '3-5' : '6-9';
+    const meta = JSON.stringify({ heroName, heroAge, prompt: prompt || null });
+    await pool.query(
+      'INSERT INTO stories (id, title, prompt, age_group, summary) VALUES ($1, $2, $3, $4, $5)',
+      [id, title, prompt || null, ageGroup, meta]
+    );
+    // Notify Robert
+    const botToken = '7864521445:AAHocdoKrms2HG3kshkoETC1kVAO5tAiUus';
+    const chatId = '5559274578';
+    const parts = [`✨ *Neuer Hörspiel-Wunsch!*`];
+    if (heroName) parts.push(`🦸 ${heroName}${heroAge ? ` (${heroAge} J.)` : ''}`);
+    if (prompt) parts.push(`💬 „${prompt}"`);
+    parts.push(`🔗 https://fablino.de/story/${id}`);
+    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: parts.join('\n'), parse_mode: 'Markdown' })
+    }).catch(() => {});
+
+    res.json({ ok: true, storyId: id });
+  } catch (err) {
+    console.error('Reserve error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Waitlist signup
+app.post('/api/waitlist', async (req, res) => {
+  try {
+    const { email, heroName, heroAge, prompt, sideCharacters } = req.body;
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ error: 'Bitte gib eine gültige Email-Adresse ein.' });
+    }
+    const storyId = req.body.storyId;
+    if (!storyId) {
+      return res.status(400).json({ error: 'Story-ID fehlt.' });
+    }
+    // Check for duplicate email
+    const existing = await pool.query('SELECT id FROM waitlist WHERE email = $1 AND story_id = $2', [email.toLowerCase().trim(), storyId]);
+    if (existing.rows.length > 0) {
+      return res.json({ ok: true, storyId, message: 'Du bist bereits vorgemerkt! Wir melden uns, sobald dein Hörspiel fertig ist.' });
+    }
+    await pool.query(
+      'INSERT INTO waitlist (email, hero_name, hero_age, prompt, side_characters, story_id) VALUES ($1, $2, $3, $4, $5, $6)',
+      [email.toLowerCase().trim(), heroName || null, heroAge || null, prompt || null, JSON.stringify(sideCharacters || []), storyId]
+    );
+    // Notify Robert via Telegram
+    const botToken = '7864521445:AAHocdoKrms2HG3kshkoETC1kVAO5tAiUus';
+    const chatId = '5559274578';
+    const parts = [`📬 *Email eingetragen!*\n✉️ ${email.toLowerCase().trim()}`];
+    if (heroName) parts.push(`🦸 ${heroName}${heroAge ? ` (${heroAge} J.)` : ''}`);
+    if (prompt) parts.push(`💬 „${prompt}"`);
+    if (storyId) parts.push(`🔗 https://fablino.de/story/${storyId}`);
+    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: parts.join('\n'), parse_mode: 'Markdown' })
+    }).catch(() => {});
+
+    res.json({ ok: true, storyId, message: 'Du bist dabei! Wir melden uns per Email, sobald dein Hörspiel fertig gezaubert ist.' });
+  } catch (err) {
+    console.error('Waitlist error:', err);
+    res.status(500).json({ error: 'Etwas ist schiefgelaufen. Bitte versuche es später noch mal.' });
+  }
+});
+
+// Check if story has waitlist signup
+app.get('/api/waitlist/:storyId', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT email FROM waitlist WHERE story_id = $1 LIMIT 1', [req.params.storyId]);
+    res.json({ registered: rows.length > 0 });
+  } catch (err) {
+    res.json({ registered: false });
+  }
+});
+
+// Admin: list waitlist entries
+app.get('/api/waitlist', async (_req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM waitlist ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
