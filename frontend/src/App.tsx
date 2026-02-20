@@ -12,6 +12,7 @@ interface Story {
   characters: { name: string; gender: string }[]
   voiceMap: Record<string, string>
   prompt: string
+  summary?: string
   ageGroup: string
   createdAt: string
   audioUrl: string
@@ -538,7 +539,7 @@ function App() {
                         <Headphones size={20} />
                       </div>
                       <h3>{s.title}</h3>
-                      <p className="story-prompt">{s.prompt}</p>
+                      <p className="story-prompt">{s.summary || s.prompt}</p>
                       <div className="story-meta-row">
                         {dur && <span className="story-meta"><Clock size={12} /> {fmt(dur)}</span>}
                       </div>
@@ -641,7 +642,7 @@ function App() {
             </button>
 
             <h2>{currentStory.title}</h2>
-            <p className="player-prompt">„{currentStory.prompt}"</p>
+            <p className="player-prompt">„{currentStory.summary || currentStory.prompt}"</p>
             <div className="characters">
               {currentStory.characters.map(c => (
                 <span key={c.name} className="char-badge">{c.name}</span>

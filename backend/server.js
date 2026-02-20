@@ -157,6 +157,7 @@ async function getStories() {
       characters: chars.map(c => ({ name: c.name, gender: c.gender })),
       voiceMap,
       prompt: row.prompt,
+      summary: row.summary,
       ageGroup: row.age_group,
       featured: row.featured,
       createdAt: row.created_at,
@@ -170,8 +171,8 @@ async function insertStory(story, script, voiceMap) {
   try {
     await client.query('BEGIN');
     await client.query(
-      'INSERT INTO stories (id, title, prompt, age_group, created_at, audio_path) VALUES ($1,$2,$3,$4,$5,$6)',
-      [story.id, story.title, story.prompt, story.ageGroup, story.createdAt, `audio/${story.id}.mp3`]
+      'INSERT INTO stories (id, title, prompt, summary, age_group, created_at, audio_path) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+      [story.id, story.title, story.prompt, story.summary || null, story.ageGroup, story.createdAt, `audio/${story.id}.mp3`]
     );
     for (const char of script.characters) {
       await client.query(
@@ -383,6 +384,7 @@ ${characters?.sideCharacters?.length ? `Folgende Personen sollen auch vorkommen:
 Antworte NUR mit validem JSON (kein Markdown, kein \`\`\`):
 {
   "title": "Kreativer Titel",
+  "summary": "Ein spannender Teaser in 1-2 Sätzen, der neugierig macht ohne zu spoilern. Wie ein Klappentext für Kinder.",
   "characters": [{ "name": "Name", "gender": "child_m|child_f|adult_m|adult_f|elder_m|elder_f|creature", "traits": ["trait1", "trait2"] }],
   "scenes": [{ "lines": [{ "speaker": "Name", "text": "Dialog" }] }]
 }
@@ -529,6 +531,7 @@ app.post('/api/generate/:id/confirm', (req, res) => {
         id,
         title: script.title,
         prompt,
+        summary: script.summary || null,
         ageGroup,
         createdAt: new Date().toISOString(),
       };
@@ -675,6 +678,7 @@ app.get('/api/story/:id', async (req, res) => {
       characters: chars.rows.map(c => ({ name: c.name, gender: c.gender })),
       voiceMap,
       prompt: row.prompt,
+      summary: row.summary,
       ageGroup: row.age_group,
       createdAt: row.created_at,
       audioUrl: `/api/audio/${row.id}`,
