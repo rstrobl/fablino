@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
-  Headphones, Sparkles, Wand2, BookOpen, Play, Pause, Download,
+  Headphones, Sparkles, Wand2, BookOpen, Play, Pause,
   Share2, ChevronLeft, Heart, Clock, Music, Link2, Check,
   // @ts-ignore
   Shuffle, AlertCircle
@@ -76,6 +76,7 @@ interface Story {
   ageGroup: string
   createdAt: string
   audioUrl: string
+  coverUrl?: string
   lines?: { speaker: string; text: string }[]
 }
 
@@ -123,7 +124,7 @@ const RANDOM_PROMPTS = [
   'Ein Wettrennen durch die Wolken',
 ]
 
-type View = 'home' | 'loading' | 'preview' | 'player' | 'waitlist'
+type View = 'home' | 'loading' | 'preview' | 'player' | 'waitlist' | 'script'
 
 const GENERIC_LOADING = [
   'Die Charaktere werden erfunden...',
@@ -161,6 +162,7 @@ function generateWaveHeights(count: number, seed: string): number[] {
 }
 
 function App() {
+  const [initialLoad, setInitialLoad] = useState(() => !!window.location.pathname.match(/\/(story|preview)\//))
   const [view, setView] = useState<View>('home')
   const [prompt, setPrompt] = useState('')
   const [heroName, setHeroName] = useState('')
@@ -185,6 +187,8 @@ function App() {
   const [waitlistLoading, setWaitlistLoading] = useState(false)
   const [reservedStoryId, setReservedStoryId] = useState<string | null>(null)
   const [waitlistChecked, setWaitlistChecked] = useState<string | null>(null)
+  const [miniPlaying, setMiniPlaying] = useState<string | null>(null)
+  const miniAudioRef = useRef<HTMLAudioElement | null>(null)
 
   // Check waitlist registration for stories without audio
   useEffect(() => {
@@ -240,6 +244,34 @@ function App() {
       return
     }
 
+    // Handle /story/:id/script URLs
+    const scriptMatch = window.location.pathname.match(/\/story\/([a-f0-9-]+)\/script/)
+    if (scriptMatch) {
+      const scriptStoryId = scriptMatch[1]
+      const found = list.find(s => s.id === scriptStoryId)
+      if (found) {
+        // If we already have lines, show script directly
+        if (found.lines && found.lines.length > 0) {
+          setCurrentStory(found)
+          setView('script')
+          return
+        }
+      }
+      // Fetch full story with lines
+      fetch(`${BASE_URL}/api/story/${scriptStoryId}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(story => {
+          if (story) {
+            setCurrentStory(story)
+            setView('script')
+          } else {
+            setView('home')
+          }
+        })
+        .catch(() => { setView('home') })
+      return
+    }
+
     const pathMatch = window.location.pathname.match(/\/story\/([a-f0-9-]+)/)
     const storyId = pathMatch ? pathMatch[1] : new URLSearchParams(window.location.search).get('story')
     if (storyId) {
@@ -277,7 +309,8 @@ function App() {
     fetch('/api/stories').then(r => r.json()).then((data: Story[]) => {
       setStories(data)
       navigateFromUrl(data)
-    }).catch(() => {})
+      setInitialLoad(false)
+    }).catch(() => { setInitialLoad(false) })
   }, [])
 
   useEffect(() => {
@@ -528,7 +561,7 @@ function App() {
       </header>
 
       {/* ===== HOME ===== */}
-      {view === 'home' && (
+      {view === 'home' && !initialLoad && (
         <main>
           <div className="hero">
             <h2>
@@ -545,7 +578,7 @@ function App() {
 
             {/* Hero character */}
             <div className="character-section">
-              <label>Dein Held</label>
+              <label>Wie heißt dein Kind?</label>
               <div className="hero-fields">
                 <input
                   type="text"
@@ -604,22 +637,50 @@ function App() {
           {stories.length > 0 && (
             <div className="gallery">
               <div className="gallery-header">
-                <BookOpen size={22} />
-                <h2>Letzte Hörspiele</h2>
+                <Headphones size={22} />
+                <h2>Hörprobe</h2>
               </div>
               <div className="story-grid">
                 {stories.map(s => {
                   const dur = storyDurations[s.id]
+                  const isMiniPlaying = miniPlaying === s.id
                   return (
-                    <div key={s.id} className="story-card" onClick={() => playStory(s)}>
-                      <div className="story-icon-row">
-                        <Music size={20} />
-                        <Headphones size={20} />
-                      </div>
+                    <div key={s.id} className="featured-card">
+                      {s.coverUrl && (
+                        <img src={s.coverUrl} alt={s.title} className="featured-cover" />
+                      )}
                       <h3>{s.title}</h3>
-                      <p className="story-prompt">{s.summary || s.prompt}</p>
-                      <div className="story-meta-row">
-                        {dur && <span className="story-meta"><Clock size={12} /> {fmt(dur)}</span>}
+                      {dur && <span className="story-meta"><Clock size={12} /> {fmt(dur)}</span>}
+                      {s.audioUrl && (
+                        <audio
+                          ref={isMiniPlaying ? miniAudioRef : undefined}
+                          src={isMiniPlaying ? s.audioUrl : undefined}
+                          onEnded={() => setMiniPlaying(null)}
+                          style={{ display: 'none' }}
+                        />
+                      )}
+                      <div className="featured-actions">
+                        <button className="featured-icon-btn play" onClick={() => {
+                          if (isMiniPlaying) {
+                            miniAudioRef.current?.pause()
+                            setMiniPlaying(null)
+                          } else {
+                            if (miniAudioRef.current) miniAudioRef.current.pause()
+                            setMiniPlaying(s.id)
+                            setTimeout(() => miniAudioRef.current?.play(), 50)
+                          }
+                        }}>
+                          {isMiniPlaying ? <Pause size={18} /> : <Play size={18} style={{ marginLeft: 2 }} />}
+                        </button>
+                        {typeof navigator.share === 'function' ? (
+                          <button className="featured-icon-btn share" onClick={() => shareNative(s)}>
+                            <Share2 size={18} />
+                          </button>
+                        ) : (
+                          <button className={`featured-icon-btn share ${copied ? 'copied' : ''}`} onClick={() => copyLink(s)}>
+                            {copied ? <Check size={18} /> : <Link2 size={18} />}
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
@@ -781,12 +842,19 @@ function App() {
 
         return (
           <main className="player">
-            <h2>{currentStory.title}</h2>
-            <p className="player-prompt">„{currentStory.summary || currentStory.prompt}"</p>
-            <div className="characters">
-              {currentStory.characters.map((c, i) => (
-                <span key={c.name} className="char-badge"><TwemojiIcon emoji={charEmoji(c.name, c.gender, i)} size={18} /> {c.name}</span>
-              ))}
+            <div className="story-header">
+              {currentStory.coverUrl && (
+                <img src={currentStory.coverUrl} alt={currentStory.title} className="story-cover" />
+              )}
+              <div className="story-header-info">
+                <h2>{currentStory.title}</h2>
+                <p className="player-prompt">{currentStory.summary || currentStory.prompt}</p>
+                <div className="characters">
+                  {currentStory.characters.map((c, i) => (
+                    <span key={c.name} className="char-badge"><TwemojiIcon emoji={charEmoji(c.name, c.gender, i)} size={18} /> {c.name}</span>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <audio
@@ -820,23 +888,69 @@ function App() {
               <span>{fmt(audioDuration)}</span>
             </div>
 
-            <div className="player-actions">
-              {typeof navigator.share === 'function' ? (
-                <button className="action-btn-small" onClick={() => shareNative(currentStory)}>
-                  <Share2 size={14} /> Teilen
+            <div className="fablino-promo">
+              <p><strong>Fablino</strong> erstellt personalisierte Hörspiele, in denen dein Kind die Hauptrolle spielt.</p>
+              <div className="promo-buttons">
+                <button className="promo-cta" onClick={() => { goHome(); setPrompt('') }}>
+                  <Wand2 size={16} /> Eigenes Hörspiel erstellen
                 </button>
-              ) : (
-                <button className={`action-btn-small ${copied ? 'copied' : ''}`} onClick={() => copyLink(currentStory)}>
-                  {copied ? <><Check size={14} /> Kopiert!</> : <><Link2 size={14} /> Link kopieren</>}
-                </button>
-              )}
-              <a className="action-btn-small" href={currentStory.audioUrl} download={`${currentStory.title}.mp3`}>
-                <Download size={14} /> MP3
-              </a>
+                {typeof navigator.share === 'function' ? (
+                  <button className="promo-share" onClick={() => shareNative(currentStory)}>
+                    <Share2 size={16} /> Teilen
+                  </button>
+                ) : (
+                  <button className={`promo-share ${copied ? 'copied' : ''}`} onClick={() => copyLink(currentStory)}>
+                    {copied ? <><Check size={16} /> Kopiert!</> : <><Link2 size={16} /> Teilen</>}
+                  </button>
+                )}
+              </div>
+            </div>
+          </main>
+        )
+      })()}
+
+      {/* ===== SCRIPT ===== */}
+      {view === 'script' && currentStory && (() => {
+        const lines = currentStory.lines || []
+        // Group lines into scenes: a scene break is when speaker is 'Erzähler' and text contains scene-like markers,
+        // or we just show all lines as one flowing script
+        return (
+          <main className="player">
+            <button className="back-btn" onClick={() => {
+              window.history.pushState({}, '', `/story/${currentStory.id}`)
+              setView('player')
+            }}>
+              <ChevronLeft size={18} /> Zurück
+            </button>
+
+            <h2>{currentStory.title}</h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Skript — {lines.length} Zeilen</p>
+
+            <div className="characters" style={{ marginBottom: '1.5rem' }}>
+              {currentStory.characters.map((c, i) => (
+                <span key={c.name} className="char-badge">
+                  <TwemojiIcon emoji={charEmoji(c.name, c.gender, i)} size={18} /> {c.name}
+                </span>
+              ))}
             </div>
 
-            <button className="new-btn" onClick={() => { goHome(); setPrompt('') }}>
-              <Wand2 size={18} /> Neues Hörspiel zaubern
+            <div className="script-view" style={{ maxHeight: 'none' }}>
+              {lines.map((line, i) => {
+                const isNarrator = line.speaker === 'Erzähler'
+                return (
+                  <div key={i} className={`script-line ${isNarrator ? 'narrator' : 'character'}`}>
+                    <span className="script-speaker">{line.speaker}</span>
+                    <span className="script-text">{line.text}</span>
+                  </div>
+                )
+              })}
+            </div>
+
+            <button className="back-btn" onClick={() => {
+              window.history.pushState({}, '', `/story/${currentStory.id}`)
+              setView('player')
+            }} style={{ marginTop: '1.5rem' }}>
+              <ChevronLeft size={18} /> Zurück zum Player
             </button>
           </main>
         )

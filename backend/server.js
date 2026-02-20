@@ -16,6 +16,8 @@ app.use(cors());
 app.use(express.json());
 
 const AUDIO_DIR = path.resolve('../audio');
+const COVERS_DIR = path.resolve('./covers');
+app.use('/covers', express.static(COVERS_DIR));
 fs.mkdirSync(AUDIO_DIR, { recursive: true });
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
@@ -162,6 +164,7 @@ async function getStories() {
       featured: row.featured,
       createdAt: row.created_at,
       audioUrl: row.audio_path ? `/api/audio/${row.id}` : null,
+      coverUrl: row.cover_url || null,
     };
   });
 }
@@ -269,10 +272,7 @@ async function combineAudio(segments, outputPath) {
   fs.writeFileSync(listPath, listContent);
   const tmpConcat = path.join(AUDIO_DIR, `tmp_${Date.now()}.mp3`);
   await execAsync(`ffmpeg -y -f concat -safe 0 -i "${listPath}" -q:a 2 "${tmpConcat}"`);
-  const probeOut = await execAsync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${tmpConcat}"`);
-  const dur = parseFloat(probeOut.stdout.trim()) || 10;
-  const fadeOutStart = Math.max(0, dur - 1);
-  await execAsync(`ffmpeg -y -i "${tmpConcat}" -af "afade=t=in:d=0.5,afade=t=out:st=${fadeOutStart}:d=1" -q:a 2 "${outputPath}"`);
+  await execAsync(`ffmpeg -y -i "${tmpConcat}" -af "afade=t=in:d=0.5" -q:a 2 "${outputPath}"`);
   try { fs.unlinkSync(tmpConcat); } catch {}
   try { fs.unlinkSync(silencePath); fs.unlinkSync(listPath); } catch {}
 }
@@ -691,6 +691,7 @@ app.get('/api/story/:id', async (req, res) => {
       ageGroup: row.age_group,
       createdAt: row.created_at,
       audioUrl: row.audio_path ? `/api/audio/${row.id}` : null,
+      coverUrl: row.cover_url || null,
       lines: linesRes.rows,
     });
   } catch (err) {
@@ -772,9 +773,10 @@ async function serveOgPage(req, res) {
     const chars = await pool.query('SELECT name FROM characters WHERE story_id = $1', [story.id]);
     const charNames = chars.rows.map(c => c.name).join(', ');
     const summary = story.summary || 'Ein personalisiertes Hörspiel für kleine Ohren';
-    const desc = `🎧 ${summary}`;
+    const desc = summary;
     const storyUrl = `https://fablino.de/story/${story.id}`;
-    const ogImage = `https://fablino.de/logo.png`;
+    const ogImage = story.cover_url ? `https://fablino.de${story.cover_url}` : `https://fablino.de/logo.png`;
+    const ogImageType = story.cover_url ? 'summary_large_image' : 'summary';
     // Escape HTML entities in dynamic content
     const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -782,15 +784,17 @@ async function serveOgPage(req, res) {
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>🎧 ${esc(story.title)}</title>
-<meta property="og:title" content="🎧 ${esc(story.title)}">
+<title>${esc(story.title)} — Fablino</title>
+<meta property="og:title" content="${esc(story.title)}">
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:image" content="${ogImage}">
+<meta property="og:image:width" content="1024">
+<meta property="og:image:height" content="1024">
 <meta property="og:type" content="website">
 <meta property="og:url" content="${storyUrl}">
-<meta property="og:site_name" content="Fablino · Hörspiele">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="${esc(story.title)} — Fablino">
+<meta property="og:site_name" content="Fablino · Hörspiele für kleine Helden">
+<meta name="twitter:card" content="${ogImageType}">
+<meta name="twitter:title" content="${esc(story.title)}">
 <meta name="twitter:description" content="${esc(desc)}">
 <meta name="twitter:image" content="${ogImage}">
 <meta http-equiv="refresh" content="0;url=${storyUrl}">
