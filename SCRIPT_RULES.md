@@ -35,6 +35,7 @@
 - **Diversität natürlich einbauen** — verschiedene Familienmodelle, Namen, Hintergründe — ohne es zu betonen
 - **KEINE Lautmalerei im Dialog** — kein HAHAHA, Hihihi, Buhuhu, Seufz, Wiehern, Miau, Wuff etc. TTS kann das nicht. Emotionen und Tierlaute werden vom **Erzähler beschrieben** ("Der Drache lachte so laut, dass der Berg wackelte", "Das Pferd wieherte fröhlich"). Charaktere sprechen in ganzen Sätzen.
 - **KEINE konkreten Zeitangaben** — nicht "eine Stunde später", "nach 30 Minuten". Stattdessen: "Kurze Zeit später", "Als die Sonne unterging", "Nach einer langen Reise".
+- **KORREKTES DEUTSCH ist Pflicht** — keine Grammatikfehler, keine falschen Deklinationen, keine Anglizismen. Charakternamen müssen korrekt deutsch sein (nicht "Drachenfriend" sondern "Drachenfreund", nicht "Kuchens" sondern "Kuchen"). Jeder Text muss klingen als hätte ihn ein deutscher Muttersprachler geschrieben. Im Zweifel einfacher formulieren.
 
 ## Voice Mapping
 - **Georg - Funny and Emotional**: NUR für Kinder/Kreaturen/Fabelwesen, NICHT für erwachsene Männer

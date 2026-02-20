@@ -374,6 +374,7 @@ ALLGEMEINE REGELN:
 - Keine Belehrung, keine Moral-Keule — Story first
 - Deutsche Settings/Kultur bevorzugt, aber Fantasie-Welten genauso OK
 - Diversität natürlich einbauen — verschiedene Familienmodelle, Namen, Hintergründe — ohne es zu betonen
+- KORREKTES DEUTSCH IST PFLICHT: Keine Grammatikfehler, keine falschen Deklinationen, keine Anglizismen. Charakternamen MÜSSEN korrekt deutsch sein (NICHT "Drachenfriend" sondern "Drachenfreund", NICHT "Kuchens" sondern "Kuchen"). Schreibe wie ein deutscher Muttersprachler. Im Zweifel einfacher formulieren.
 
 PERSONALISIERUNG:
 ${characters?.hero ? `Der HELD der Geschichte heißt "${characters.hero.name}"${characters.hero.age ? ` und ist ${characters.hero.age} Jahre alt` : ''}. Das Kind IST der Held — es erlebt das Abenteuer, löst die Probleme, ist mutig.` : 'Erfinde einen passenden Helden.'}
