@@ -332,10 +332,10 @@ KLEINE OHREN (3–5 Jahre):
 - Kurze Sätze. Wiederholungen ("Klopf, klopf, klopf!"). Klangwörter nur im Erzählertext.
 - KEINE Zahlen, Maßeinheiten, Zeitangaben, abstrakte Konzepte
 - Emotionen benennen: "Da wurde der Igel ganz traurig" (Kinder lernen Gefühle einzuordnen)
-- Max 4 Charaktere (zu viele Stimmen verwirren)
+- Max 6 Charaktere (inkl. Erzähler)
 - Klare Gut/Böse-Struktur, aber Böse wird nie bestraft — sondern versteht es am Ende
 - Happy End ist Pflicht
-- Länge: 10–20 Zeilen, ~3 Minuten
+- Länge: 25–40 Zeilen, ~5–8 Minuten
 - Erzähler führt stark — bindet Szenen zusammen, beschreibt Bilder, leitet Dialoge ein
 - Keine Ironie, kein Sarkasmus — wird nicht verstanden` : `
 GROSSE OHREN (6–9 Jahre):
@@ -345,7 +345,7 @@ GROSSE OHREN (6–9 Jahre):
 - Bis 6 Charaktere, Nebenfiguren möglich
 - Moral darf subtil sein — nicht mit dem Holzhammer
 - Offene Enden möglich (Cliffhanger für Fortsetzungen!)
-- Länge: 20–35 Zeilen, ~5–7 Minuten
+- Länge: 40–60 Zeilen, ~8–12 Minuten
 - Erzähler als Rahmen: Intro, Szenenwechsel, Atmosphäre, Outro — aber Dialog trägt die Handlung
 - Leichte Grusel-Elemente OK (aber immer aufgelöst)`;
 
