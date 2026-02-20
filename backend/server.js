@@ -335,7 +335,7 @@ KLEINE OHREN (3–5 Jahre):
 - Max 6 Charaktere (inkl. Erzähler)
 - Klare Gut/Böse-Struktur, aber Böse wird nie bestraft — sondern versteht es am Ende
 - Happy End ist Pflicht
-- Länge: 40–60 Zeilen, ~6–10 Minuten
+- LÄNGE: MINDESTENS 40 Zeilen, besser 50–60. Das Hörspiel MUSS mindestens 6 Minuten dauern. Schreibe ausführliche Szenen mit vielen Dialogen. Nicht abkürzen! Jede Szene braucht mehrere Hin-und-Her-Dialoge zwischen den Charakteren.
 - Erzähler führt stark — bindet Szenen zusammen, beschreibt Bilder, leitet Dialoge ein
 - Keine Ironie, kein Sarkasmus — wird nicht verstanden` : `
 GROSSE OHREN (6–9 Jahre):
@@ -345,7 +345,7 @@ GROSSE OHREN (6–9 Jahre):
 - Bis 6 Charaktere, Nebenfiguren möglich
 - Moral darf subtil sein — nicht mit dem Holzhammer
 - Offene Enden möglich (Cliffhanger für Fortsetzungen!)
-- Länge: 60–80 Zeilen, ~10–15 Minuten
+- LÄNGE: MINDESTENS 60 Zeilen, besser 70–80. Das Hörspiel MUSS mindestens 10 Minuten dauern. Schreibe ausführliche Szenen mit vielen Dialogen, Wendungen und Details. Nicht abkürzen!
 - Erzähler als Rahmen: Intro, Szenenwechsel, Atmosphäre, Outro — aber Dialog trägt die Handlung
 - Leichte Grusel-Elemente OK (aber immer aufgelöst)`;
 
