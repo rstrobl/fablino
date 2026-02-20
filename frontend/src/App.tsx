@@ -637,10 +637,6 @@ function App() {
       {view === 'player' && currentStory && (() => {
         return (
           <main className="player">
-            <button className="back-btn" onClick={() => { goHome(); setPrompt('') }}>
-              <ChevronLeft size={18} /> Zurück
-            </button>
-
             <h2>{currentStory.title}</h2>
             <p className="player-prompt">„{currentStory.summary || currentStory.prompt}"</p>
             <div className="characters">
@@ -684,9 +680,6 @@ function App() {
               <button className="action-btn tonie" onClick={() => downloadTonie(currentStory)}>
                 <Package size={16} /> Für Toniebox
               </button>
-              <a className="action-btn dl" href={currentStory.audioUrl} download={`${currentStory.title}.mp3`}>
-                <Download size={16} /> MP3
-              </a>
             </div>
 
             <div className="divider" />
