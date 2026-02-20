@@ -221,11 +221,26 @@ async function generateTTS(text, voiceId, outputPath, voiceSettings = { stabilit
   const rawPath = outputPath.replace('.mp3', '_raw.mp3');
   fs.writeFileSync(rawPath, buffer);
   try {
-    await execAsync(`ffmpeg -y -i "${rawPath}" -af "loudnorm=I=-16:TP=-1.5:LRA=11" -q:a 2 "${outputPath}" 2>/dev/null`);
+    // Step 1: Normalize volume
+    const normPath = outputPath.replace('.mp3', '_norm.mp3');
+    await execAsync(`ffmpeg -y -i "${rawPath}" -af "loudnorm=I=-16:TP=-1.5:LRA=11" -q:a 2 "${normPath}" 2>/dev/null`);
     fs.unlinkSync(rawPath);
+    // Step 2: Trim trailing silence + apply fade-out to remove ElevenLabs artifacts
+    // silenceremove removes trailing silence below -35dB, then 150ms fade-out for clean ending
+    await execAsync(`ffmpeg -y -i "${normPath}" -af "silenceremove=stop_periods=1:stop_duration=0.15:stop_threshold=-35dB,afade=t=out:st=0:d=0.15:curve=log" -q:a 2 "${outputPath}" 2>/dev/null`);
+    // Fix fade-out start to actual end: re-probe and apply
+    const probeOut = await execAsync(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${outputPath}"`);
+    const dur = parseFloat(probeOut.stdout.trim()) || 0;
+    if (dur > 0.3) {
+      const fadeStart = Math.max(0, dur - 0.15);
+      const fadedPath = outputPath.replace('.mp3', '_faded.mp3');
+      await execAsync(`ffmpeg -y -i "${outputPath}" -af "afade=t=out:st=${fadeStart}:d=0.15:curve=log" -q:a 2 "${fadedPath}" 2>/dev/null`);
+      fs.renameSync(fadedPath, outputPath);
+    }
+    try { fs.unlinkSync(normPath); } catch {}
   } catch {
-    // If normalization fails, use raw file
-    fs.renameSync(rawPath, outputPath);
+    // If processing fails, use raw file
+    if (fs.existsSync(rawPath)) fs.renameSync(rawPath, outputPath);
   }
 }
 
