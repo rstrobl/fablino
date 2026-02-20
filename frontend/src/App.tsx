@@ -354,8 +354,21 @@ function App() {
       const job = await pollJob(previewJobId)
       if (job.status === 'done') {
         const story = job.story as Story
-        setCurrentStory(story)
-        setStories(prev => [story, ...prev])
+        // Fetch full story with lines from API
+        try {
+          const fullResp = await fetch(`/api/story/${story.id}`)
+          if (fullResp.ok) {
+            const fullStory = await fullResp.json()
+            setCurrentStory(fullStory)
+            setStories(prev => [fullStory, ...prev])
+          } else {
+            setCurrentStory(story)
+            setStories(prev => [story, ...prev])
+          }
+        } catch {
+          setCurrentStory(story)
+          setStories(prev => [story, ...prev])
+        }
         setView('player')
         setIsPlaying(false)
         setProgress(0)
