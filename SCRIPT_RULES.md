@@ -33,6 +33,7 @@
 - **Keine Belehrung, keine Moral-Keule** — Story first
 - **Deutsche Settings/Kultur** bevorzugt, aber Fantasie-Welten genauso OK
 - **Diversität natürlich einbauen** — verschiedene Familienmodelle, Namen, Hintergründe — ohne es zu betonen
+- **Charaktere MÜSSEN vom Erzähler eingeführt werden**, bevor sie zum ersten Mal sprechen. Kein Charakter darf "aus dem Nichts" reden. Beispiel: Erst "Ihre Mama Kristin kam in den Flur", dann darf Kristin sprechen.
 - **KEINE Lautmalerei im Dialog** — kein HAHAHA, Hihihi, Buhuhu, Seufz, Wiehern, Miau, Wuff etc. TTS kann das nicht. Emotionen und Tierlaute werden vom **Erzähler beschrieben** ("Der Drache lachte so laut, dass der Berg wackelte", "Das Pferd wieherte fröhlich"). Charaktere sprechen in ganzen Sätzen.
 - **KEINE konkreten Zeitangaben** — nicht "eine Stunde später", "nach 30 Minuten". Stattdessen: "Kurze Zeit später", "Als die Sonne unterging", "Nach einer langen Reise".
 - **KORREKTES DEUTSCH ist Pflicht** — keine Grammatikfehler, keine falschen Deklinationen, keine Anglizismen. Charakternamen müssen korrekt deutsch sein (nicht "Drachenfriend" sondern "Drachenfreund", nicht "Kuchens" sondern "Kuchen"). Jeder Text muss klingen als hätte ihn ein deutscher Muttersprachler geschrieben. Im Zweifel einfacher formulieren.
@@ -41,3 +42,9 @@
 - **Georg - Funny and Emotional**: NUR für Kinder/Kreaturen/Fabelwesen, NICHT für erwachsene Männer
 - Männliche Stimmen: konversationell, HD, deutsch
 - Blacklisted: Julian (Ij3D7RBMzlWQDt3CctjK), Peter (wDnxGeJ6u1xICsO4Agdh), Opa Johann (R3XXDwKMU2YHwBcuYUH3), alte Charly (YQ9Q2ORpGKe5Kyr5k57o)
+
+## MARKEN UND LIZENZEN
+- Geschützte Charaktere (Disney, etc.) und Markenprodukte (LEGO, etc.) dürfen NICHT in Skripten verwendet werden
+- Bei Erkennung: User transparent informieren und kreative Alternative vorschlagen
+- User entscheidet, ob die Alternative passt — nicht stillschweigend ersetzen
+- Beispiel: "Elsa ist leider markenrechtlich geschützt — aber wir können eine eigene Eisprinzessin mit Zauberkräften erschaffen! Soll sie einen Namen bekommen?"

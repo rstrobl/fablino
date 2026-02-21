@@ -22,6 +22,7 @@ fs.mkdirSync(AUDIO_DIR, { recursive: true });
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 
 // PostgreSQL connection
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -277,6 +278,83 @@ async function combineAudio(segments, outputPath) {
   try { fs.unlinkSync(silencePath); fs.unlinkSync(listPath); } catch {}
 }
 
+// --- Cover image generation via Replicate ---
+
+async function generateCover(title, summary, characters, storyId) {
+  if (!REPLICATE_API_TOKEN) {
+    console.warn('No REPLICATE_API_TOKEN — skipping cover generation');
+    return null;
+  }
+  try {
+    const charDesc = characters
+      .filter(c => c.name !== 'Erzähler')
+      .slice(0, 4)
+      .map(c => c.name)
+      .join(', ');
+    const prompt = `Watercolor children's storybook illustration. ${title}. Characters: ${charDesc}. ${summary}. Warm magical lighting, soft colors, whimsical fairy tale style, no text, no words, no letters.`;
+    
+    // Create prediction
+    const createRes = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${REPLICATE_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        version: 'black-forest-labs/flux-1.1-pro',
+        input: {
+          prompt,
+          aspect_ratio: '1:1',
+          output_format: 'jpg',
+          output_quality: 90,
+        },
+      }),
+    });
+    
+    if (!createRes.ok) {
+      console.error('Replicate create error:', await createRes.text());
+      return null;
+    }
+    
+    let prediction = await createRes.json();
+    
+    // Poll for completion
+    while (prediction.status !== 'succeeded' && prediction.status !== 'failed') {
+      await new Promise(r => setTimeout(r, 2000));
+      const pollRes = await fetch(prediction.urls.get, {
+        headers: { 'Authorization': `Bearer ${REPLICATE_API_TOKEN}` },
+      });
+      prediction = await pollRes.json();
+    }
+    
+    if (prediction.status === 'failed') {
+      console.error('Replicate prediction failed:', prediction.error);
+      return null;
+    }
+    
+    const imageUrl = prediction.output;
+    if (!imageUrl) return null;
+    
+    // Download image
+    const imgRes = await fetch(typeof imageUrl === 'string' ? imageUrl : imageUrl[0]);
+    const buffer = Buffer.from(await imgRes.arrayBuffer());
+    const coverFilename = `${storyId}.jpg`;
+    const coverPath = path.join(COVERS_DIR, coverFilename);
+    fs.mkdirSync(COVERS_DIR, { recursive: true });
+    fs.writeFileSync(coverPath, buffer);
+    
+    // Update DB
+    const coverUrl = `/covers/${coverFilename}`;
+    await pool.query('UPDATE stories SET cover_url = $1 WHERE id = $2', [coverUrl, storyId]);
+    
+    console.log(`Cover generated: ${coverUrl}`);
+    return coverUrl;
+  } catch (err) {
+    console.error('Cover generation error:', err);
+    return null;
+  }
+}
+
 // --- Voice assignment ---
 
 function assignVoices(characters) {
@@ -384,7 +462,7 @@ ${characters?.sideCharacters?.length ? `Folgende Personen sollen auch vorkommen:
 Antworte NUR mit validem JSON (kein Markdown, kein \`\`\`):
 {
   "title": "Kreativer Titel",
-  "summary": "Ein spannender Teaser in 1-2 Sätzen, der neugierig macht ohne zu spoilern. Wie ein Klappentext für Kinder.",
+  "summary": "Ein kurzer Teaser-Satz, der neugierig macht und mit einer offenen Frage endet (z.B. 'Wird sie es schaffen?', 'Ob das gut geht?'). Maximal EIN Satz. Nicht spoilern!",
   "characters": [{ "name": "Name", "gender": "child_m|child_f|adult_m|adult_f|elder_m|elder_f|creature", "traits": ["trait1", "trait2"] }],
   "scenes": [{ "lines": [{ "speaker": "Name", "text": "Dialog" }] }]
 }
@@ -504,6 +582,9 @@ app.post('/api/generate/:id/confirm', (req, res) => {
     const linesDir = path.join(AUDIO_DIR, 'lines', id);
     fs.mkdirSync(linesDir, { recursive: true });
 
+    // Start cover generation in parallel
+    const coverPromise = generateCover(script.title, script.summary || prompt, script.characters, id);
+
     try {
       const voiceSettings = DEFAULT_VOICE_SETTINGS;
       const segments = [];
@@ -526,6 +607,10 @@ app.post('/api/generate/:id/confirm', (req, res) => {
       jobs[id].progress = 'Audio wird zusammengemischt...';
       const finalPath = path.join(AUDIO_DIR, `${id}.mp3`);
       await combineAudio(segments, finalPath);
+
+      // Wait for cover to finish (may already be done)
+      const coverUrl = await coverPromise;
+      console.log(`Cover for ${id}: ${coverUrl || 'none'}`);
 
       const story = {
         id,
@@ -873,6 +958,27 @@ app.post('/api/waitlist', async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text: parts.join('\n'), parse_mode: 'Markdown' })
+    }).catch(() => {});
+
+    // Create Trello card
+    const trelloKey = process.env.TRELLO_API_KEY;
+    const trelloToken = process.env.TRELLO_TOKEN;
+    const trelloListNeu = '6998aebd8a96dd70e0c03438';
+    const cardName = `${heroName || 'Unbekannt'}${heroAge ? ` (${heroAge} J.)` : ''} — ${email.toLowerCase().trim()}`;
+    const cardDesc = [
+      `**Email:** ${email.toLowerCase().trim()}`,
+      heroName ? `**Held:** ${heroName}${heroAge ? ` (${heroAge} J.)` : ''}` : null,
+      prompt ? `**Wunsch:** ${prompt}` : null,
+      `\n🔗 **Story:** https://fablino.de/story/${storyId}`,
+      `\n### Status`,
+      `- [ ] Script generieren`,
+      `- [ ] Audio generieren`,
+      `- [ ] An Kunde senden`,
+    ].filter(Boolean).join('\n');
+    fetch(`https://api.trello.com/1/cards?key=${trelloKey}&token=${trelloToken}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idList: trelloListNeu, name: cardName, desc: cardDesc })
     }).catch(() => {});
 
     res.json({ ok: true, storyId, message: 'Du bist dabei! Wir melden uns per Email, sobald dein Hörspiel fertig gezaubert ist.' });

@@ -5,3 +5,7 @@ node_modules/
 audio/
 frontend/node_modules/
 frontend/dist/
+*.sql
+*.tar.gz
+backend/generate_audio_sv*.cjs
+backend/generate_remaining.cjs
