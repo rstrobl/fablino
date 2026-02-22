@@ -9,6 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GenerationModule = void 0;
 const common_1 = require("@nestjs/common");
 const generation_controller_1 = require("./generation.controller");
+const status_controller_1 = require("./status.controller");
 const generation_service_1 = require("./generation.service");
 const claude_service_1 = require("../../services/claude.service");
 const tts_service_1 = require("../../services/tts.service");
@@ -19,7 +20,7 @@ let GenerationModule = class GenerationModule {
 exports.GenerationModule = GenerationModule;
 exports.GenerationModule = GenerationModule = __decorate([
     (0, common_1.Module)({
-        controllers: [generation_controller_1.GenerationController],
+        controllers: [generation_controller_1.GenerationController, status_controller_1.StatusController],
         providers: [
             generation_service_1.GenerationService,
             claude_service_1.ClaudeService,
