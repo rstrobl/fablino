@@ -43,7 +43,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WaitlistController.prototype, "checkWaitlist", null);
 exports.WaitlistController = WaitlistController = __decorate([
-    (0, common_1.Controller)(['api/waitlist', 'api/reserve']),
+    (0, common_1.Controller)('api/waitlist'),
     __metadata("design:paramtypes", [waitlist_service_1.WaitlistService])
 ], WaitlistController);
 //# sourceMappingURL=waitlist.controller.js.map

@@ -9,13 +9,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WaitlistModule = void 0;
 const common_1 = require("@nestjs/common");
 const waitlist_controller_1 = require("./waitlist.controller");
+const reserve_controller_1 = require("./reserve.controller");
 const waitlist_service_1 = require("./waitlist.service");
 let WaitlistModule = class WaitlistModule {
 };
 exports.WaitlistModule = WaitlistModule;
 exports.WaitlistModule = WaitlistModule = __decorate([
     (0, common_1.Module)({
-        controllers: [waitlist_controller_1.WaitlistController],
+        controllers: [waitlist_controller_1.WaitlistController, reserve_controller_1.ReserveController],
         providers: [waitlist_service_1.WaitlistService],
         exports: [waitlist_service_1.WaitlistService],
     })
