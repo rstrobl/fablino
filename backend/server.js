@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
-import { exec as execCb } from 'child_process';
+import { exec as execCb, execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
@@ -17,6 +17,7 @@ app.use(express.json());
 
 const AUDIO_DIR = path.resolve('../audio');
 const COVERS_DIR = path.resolve('./covers');
+app.use('/covers/og', express.static(path.join(COVERS_DIR, 'og'), { maxAge: '7d' }));
 app.use('/covers', express.static(COVERS_DIR));
 fs.mkdirSync(AUDIO_DIR, { recursive: true });
 
@@ -347,6 +348,17 @@ async function generateCover(title, summary, characters, storyId) {
     const coverUrl = `/covers/${coverFilename}`;
     await pool.query('UPDATE stories SET cover_url = $1 WHERE id = $2', [coverUrl, storyId]);
     
+    // Generate OG thumbnail for social sharing (600x600 JPEG)
+    try {
+      const ogDir = path.join(COVERS_DIR, 'og');
+      fs.mkdirSync(ogDir, { recursive: true });
+      const ogPath = path.join(ogDir, `${storyId}_og.jpg`);
+      execSync(`convert "${coverPath}" -resize 600x600 -quality 80 "${ogPath}"`);
+      console.log(`OG thumbnail generated: ${ogPath}`);
+    } catch (ogErr) {
+      console.error('OG thumbnail generation error:', ogErr.message);
+    }
+
     console.log(`Cover generated: ${coverUrl}`);
     return coverUrl;
   } catch (err) {
@@ -860,7 +872,10 @@ async function serveOgPage(req, res) {
     const summary = story.summary || 'Ein personalisiertes Hörspiel für kleine Ohren';
     const desc = summary;
     const storyUrl = `https://fablino.de/story/${story.id}`;
-    const ogImage = story.cover_url ? `https://fablino.de${story.cover_url}` : `https://fablino.de/logo.png`;
+    // Use OG thumbnail (600x600 JPEG, <150KB) for fast WhatsApp/social previews
+    const ogImage = story.cover_url
+      ? `https://fablino.de/covers/og/${path.basename(story.cover_url, path.extname(story.cover_url))}_og.jpg`
+      : `https://fablino.de/logo.png`;
     const ogImageType = story.cover_url ? 'summary_large_image' : 'summary';
     // Escape HTML entities in dynamic content
     const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -873,8 +888,8 @@ async function serveOgPage(req, res) {
 <meta property="og:title" content="${esc(story.title)}">
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:image" content="${ogImage}">
-<meta property="og:image:width" content="1024">
-<meta property="og:image:height" content="1024">
+<meta property="og:image:width" content="600">
+<meta property="og:image:height" content="600">
 <meta property="og:type" content="website">
 <meta property="og:url" content="${storyUrl}">
 <meta property="og:site_name" content="Fablino · Hörspiele für kleine Helden">
