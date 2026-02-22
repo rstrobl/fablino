@@ -37,4 +37,9 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Array)
 ], CreateWaitlistDto.prototype, "sideCharacters", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateWaitlistDto.prototype, "storyId", void 0);
 //# sourceMappingURL=waitlist.dto.js.map

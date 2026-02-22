@@ -7,7 +7,7 @@ export declare class WaitlistService {
     constructor(prisma: PrismaService, configService: ConfigService);
     createWaitlistEntry(dto: CreateWaitlistDto): Promise<{
         ok: boolean;
-        storyId: any;
+        storyId: string;
         message: string;
     }>;
     checkWaitlist(storyId: string): Promise<{

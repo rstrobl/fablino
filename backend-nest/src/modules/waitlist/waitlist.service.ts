@@ -17,7 +17,7 @@ export class WaitlistService {
       throw new HttpException('Bitte gib eine gültige Email-Adresse ein.', HttpStatus.BAD_REQUEST);
     }
 
-    const storyId = dto['storyId']; // TODO: Add to DTO if needed
+    const storyId = dto.storyId;
     if (!storyId) {
       throw new HttpException('Story-ID fehlt.', HttpStatus.BAD_REQUEST);
     }

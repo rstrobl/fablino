@@ -5,7 +5,7 @@ export declare class WaitlistController {
     constructor(waitlistService: WaitlistService);
     createWaitlistEntry(dto: CreateWaitlistDto): Promise<{
         ok: boolean;
-        storyId: any;
+        storyId: string;
         message: string;
     }>;
     checkWaitlist(storyId: string): Promise<{

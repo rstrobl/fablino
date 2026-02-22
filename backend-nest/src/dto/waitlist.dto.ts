@@ -18,4 +18,8 @@ export class CreateWaitlistDto {
 
   @IsOptional()
   sideCharacters?: any[];
+
+  @IsOptional()
+  @IsString()
+  storyId?: string;
 }

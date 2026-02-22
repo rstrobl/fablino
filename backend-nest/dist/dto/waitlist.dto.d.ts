@@ -4,4 +4,5 @@ export declare class CreateWaitlistDto {
     heroAge?: string;
     prompt?: string;
     sideCharacters?: any[];
+    storyId?: string;
 }

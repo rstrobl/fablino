@@ -23,7 +23,7 @@ let WaitlistService = class WaitlistService {
         if (!email || !email.includes('@')) {
             throw new common_1.HttpException('Bitte gib eine gültige Email-Adresse ein.', common_1.HttpStatus.BAD_REQUEST);
         }
-        const storyId = dto['storyId'];
+        const storyId = dto.storyId;
         if (!storyId) {
             throw new common_1.HttpException('Story-ID fehlt.', common_1.HttpStatus.BAD_REQUEST);
         }
