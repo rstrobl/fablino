@@ -35,7 +35,8 @@ async function bootstrap() {
   });
 
   // Bind to specific IP and port to match original backend
-  await app.listen(3001, '127.0.0.1');
-  console.log('🎧 Fablino Backend (NestJS) on 127.0.0.1:3001');
+  const port = parseInt(process.env.PORT || '3001', 10);
+  await app.listen(port, '127.0.0.1');
+  console.log(`🎧 Fablino Backend (NestJS) on 127.0.0.1:${port}`);
 }
 bootstrap();
