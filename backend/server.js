@@ -11,6 +11,7 @@ import voicesRouter from './routes/voices.js';
 import audioRouter from './routes/audio.js';
 import waitlistRouter from './routes/waitlist.js';
 import sharingRouter from './routes/sharing.js';
+import adminRouter from './routes/admin.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -35,6 +36,7 @@ app.use('/api/voices', voicesRouter);
 app.use('/api/audio', audioRouter);
 app.use('/api/waitlist', waitlistRouter);
 app.use('/api/reserve', waitlistRouter); // Reserve uses waitlist router
+app.use('/admin', adminRouter);
 app.use('/', sharingRouter);
 
 // Error handling middleware

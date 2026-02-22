@@ -54,13 +54,13 @@ async function getStories() {
   });
 }
 
-async function insertStory(story, script, voiceMap) {
+async function insertStory(story, script, voiceMap, systemPrompt) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     await client.query(
-      'INSERT INTO stories (id, title, prompt, summary, age_group, created_at, audio_path) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-      [story.id, story.title, story.prompt, story.summary || null, story.ageGroup, story.createdAt, `audio/${story.id}.mp3`]
+      'INSERT INTO stories (id, title, prompt, summary, age_group, created_at, audio_path, system_prompt) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+      [story.id, story.title, story.prompt, story.summary || null, story.ageGroup, story.createdAt, `audio/${story.id}.mp3`, systemPrompt || null]
     );
     for (const char of script.characters) {
       await client.query(

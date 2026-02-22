@@ -37,7 +37,7 @@ router.post('/', (req, res) => {
     try {
       jobs[id].progress = 'Skript wird geschrieben...';
       if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY nicht konfiguriert');
-      const script = await generateScript(prompt, ageGroup || '5-7', characters);
+      const { script, systemPrompt } = await generateScript(prompt, ageGroup || '5-7', characters);
 
       // Post-processing: remove onomatopoeia from non-narrator lines
       const onomatopoeiaPattern = /\b(H[aie]h[aie]h?[aie]?|Buhuhu|Hihihi|Ächz|Seufz|Grr+|Brumm+|Miau|Wuff|Schnurr|Piep|Prust|Uff|Autsch|Hmpf|Pah|Tss|Juhu|Juchhu|Hurra|Wiehern?)\b\.{0,3}\s*/gi;
@@ -61,6 +61,7 @@ router.post('/', (req, res) => {
         voiceMap,
         prompt,
         ageGroup: ageGroup || '5-7',
+        systemPrompt,
       };
     } catch (err) {
       console.error('Script generation error:', err);
@@ -77,7 +78,7 @@ router.post('/:id/confirm', (req, res) => {
     return res.status(404).json({ error: 'Kein Skript zur Bestätigung gefunden' });
   }
 
-  const { script, voiceMap, prompt, ageGroup } = job;
+  const { script, voiceMap, prompt, ageGroup, systemPrompt } = job;
   jobs[id] = { status: 'generating_audio', progress: 'Stimmen werden eingesprochen...', title: script.title };
   res.json({ status: 'confirmed' });
 
@@ -123,7 +124,7 @@ router.post('/:id/confirm', (req, res) => {
         ageGroup,
         createdAt: new Date().toISOString(),
       };
-      await insertStory(story, script, voiceMap);
+      await insertStory(story, script, voiceMap, systemPrompt);
 
       jobs[id] = {
         status: 'done',

@@ -102,7 +102,13 @@ Die traits beschreiben die PERSÖNLICHKEIT des Charakters und werden für die St
   const text = data.content[0].text.trim();
   // Parse JSON, handle potential markdown wrapping
   const jsonStr = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '');
-  return JSON.parse(jsonStr);
+  const script = JSON.parse(jsonStr);
+  
+  // Return both the script and the system prompt used
+  return {
+    script,
+    systemPrompt
+  };
 }
 
 export { generateScript };
