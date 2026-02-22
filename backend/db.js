@@ -3,8 +3,24 @@ import { config } from 'dotenv';
 
 config();
 
-// PostgreSQL connection
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+// PostgreSQL connection with fallback configuration
+let connectionConfig;
+
+if (process.env.DATABASE_URL) {
+  // Use DATABASE_URL if available (Docker or production)
+  connectionConfig = { connectionString: process.env.DATABASE_URL };
+} else {
+  // Fallback to individual environment variables or defaults
+  connectionConfig = {
+    host: process.env.PGHOST || 'localhost',
+    port: parseInt(process.env.PGPORT || '5433'),
+    database: process.env.PGDATABASE || 'fablino',
+    user: process.env.PGUSER || 'postgres',
+    password: process.env.PGPASSWORD || process.env.DATABASE_PASSWORD,
+  };
+}
+
+const pool = new pg.Pool(connectionConfig);
 
 // --- DB helpers ---
 

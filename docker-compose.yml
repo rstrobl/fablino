@@ -38,6 +38,7 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - DOCKER_ENV=true
     command: npm run dev
 
   db:
