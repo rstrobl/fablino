@@ -1,0 +1,20 @@
+import { Module } from '@nestjs/common';
+import { GenerationController } from './generation.controller';
+import { GenerationService } from './generation.service';
+import { ClaudeService } from '../../services/claude.service';
+import { TtsService } from '../../services/tts.service';
+import { AudioService } from '../../services/audio.service';
+import { ReplicateService } from '../../services/replicate.service';
+
+@Module({
+  controllers: [GenerationController],
+  providers: [
+    GenerationService,
+    ClaudeService,
+    TtsService,
+    AudioService,
+    ReplicateService,
+  ],
+  exports: [GenerationService],
+})
+export class GenerationModule {}

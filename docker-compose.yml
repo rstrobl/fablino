@@ -3,13 +3,15 @@ version: '3.8'
 services:
   backend:
     build:
-      context: ./backend
+      context: ./backend-nest
       dockerfile: Dockerfile
     ports:
       - "3001:3001"
     volumes:
-      - ./backend:/app
+      - ./backend-nest:/app
       - /app/node_modules
+      - ./audio:/audio:rw
+      - ./backend-nest/covers:/app/covers:rw
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgres://postgres:postgres@db:5432/fablino
@@ -25,7 +27,7 @@ services:
       - TRELLO_TOKEN=${TRELLO_TOKEN}
     depends_on:
       - db
-    command: npm run dev
+    command: npm run start:dev
 
   frontend:
     build:

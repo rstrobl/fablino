@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Story {
+  id            String     @id @default(uuid()) @db.Uuid
+  title         String?
+  prompt        String?
+  mood          String?
+  ageGroup      String?    @map("age_group")
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  audioPath     String?    @map("audio_path")
+  featured      Boolean    @default(false)
+  summary       String?
+  coverUrl      String?    @map("cover_url")
+  voiceSettings Json?      @map("voice_settings")
+  systemPrompt  String?    @map("system_prompt")
+  characters    Character[]
+  lines         Line[]
+
+  @@map("stories")
+}
+
+model Character {
+  id      Int     @id @default(autoincrement())
+  storyId String  @map("story_id") @db.Uuid
+  name    String?
+  gender  String?
+  voiceId String? @map("voice_id")
+  story   Story   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@index([storyId])
+  @@map("characters")
+}
+
+model Line {
+  id        Int     @id @default(autoincrement())
+  storyId   String  @map("story_id") @db.Uuid
+  sceneIdx  Int?    @map("scene_idx")
+  lineIdx   Int?    @map("line_idx")
+  speaker   String?
+  text      String?
+  sfx       String?
+  audioPath String? @map("audio_path")
+  story     Story   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@index([storyId])
+  @@map("lines")
+}
+
+model Waitlist {
+  id             Int      @id @default(autoincrement())
+  email          String
+  heroName       String?  @map("hero_name")
+  heroAge        String?  @map("hero_age")
+  prompt         String?
+  sideCharacters Json?    @map("side_characters")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  storyId        String?  @map("story_id") @db.Uuid
+
+  @@map("waitlist")
+}

@@ -1,0 +1,67 @@
+import { StoriesService } from './stories.service';
+import { ToggleFeaturedDto, VoiceSwapDto } from '../../dto/stories.dto';
+export declare class StoriesController {
+    private readonly storiesService;
+    constructor(storiesService: StoriesService);
+    getStories(all?: string): Promise<{
+        id: string;
+        title: string;
+        characters: {
+            name: string;
+            gender: string;
+        }[];
+        voiceMap: {};
+        prompt: string;
+        summary: string;
+        ageGroup: string;
+        featured: boolean;
+        createdAt: Date;
+        audioUrl: string;
+        coverUrl: string;
+    }[]>;
+    getStory(id: string): Promise<{
+        id: string;
+        title: string;
+        characters: {
+            name: string;
+            gender: string;
+        }[];
+        voiceMap: {};
+        prompt: string;
+        summary: string;
+        ageGroup: string;
+        createdAt: Date;
+        audioUrl: string;
+        coverUrl: string;
+        lines: {
+            id: number;
+            audioPath: string | null;
+            storyId: string;
+            lineIdx: number | null;
+            sceneIdx: number | null;
+            speaker: string | null;
+            text: string | null;
+            sfx: string | null;
+        }[];
+    }>;
+    toggleFeatured(id: string, dto: ToggleFeaturedDto): Promise<{
+        status: string;
+        featured: boolean;
+    }>;
+    voiceSwap(id: string, dto: VoiceSwapDto): Promise<{
+        status: string;
+        message: string;
+        character?: undefined;
+        voiceId?: undefined;
+        linesRegenerated?: undefined;
+    } | {
+        status: string;
+        character: string;
+        voiceId: string;
+        linesRegenerated: number;
+        message?: undefined;
+    }>;
+    deleteStory(id: string): Promise<{
+        status: string;
+    }>;
+}
