@@ -19,6 +19,10 @@ export declare class StoriesController {
         audioUrl: string;
         coverUrl: string;
         status: string;
+        requesterName: string;
+        requesterSource: string;
+        requesterContact: string;
+        interests: string;
     }[]>;
     getStory(id: string): Promise<{
         id: string;
@@ -34,6 +38,12 @@ export declare class StoriesController {
         createdAt: Date;
         audioUrl: string;
         coverUrl: string;
+        status: string;
+        requesterName: string;
+        requesterSource: string;
+        requesterContact: string;
+        interests: string;
+        featured: boolean;
         lines: {
             id: number;
             audioPath: string | null;

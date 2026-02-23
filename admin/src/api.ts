@@ -1,5 +1,7 @@
 import type { Story, WaitlistEntry, Voice } from './types';
 
+const API = '/api';
+
 function getAuth(): string {
   return sessionStorage.getItem('fablino_auth') || '';
 }
@@ -9,19 +11,19 @@ const authHeaders = (): HeadersInit => ({
 });
 
 export async function fetchStories(): Promise<Story[]> {
-  const res = await fetch('/stories?all=true');
+  const res = await fetch(`${API}/stories?all=true`);
   if (!res.ok) throw new Error('Failed to fetch stories');
   return res.json();
 }
 
 export async function fetchStory(id: string): Promise<Story> {
-  const res = await fetch(`/stories/${id}`);
+  const res = await fetch(`${API}/stories/${id}`);
   if (!res.ok) throw new Error('Failed to fetch story');
   return res.json();
 }
 
 export async function deleteStory(id: string): Promise<void> {
-  const res = await fetch(`/admin/stories/${id}`, {
+  const res = await fetch(`${API}/admin/stories/${id}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });
@@ -29,21 +31,30 @@ export async function deleteStory(id: string): Promise<void> {
 }
 
 export async function toggleFeatured(id: string): Promise<void> {
-  const res = await fetch(`/admin/stories/${id}/toggle-featured`, {
+  const res = await fetch(`${API}/admin/stories/${id}/toggle-featured`, {
     method: 'POST',
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error('Failed to toggle featured');
 }
 
+export async function updateStoryStatus(id: string, status: string): Promise<void> {
+  const res = await fetch(`${API}/stories/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error('Failed to update status');
+}
+
 export async function fetchWaitlist(): Promise<WaitlistEntry[]> {
-  const res = await fetch('/waitlist', { headers: authHeaders() });
+  const res = await fetch(`${API}/waitlist`, { headers: authHeaders() });
   if (!res.ok) throw new Error('Failed to fetch waitlist');
   return res.json();
 }
 
 export async function deleteWaitlistEntry(id: string): Promise<void> {
-  const res = await fetch(`/waitlist/${id}`, {
+  const res = await fetch(`${API}/waitlist/${id}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });
@@ -51,10 +62,9 @@ export async function deleteWaitlistEntry(id: string): Promise<void> {
 }
 
 export async function fetchVoices(): Promise<Voice[]> {
-  const res = await fetch('/voices');
+  const res = await fetch(`${API}/voices`);
   if (!res.ok) throw new Error('Failed to fetch voices');
   const data = await res.json();
-  // API returns {id: {name, desc, category, ...}} — convert to array
   if (!Array.isArray(data)) {
     return Object.entries(data).map(([id, v]: [string, any]) => ({
       voice_id: id,
@@ -69,7 +79,7 @@ export async function fetchVoices(): Promise<Voice[]> {
 }
 
 export async function fetchVoiceCategories(): Promise<string[]> {
-  const res = await fetch('/voices/categories');
+  const res = await fetch(`${API}/voices/categories`);
   if (!res.ok) throw new Error('Failed to fetch voice categories');
   return res.json();
 }
@@ -80,7 +90,7 @@ export async function generateScript(data: {
   prompt: string;
   sideCharacters?: string[];
 }): Promise<any> {
-  const res = await fetch('/generate', {
+  const res = await fetch(`${API}/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),
@@ -90,7 +100,7 @@ export async function generateScript(data: {
 }
 
 export async function generateAudio(data: any): Promise<any> {
-  const res = await fetch('/generate/audio', {
+  const res = await fetch(`${API}/generate/audio`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(data),
@@ -99,24 +109,15 @@ export async function generateAudio(data: any): Promise<any> {
   return res.json();
 }
 
-export async function updateStoryStatus(id: string, status: string): Promise<void> {
-  const res = await fetch(`/stories/${id}/status`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ status }),
-  });
-  if (!res.ok) throw new Error('Failed to update status');
-}
-
 export async function fetchPlayStats(): Promise<{ storyId: string; plays: number }[]> {
-  const res = await fetch('/plays/stats', { headers: authHeaders() });
+  const res = await fetch(`${API}/plays/stats`, { headers: authHeaders() });
   if (!res.ok) throw new Error('Failed to fetch play stats');
   return res.json();
 }
 
 export async function checkHealth(): Promise<{ status: string }> {
   try {
-    const res = await fetch('/stories?all=true');
+    const res = await fetch(`${API}/stories?all=true`);
     return { status: res.ok ? 'healthy' : 'unhealthy' };
   } catch {
     return { status: 'unreachable' };

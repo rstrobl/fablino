@@ -31,6 +31,10 @@ export interface Story {
   voiceSettings: any;
   systemPrompt: string | null;
   status: string;
+  requesterName: string | null;
+  requesterSource: string | null;
+  requesterContact: string | null;
+  interests: string | null;
   characters: Character[];
   lines: Line[];
 }

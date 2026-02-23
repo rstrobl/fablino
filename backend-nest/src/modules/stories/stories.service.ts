@@ -55,6 +55,10 @@ export class StoriesService {
         audioUrl: story.audioPath ? `/api/audio/${story.id}` : null,
         coverUrl: story.coverUrl || null,
         status: story.status || 'requested',
+        requesterName: story.requesterName || null,
+        requesterSource: story.requesterSource || null,
+        requesterContact: story.requesterContact || null,
+        interests: story.interests || null,
       };
     });
 
@@ -106,6 +110,12 @@ export class StoriesService {
       createdAt: story.createdAt,
       audioUrl: story.audioPath ? `/api/audio/${story.id}` : null,
       coverUrl: story.coverUrl || null,
+      status: story.status || 'requested',
+      requesterName: story.requesterName || null,
+      requesterSource: story.requesterSource || null,
+      requesterContact: story.requesterContact || null,
+      interests: story.interests || null,
+      featured: story.featured,
       lines: story.lines,
     };
   }

@@ -23,8 +23,12 @@ model Story {
   coverUrl      String?    @map("cover_url")
   voiceSettings Json?      @map("voice_settings")
   systemPrompt  String?    @map("system_prompt")
-  status        String     @default("requested")
-  characters    Character[]
+  status          String     @default("requested")
+  requesterName   String?    @map("requester_name")
+  requesterSource String?    @map("requester_source")
+  requesterContact String?   @map("requester_contact")
+  interests       String?
+  characters      Character[]
   lines         Line[]
   plays         Play[]
 

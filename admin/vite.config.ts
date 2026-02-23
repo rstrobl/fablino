@@ -9,12 +9,7 @@ export default defineConfig({
     host: '0.0.0.0',
     allowedHosts: ['admin.fablino.de'],
     proxy: {
-      '/stories': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: (path) => '/api' + path,
-      },
-      '/admin': {
+      '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
@@ -22,34 +17,9 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
-      '/audio': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: (path) => '/api' + path,
-      },
       '/audio-files': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-      },
-      '/voices': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: (path) => '/api' + path,
-      },
-      '/generate': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: (path) => '/api' + path,
-      },
-      '/plays': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: (path) => '/api' + path,
-      },
-      '/waitlist': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: (path) => '/api' + path,
       },
     },
   },
