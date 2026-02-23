@@ -3,8 +3,9 @@ node_modules/
 *.mp3
 *.wav
 audio/
-frontend/node_modules/
 frontend/dist/
+admin/dist/
+backend-nest/dist/
 *.sql
 *.tar.gz
 backend/generate_audio_sv*.cjs
