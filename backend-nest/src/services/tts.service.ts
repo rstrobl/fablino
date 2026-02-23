@@ -197,7 +197,15 @@ export class TtsService {
         voiceMap[char.name] = this.EL_VOICES.narrator;
         usedVoices.add(this.EL_VOICES.narrator);
       } else {
-        const gender = char.gender || 'adult_m';
+        // For creatures, detect if female voice needed based on name
+        let gender = char.gender || 'adult_m';
+        if (gender === 'creature') {
+          const n = char.name.toLowerCase();
+          const femaleHints = ['fee', 'fairy', 'prinzessin', 'königin', 'hexe', 'meerjungfrau', 'nixe', 'elfe', 'stella', 'luna', 'rosa', 'lila', 'susi', 'dame', 'frau', 'mutter', 'oma', 'tante'];
+          if (femaleHints.some(h => n.includes(h))) {
+            gender = 'adult_f';
+          }
+        }
         // Try trait-based matching first
         const traitMatch = this.matchVoiceByTraits(gender, char.traits, usedVoices);
         if (traitMatch) {

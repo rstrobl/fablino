@@ -253,32 +253,11 @@ function App() {
       return
     }
 
-    // Handle /story/:id/script URLs
+    // /story/:id/script URLs → redirect to story page (scripts now in admin)
     const scriptMatch = window.location.pathname.match(/\/story\/([a-f0-9-]+)\/script/)
     if (scriptMatch) {
-      const scriptStoryId = scriptMatch[1]
-      const found = list.find(s => s.id === scriptStoryId)
-      if (found) {
-        // If we already have lines, show script directly
-        if (found.lines && found.lines.length > 0) {
-          setCurrentStory(found)
-          setView('script')
-          return
-        }
-      }
-      // Fetch full story with lines
-      fetch(`${BASE_URL}/api/stories/${scriptStoryId}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(story => {
-          if (story) {
-            setCurrentStory(story)
-            setView('script')
-          } else {
-            setView('home')
-          }
-        })
-        .catch(() => { setView('home') })
-      return
+      window.history.replaceState({}, '', `/story/${scriptMatch[1]}`)
+      // fall through to story handler below
     }
 
     const pathMatch = window.location.pathname.match(/\/story\/([a-f0-9-]+)/)
@@ -913,53 +892,6 @@ function App() {
                 )}
               </div>
             </div>
-          </main>
-        )
-      })()}
-
-      {/* ===== SCRIPT ===== */}
-      {view === 'script' && currentStory && (() => {
-        const lines = currentStory.lines || []
-        // Group lines into scenes: a scene break is when speaker is 'Erzähler' and text contains scene-like markers,
-        // or we just show all lines as one flowing script
-        return (
-          <main className="player">
-            <button className="back-btn" onClick={() => {
-              window.history.pushState({}, '', `/story/${currentStory.id}`)
-              setView('player')
-            }}>
-              <ChevronLeft size={18} /> Zurück
-            </button>
-
-            <h2>{currentStory.title}</h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Skript — {lines.length} Zeilen</p>
-
-            <div className="characters" style={{ marginBottom: '1.5rem' }}>
-              {currentStory.characters.filter(c => c.name !== 'Erzähler').map((c, i) => (
-                <span key={c.name} className="char-badge">
-                  <TwemojiIcon emoji={charEmoji(c.name, c.gender, i)} size={18} /> {c.name}
-                </span>
-              ))}
-            </div>
-
-            <div className="script-view" style={{ maxHeight: 'none' }}>
-              {lines.map((line, i) => {
-                const isNarrator = line.speaker === 'Erzähler'
-                return (
-                  <div key={i} className={`script-line ${isNarrator ? 'narrator' : 'character'}`}>
-                    <span className="script-speaker">{line.speaker}</span>
-                    <span className="script-text">{line.text}</span>
-                  </div>
-                )
-              })}
-            </div>
-
-            <button className="back-btn" onClick={() => {
-              window.history.pushState({}, '', `/story/${currentStory.id}`)
-              setView('player')
-            }} style={{ marginTop: '1.5rem' }}>
-              <ChevronLeft size={18} /> Zurück zum Player
-            </button>
           </main>
         )
       })()}

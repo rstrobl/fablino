@@ -2,9 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchStory, deleteStory, toggleFeatured, updateStoryStatus } from '../api';
 import { useAudio } from '../audioContext';
-import { ArrowLeft, Play, Star, Trash2, Wand2, Loader2, Check, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Star, Trash2, Wand2, Loader2, Check, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useState, useEffect, useRef } from 'react';
+import { charEmoji, TwemojiIcon } from '../charEmoji';
 
 function getAuth(): string {
   return sessionStorage.getItem('fablino_auth') || '';
@@ -76,7 +77,7 @@ function GenerateForm({ story, onDone }: { story: any; onDone: () => void }) {
         prompt: useHeroName
           ? `Name: ${heroName}, Alter: ${heroAge} Jahre. Interessen/Thema: ${prompt}`
           : `Alter des Kindes: ${heroAge} Jahre. Interessen/Thema: ${prompt}. Der Held soll NICHT das Kind selbst sein, sondern eine fiktive Figur.`,
-        ageGroup: heroAge,
+        age: parseFloat(heroAge) || 6,
         ...(systemPrompt.trim() && defaultPromptLoaded && { systemPromptOverride: systemPrompt.trim() }),
         characters: {
           ...(useHeroName && { hero: { name: heroName, age: heroAge } }),
@@ -238,11 +239,16 @@ function GenerateForm({ story, onDone }: { story: any; onDone: () => void }) {
             <div className="flex gap-2 flex-wrap">
               {script.characters?.map((c: any) => (
                 <span key={c.name} className="px-3 py-1 bg-gray-800 border border-border rounded-full text-xs">
-                  {c.name} <span className="text-text-muted">({c.gender})</span>
-                  {voiceMap?.[c.name] && <span className="text-brand ml-1">🎤</span>}
+                  <TwemojiIcon emoji={charEmoji(c.name, c.gender)} size={16} /> {c.name}
                 </span>
               ))}
             </div>
+          </div>
+
+          <div className="flex gap-4 text-xs text-text-muted">
+            <span>{script.scenes?.length} Szenen</span>
+            <span>{script.scenes?.reduce((t: number, s: any) => t + (s.lines?.length || 0), 0)} Zeilen</span>
+            <span>{script.characters?.length} Charaktere</span>
           </div>
 
           <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -251,7 +257,7 @@ function GenerateForm({ story, onDone }: { story: any; onDone: () => void }) {
                 <p className="text-xs text-text-muted mb-2">Szene {si + 1}</p>
                 {scene.lines?.map((line: any, li: number) => (
                   <div key={li} className="mb-1">
-                    <span className="text-brand font-medium text-sm">{line.speaker}:</span>{' '}
+                    <span className="text-brand font-medium text-sm"><TwemojiIcon emoji={charEmoji(line.speaker, script.characters?.find((c: any) => c.name === line.speaker)?.gender || '')} size={14} /> {line.speaker}:</span>{' '}
                     <span className="text-sm">{line.text}</span>
                   </div>
                 ))}
@@ -378,11 +384,16 @@ function DraftPreview({ story, onDone }: { story: any; onDone: () => void }) {
         <div className="flex gap-2 flex-wrap">
           {script.characters?.map((c: any) => (
             <span key={c.name} className="px-3 py-1 bg-gray-800 border border-border rounded-full text-xs">
-              {c.name} <span className="text-text-muted">({c.gender})</span>
-              {voiceMap?.[c.name] && <span className="text-brand ml-1">🎤</span>}
+              <TwemojiIcon emoji={charEmoji(c.name, c.gender)} size={16} /> {c.name}
             </span>
           ))}
         </div>
+      </div>
+
+      <div className="flex gap-4 text-xs text-text-muted">
+        <span>{script.scenes?.length} Szenen</span>
+        <span>{script.scenes?.reduce((t: number, s: any) => t + (s.lines?.length || 0), 0)} Zeilen</span>
+        <span>{script.characters?.length} Charaktere</span>
       </div>
 
       <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -391,7 +402,7 @@ function DraftPreview({ story, onDone }: { story: any; onDone: () => void }) {
             <p className="text-xs text-text-muted mb-2">Szene {si + 1}</p>
             {scene.lines?.map((line: any, li: number) => (
               <div key={li} className="mb-1">
-                <span className="text-brand font-medium text-sm">{line.speaker}:</span>{' '}
+                <span className="text-brand font-medium text-sm"><TwemojiIcon emoji={charEmoji(line.speaker, script.characters?.find((c: any) => c.name === line.speaker)?.gender || '')} size={14} /> {line.speaker}:</span>{' '}
                 <span className="text-sm">{line.text}</span>
               </div>
             ))}
@@ -407,6 +418,149 @@ function DraftPreview({ story, onDone }: { story: any; onDone: () => void }) {
           <Check size={16} /> Skript bestätigen & Audio generieren
         </button>
       </div>
+    </div>
+  );
+}
+
+// Global audio ref so only one line plays at a time
+let globalLineAudio: HTMLAudioElement | null = null;
+let globalLineStop: (() => void) | null = null;
+
+function ScriptLine({ line, story, onUpdated }: { line: any; story: any; onUpdated: () => void }) {
+  const [state, setState] = useState<'idle' | 'loading' | 'playing'>('idle');
+  const [regenerating, setRegenerating] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [stability, setStability] = useState(0.45);
+  const [similarity, setSimilarity] = useState(0.8);
+  const [style, setStyle] = useState(0.7);
+  const [cachedUrl, setCachedUrl] = useState<string | null>(null);
+
+  const matchChar = story.characters?.find((c: any) => c.name === line.speaker || c.name?.includes(line.speaker) || line.speaker?.includes(c.name));
+  const voiceId = matchChar?.voiceId || '';
+  const gender = matchChar?.gender || '';
+
+  const stopGlobal = () => {
+    if (globalLineAudio) { globalLineAudio.pause(); globalLineAudio = null; }
+    if (globalLineStop) { globalLineStop(); globalLineStop = null; }
+  };
+
+  const playAudio = (url: string) => {
+    stopGlobal();
+    const audio = new Audio(url);
+    globalLineAudio = audio;
+    globalLineStop = () => setState('idle');
+    audio.onended = () => { setState('idle'); globalLineAudio = null; globalLineStop = null; };
+    audio.play();
+    setState('playing');
+  };
+
+  const playLine = async () => {
+    if (state === 'playing') {
+      stopGlobal();
+      setState('idle');
+      return;
+    }
+    if (cachedUrl) {
+      playAudio(cachedUrl);
+      return;
+    }
+    try {
+      stopGlobal();
+      setState('loading');
+      const res = await fetch('/api/generate/preview-line', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: line.text, voiceId,
+          voiceSettings: { stability, similarity_boost: similarity, style, use_speaker_boost: true },
+        }),
+      });
+      if (!res.ok) throw new Error('Fehler');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setCachedUrl(url);
+      playAudio(url);
+    } catch {
+      setState('idle');
+    }
+  };
+
+  const regenerate = async () => {
+    setRegenerating(true);
+    try {
+      stopGlobal();
+      const res = await fetch('/api/generate/preview-line', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: line.text, voiceId,
+          voiceSettings: { stability, similarity_boost: similarity, style, use_speaker_boost: true },
+        }),
+      });
+      if (!res.ok) throw new Error('Fehler');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      if (cachedUrl) URL.revokeObjectURL(cachedUrl);
+      setCachedUrl(url);
+      playAudio(url);
+    } catch {
+      // ignore
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  return (
+    <div className="group relative flex items-start gap-2 hover:bg-gray-900/30 rounded px-2 py-1 -mx-2">
+      <div className="flex-1">
+        <span className="text-brand font-medium text-sm">
+          <TwemojiIcon emoji={charEmoji(line.speaker || '', gender)} size={14} /> {line.speaker}:
+        </span>{' '}
+        <span className="text-sm">{line.text}</span>
+      </div>
+      <div className={`flex items-center gap-1 transition-opacity shrink-0 ${state !== 'idle' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+        <button
+          onClick={playLine}
+          className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-brand transition-colors"
+          title="Vorhören"
+        >
+          {state === 'loading' ? <Loader2 size={14} className="animate-spin" /> : state === 'playing' ? <Pause size={14} /> : <Play size={14} />}
+        </button>
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-brand transition-colors"
+          title="Voice Settings"
+        >
+          <Wand2 size={14} />
+        </button>
+      </div>
+      {showSettings && (
+        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg p-3 shadow-lg z-10 space-y-2 w-64">
+          <div className="flex items-center justify-between text-xs">
+            <span>Stability</span>
+            <input type="range" min="0" max="1" step="0.05" value={stability} onChange={e => setStability(+e.target.value)} className="w-32" />
+            <span className="w-8 text-right">{stability}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span>Similarity</span>
+            <input type="range" min="0" max="1" step="0.05" value={similarity} onChange={e => setSimilarity(+e.target.value)} className="w-32" />
+            <span className="w-8 text-right">{similarity}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span>Style</span>
+            <input type="range" min="0" max="1" step="0.05" value={style} onChange={e => setStyle(+e.target.value)} className="w-32" />
+            <span className="w-8 text-right">{style}</span>
+          </div>
+          <button
+            onClick={regenerate}
+            disabled={regenerating}
+            className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-brand hover:bg-green-700 text-white rounded text-xs font-medium transition-colors disabled:opacity-50"
+          >
+            {regenerating ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
+            Neu generieren
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -533,7 +687,7 @@ export function StoryDetail() {
           <div className="flex gap-2 flex-wrap">
             {story.characters.map((c) => (
               <span key={c.id} className="px-3 py-1 bg-surface border border-border rounded-full text-sm">
-                {c.name} <span className="text-text-muted">({c.gender})</span>
+                <TwemojiIcon emoji={charEmoji(c.name, c.gender)} size={16} /> {c.name}
               </span>
             ))}
           </div>
@@ -550,11 +704,7 @@ export function StoryDetail() {
                 <p className="text-xs text-text-muted mb-2">Szene {Number(scene) + 1}</p>
                 <div className="space-y-2">
                   {lines.sort((a, b) => a.lineIdx - b.lineIdx).map((l) => (
-                    <div key={l.id}>
-                      <span className="text-brand font-medium text-sm">{l.speaker}:</span>{' '}
-                      <span className="text-sm">{l.text}</span>
-                      {l.sfx && <span className="text-xs text-text-muted ml-2">🎵 {l.sfx}</span>}
-                    </div>
+                    <ScriptLine key={l.id} line={l} story={story} onUpdated={() => qc.invalidateQueries({ queryKey: ['story', id] })} />
                   ))}
                 </div>
               </div>

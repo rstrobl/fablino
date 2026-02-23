@@ -45,7 +45,7 @@ export class ClaudeService {
 
   async generateScript(
     prompt: string,
-    ageGroup: string = '5-7',
+    age: number = 6,
     characters?: CharacterRequest,
     systemPromptOverride?: string,
   ): Promise<GeneratedScript> {
@@ -55,8 +55,10 @@ export class ClaudeService {
       throw new Error('ANTHROPIC_API_KEY nicht konfiguriert');
     }
 
-    const ageRules = ageGroup === '3-5' ? `
-KLEINE OHREN (3–5 Jahre):
+    const ageRules = `
+ZIELALTER: ${age} Jahre. Passe Sprache, Komplexität und Länge exakt an dieses Alter an.
+
+${age <= 5 ? `REGELN FÜR JÜNGERE KINDER (${age} Jahre):
 - Kurze Sätze. Wiederholungen ("Klopf, klopf, klopf!"). Klangwörter nur im Erzählertext.
 - KEINE Zahlen, Maßeinheiten, Zeitangaben, abstrakte Konzepte
 - Emotionen benennen: "Da wurde der Igel ganz traurig" (Kinder lernen Gefühle einzuordnen)
@@ -65,8 +67,7 @@ KLEINE OHREN (3–5 Jahre):
 - Happy End ist Pflicht
 - LÄNGE: MINDESTENS 40 Zeilen, besser 50–60. Das Hörspiel MUSS mindestens 6 Minuten dauern. Schreibe ausführliche Szenen mit vielen Dialogen. Nicht abkürzen! Jede Szene braucht mehrere Hin-und-Her-Dialoge zwischen den Charakteren.
 - Erzähler führt stark — bindet Szenen zusammen, beschreibt Bilder, leitet Dialoge ein
-- Keine Ironie, kein Sarkasmus — wird nicht verstanden` : `
-GROSSE OHREN (6–9 Jahre):
+- Keine Ironie, kein Sarkasmus — wird nicht verstanden` : age <= 8 ? `REGELN FÜR MITTLERE KINDER (${age} Jahre):
 - Komplexere Plots: Rätsel, Wendungen, Geheimnisse
 - Humor: Wortspiele, absurde Situationen, Slapstick
 - Einfache Zahlen/Fakten OK wenn sie der Story dienen
@@ -75,7 +76,16 @@ GROSSE OHREN (6–9 Jahre):
 - Offene Enden möglich (Cliffhanger für Fortsetzungen!)
 - LÄNGE: MINDESTENS 60 Zeilen, besser 70–80. Das Hörspiel MUSS mindestens 10 Minuten dauern. Schreibe ausführliche Szenen mit vielen Dialogen, Wendungen und Details. Nicht abkürzen!
 - Erzähler als Rahmen: Intro, Szenenwechsel, Atmosphäre, Outro — aber Dialog trägt die Handlung
-- Leichte Grusel-Elemente OK (aber immer aufgelöst)`;
+- Leichte Grusel-Elemente OK (aber immer aufgelöst)` : `REGELN FÜR ÄLTERE KINDER (${age} Jahre):
+- Anspruchsvolle Plots: Mehrere Handlungsstränge, echte Spannung, überraschende Wendungen
+- Humor: Ironie, Wortspiele, situationsbedingte Komik
+- Fakten, Technik, Geschichte dürfen einfließen
+- Bis 8 Charaktere, komplexere Beziehungen zwischen Figuren
+- Moral und Botschaft subtil eingewoben
+- Cliffhanger und offene Enden ausdrücklich erlaubt
+- LÄNGE: MINDESTENS 70 Zeilen, besser 80–100. Das Hörspiel MUSS mindestens 12 Minuten dauern. Ausführliche Dialoge, Spannungsaufbau, Details. Nicht abkürzen!
+- Erzähler sparsam — Dialog und Handlung tragen die Story
+- Echte Spannung und leichter Grusel OK`}`;
 
     // Load base system prompt from file (or use override)
     const fs = require('fs');

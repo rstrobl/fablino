@@ -43,7 +43,7 @@ describe('GenerationController', () => {
     it('should generate story successfully', async () => {
       const dto: GenerateStoryDto = {
         prompt: 'Ein Abenteuer im Wald',
-        ageGroup: '5-7',
+        age: '5-7',
       };
       const expectedResult = { id: 'job123', status: 'accepted' };
       mockGenerationService.generateStory.mockResolvedValue(expectedResult);
@@ -66,7 +66,7 @@ describe('GenerationController', () => {
     it('should pass through all DTO fields', async () => {
       const dto: GenerateStoryDto = {
         prompt: 'Test story',
-        ageGroup: '6-9',
+        age: '6-9',
         characters: {
           hero: { name: 'Max', age: '8' },
           sideCharacters: [{ name: 'Luna', role: 'friend' }]

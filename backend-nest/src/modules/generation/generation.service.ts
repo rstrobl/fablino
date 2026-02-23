@@ -17,7 +17,7 @@ export interface Job {
   script?: Script;
   voiceMap?: { [name: string]: string };
   prompt?: string;
-  ageGroup?: string;
+  age?: number;
   systemPrompt?: string;
   error?: string;
   completedAt?: number;
@@ -50,7 +50,7 @@ export class GenerationService {
   }
 
   async generateStory(dto: GenerateStoryDto) {
-    const { prompt, ageGroup = '5-7', characters, systemPromptOverride, storyId } = dto;
+    const { prompt, age = 6, characters, systemPromptOverride, storyId } = dto;
 
     if (!prompt) {
       throw new HttpException('Prompt ist erforderlich', HttpStatus.BAD_REQUEST);
@@ -64,18 +64,18 @@ export class GenerationService {
     };
 
     // Start generation async
-    this.generateScriptAsync(id, prompt, ageGroup, characters, systemPromptOverride);
+    this.generateScriptAsync(id, prompt, age, characters, systemPromptOverride);
 
     return { id, status: 'accepted' };
   }
 
-  private async generateScriptAsync(id: string, prompt: string, ageGroup: string, characters: any, systemPromptOverride?: string) {
+  private async generateScriptAsync(id: string, prompt: string, age: number, characters: any, systemPromptOverride?: string) {
     try {
       this.jobs[id].progress = 'Skript wird geschrieben...';
       
       const { script, systemPrompt } = await this.claudeService.generateScript(
         prompt, 
-        ageGroup, 
+        age, 
         characters,
         systemPromptOverride,
       );
@@ -130,7 +130,7 @@ export class GenerationService {
             title: script.title,
             prompt,
             summary: script.summary || null,
-            age: parseFloat(ageGroup) || null,
+            age: age || null,
             scriptData: { script, voiceMap, systemPrompt } as any,
           },
         });
@@ -141,7 +141,7 @@ export class GenerationService {
         script,
         voiceMap,
         prompt,
-        ageGroup,
+        age,
         systemPrompt,
       };
     } catch (err) {
@@ -167,7 +167,7 @@ export class GenerationService {
           script,
           voiceMap,
           prompt: story.prompt,
-          ageGroup: String(story.age || '5'),
+          age: Number(story.age) || 6,
           systemPrompt,
         };
         this.jobs[id] = job;
@@ -176,7 +176,7 @@ export class GenerationService {
       }
     }
 
-    const { script, voiceMap, prompt, ageGroup, systemPrompt } = job;
+    const { script, voiceMap, prompt, age, systemPrompt } = job;
     this.jobs[id] = {
       status: 'generating_audio',
       progress: 'Stimmen werden eingesprochen...',
@@ -184,7 +184,7 @@ export class GenerationService {
     };
 
     // Start audio generation async
-    this.generateAudioAsync(id, script, voiceMap, prompt, ageGroup, systemPrompt);
+    this.generateAudioAsync(id, script, voiceMap, prompt, age, systemPrompt);
 
     return { status: 'confirmed' };
   }
@@ -194,7 +194,7 @@ export class GenerationService {
     script: Script,
     voiceMap: { [name: string]: string },
     prompt: string,
-    ageGroup: string,
+    age: number,
     systemPrompt: string,
   ) {
     const linesDir = path.join(this.AUDIO_DIR, 'lines', id);
@@ -248,7 +248,7 @@ export class GenerationService {
       console.log(`Cover for ${id}: ${coverUrl || 'none'}`);
 
       // Save to database
-      const story = await this.insertStory(id, script, voiceMap, prompt, ageGroup, systemPrompt, coverUrl);
+      const story = await this.insertStory(id, script, voiceMap, prompt, age, systemPrompt, coverUrl);
 
       this.jobs[id] = {
         status: 'done',
@@ -275,7 +275,7 @@ export class GenerationService {
     script: Script,
     voiceMap: { [name: string]: string },
     prompt: string,
-    ageGroup: string,
+    age: number,
     systemPrompt: string,
     coverUrl?: string,
   ) {
@@ -286,21 +286,28 @@ export class GenerationService {
       const hasSideChars = script.characters.length > 2; // narrator + hero + others = Bezugspersonen
       const testGroup = hasHeroName ? (hasSideChars ? 'A' : 'B') : 'C';
 
-      // Insert story
-      const story = await tx.story.create({
-        data: {
-          id: storyId,
-          title: script.title,
-          prompt: prompt,
-          summary: script.summary || null,
-          age: parseInt(ageGroup) || null,
-          createdAt: new Date(),
-          audioPath: `audio/${storyId}.mp3`,
-          systemPrompt: systemPrompt || null,
-          coverUrl: coverUrl || null,
-          testGroup,
-        },
+      // Upsert story (may already exist as draft)
+      const storyData = {
+        title: script.title,
+        prompt: prompt,
+        summary: script.summary || null,
+        age: age || null,
+        audioPath: `audio/${storyId}.mp3`,
+        systemPrompt: systemPrompt || null,
+        coverUrl: coverUrl || null,
+        testGroup,
+        status: 'produced',
+        scriptData: null as any, // clear draft data
+      };
+      const story = await tx.story.upsert({
+        where: { id: storyId },
+        update: storyData,
+        create: { id: storyId, ...storyData, createdAt: new Date() },
       });
+
+      // Delete old characters/lines if re-generating
+      await tx.character.deleteMany({ where: { storyId } });
+      await tx.line.deleteMany({ where: { storyId } });
 
       // Insert characters
       for (const char of script.characters) {
@@ -386,7 +393,7 @@ export class GenerationService {
         script,
         voiceMap,
         prompt: story.prompt,
-        ageGroup: String(story.age || '5'),
+        age: Number(story.age) || 6,
         systemPrompt,
       };
       return this.jobs[id];

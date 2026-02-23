@@ -126,7 +126,7 @@ describe('GenerationService', () => {
     it('should generate story successfully', async () => {
       const dto: GenerateStoryDto = {
         prompt: 'Ein Abenteuer im Wald',
-        ageGroup: '5-7',
+        age: '5-7',
       };
 
       const result = await service.generateStory(dto);
@@ -161,7 +161,7 @@ describe('GenerationService', () => {
     it('should start async generation process', async () => {
       const dto: GenerateStoryDto = {
         prompt: 'Test story',
-        ageGroup: '6-9',
+        age: '6-9',
         characters: {
           hero: { name: 'Anna', age: '7' },
         },

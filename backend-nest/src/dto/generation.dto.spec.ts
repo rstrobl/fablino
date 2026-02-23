@@ -149,7 +149,7 @@ describe('Generation DTOs', () => {
       
       const dto = new GenerateStoryDto();
       dto.prompt = 'Adventure in space';
-      dto.ageGroup = '6-9';
+      dto.age = '6-9';
       dto.characters = charactersDto;
 
       const errors = await validate(dto);
@@ -158,7 +158,7 @@ describe('Generation DTOs', () => {
 
     it('should fail validation with missing prompt', async () => {
       const dto = new GenerateStoryDto();
-      dto.ageGroup = '3-5';
+      dto.age = '3-5';
 
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);

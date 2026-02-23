@@ -41,7 +41,7 @@ export class GenerateStoryDto {
 
   @IsOptional()
   @IsString()
-  ageGroup?: string;
+  age?: number;
 
   @IsOptional()
   @IsString()

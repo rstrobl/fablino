@@ -35,6 +35,7 @@ export class StoriesService {
       const characters = story.characters.map(c => ({
         name: c.name,
         gender: c.gender,
+        voiceId: c.voiceId || null,
       }));
 
       const voiceMap = {};
@@ -94,6 +95,7 @@ export class StoriesService {
     const characters = story.characters.map(c => ({
       name: c.name,
       gender: c.gender,
+      voiceId: c.voiceId || null,
     }));
 
     const voiceMap = {};
@@ -201,7 +203,7 @@ export class StoriesService {
         const line = allLines[i];
         const linePath = path.join(linesDir, `line_${globalIdx}.mp3`);
         
-        if (line.speaker === character) {
+        if (line.speaker === character || character.includes(line.speaker) || line.speaker?.includes(character)) {
           const previous_text = i > 0 ? 
             allLines.slice(Math.max(0, i - 2), i).map(l => l.text).join(' ') : 
             undefined;
