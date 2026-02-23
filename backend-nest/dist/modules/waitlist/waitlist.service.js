@@ -65,6 +65,15 @@ let WaitlistService = class WaitlistService {
             throw new common_1.HttpException('Etwas ist schiefgelaufen. Bitte versuche es später noch mal.', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    async getAllWaitlist() {
+        return this.prisma.waitlist.findMany({
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async deleteWaitlistEntry(id) {
+        await this.prisma.waitlist.delete({ where: { id } });
+        return { status: 'ok' };
+    }
     async checkWaitlist(storyId) {
         try {
             const waitlist = await this.prisma.waitlist.findFirst({

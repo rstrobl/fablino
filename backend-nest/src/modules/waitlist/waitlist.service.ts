@@ -73,6 +73,17 @@ export class WaitlistService {
     }
   }
 
+  async getAllWaitlist() {
+    return this.prisma.waitlist.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async deleteWaitlistEntry(id: number) {
+    await this.prisma.waitlist.delete({ where: { id } });
+    return { status: 'ok' };
+  }
+
   async checkWaitlist(storyId: string) {
     try {
       const waitlist = await this.prisma.waitlist.findFirst({

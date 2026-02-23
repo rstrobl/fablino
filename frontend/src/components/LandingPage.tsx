@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { StoryCard } from './StoryCard'
 import { RANDOM_PROMPTS } from '../utils'
-import type { Story } from '../types'
+import type { Story, View } from '../types'
 
 interface LandingPageProps {
   prompt: string
@@ -18,7 +18,7 @@ interface LandingPageProps {
   storyDurations: Record<string, number>
   onGenerate: () => void
   onPlayStory: (story: Story) => void
-  setView: (view: string) => void
+  setView: (view: View) => void
 }
 
 export function LandingPage({

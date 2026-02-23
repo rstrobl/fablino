@@ -40,6 +40,8 @@ export function StoryPlayer({ story, onGoHome }: StoryPlayerProps) {
     }
   }, [])
 
+  const hasTrackedPlay = useRef(false)
+
   const togglePlay = () => {
     const audio = audioRef.current
     if (!audio) return
@@ -48,6 +50,11 @@ export function StoryPlayer({ story, onGoHome }: StoryPlayerProps) {
       audio.pause()
     } else {
       audio.play()
+      // Track play once per session
+      if (!hasTrackedPlay.current) {
+        hasTrackedPlay.current = true
+        fetch(`/api/plays/${story.id}`, { method: 'POST' }).catch(() => {})
+      }
     }
     setIsPlaying(!isPlaying)
   }

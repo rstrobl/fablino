@@ -22,6 +22,7 @@ export declare class StoriesService {
         createdAt: Date;
         audioUrl: string;
         coverUrl: string;
+        status: string;
     }[]>;
     getStory(id: string): Promise<{
         id: string;
@@ -47,6 +48,10 @@ export declare class StoriesService {
             text: string | null;
             sfx: string | null;
         }[];
+    }>;
+    updateStatus(id: string, status: string): Promise<{
+        status: string;
+        newStatus: string;
     }>;
     toggleFeatured(id: string, featured: boolean): Promise<{
         status: string;

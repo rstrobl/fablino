@@ -23,10 +23,24 @@ model Story {
   coverUrl      String?    @map("cover_url")
   voiceSettings Json?      @map("voice_settings")
   systemPrompt  String?    @map("system_prompt")
+  status        String     @default("requested")
   characters    Character[]
   lines         Line[]
+  plays         Play[]
 
   @@map("stories")
+}
+
+model Play {
+  id        Int      @id @default(autoincrement())
+  storyId   String   @map("story_id") @db.Uuid
+  playedAt  DateTime @default(now()) @map("played_at") @db.Timestamptz
+  userAgent String?  @map("user_agent")
+  ip        String?
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@index([storyId])
+  @@map("plays")
 }
 
 model Character {

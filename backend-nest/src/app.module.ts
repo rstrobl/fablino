@@ -11,6 +11,7 @@ import { AudioModule } from './modules/audio/audio.module';
 import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { SharingModule } from './modules/sharing/sharing.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { PlaysModule } from './modules/plays/plays.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AdminModule } from './modules/admin/admin.module';
     WaitlistModule,
     SharingModule,
     AdminModule,
+    PlaysModule,
   ],
 })
 export class AppModule {}

@@ -27,6 +27,9 @@ let StoriesController = class StoriesController {
     async getStory(id) {
         return this.storiesService.getStory(id);
     }
+    async updateStatus(id, body) {
+        return this.storiesService.updateStatus(id, body.status);
+    }
     async toggleFeatured(id, dto) {
         return this.storiesService.toggleFeatured(id, dto.featured);
     }
@@ -52,6 +55,14 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], StoriesController.prototype, "getStory", null);
+__decorate([
+    (0, common_1.Patch)(':id/status'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], StoriesController.prototype, "updateStatus", null);
 __decorate([
     (0, common_1.Patch)(':id/featured'),
     __param(0, (0, common_1.Param)('id')),

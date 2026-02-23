@@ -17,6 +17,11 @@ export class StoriesController {
     return this.storiesService.getStory(id);
   }
 
+  @Patch(':id/status')
+  async updateStatus(@Param('id') id: string, @Body() body: { status: string }) {
+    return this.storiesService.updateStatus(id, body.status);
+  }
+
   @Patch(':id/featured')
   async toggleFeatured(@Param('id') id: string, @Body() dto: ToggleFeaturedDto) {
     return this.storiesService.toggleFeatured(id, dto.featured);

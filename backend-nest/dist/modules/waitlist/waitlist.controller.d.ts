@@ -8,7 +8,20 @@ export declare class WaitlistController {
         storyId: string;
         message: string;
     }>;
+    getAllWaitlist(): Promise<{
+        id: number;
+        prompt: string | null;
+        createdAt: Date;
+        storyId: string | null;
+        sideCharacters: import("@prisma/client/runtime/library").JsonValue | null;
+        email: string;
+        heroName: string | null;
+        heroAge: string | null;
+    }[]>;
     checkWaitlist(storyId: string): Promise<{
         registered: boolean;
+    }>;
+    deleteWaitlistEntry(id: string): Promise<{
+        status: string;
     }>;
 }

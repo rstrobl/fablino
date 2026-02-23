@@ -16,6 +16,7 @@ exports.WaitlistController = void 0;
 const common_1 = require("@nestjs/common");
 const waitlist_service_1 = require("./waitlist.service");
 const waitlist_dto_1 = require("../../dto/waitlist.dto");
+const basic_auth_guard_1 = require("../../guards/basic-auth.guard");
 let WaitlistController = class WaitlistController {
     constructor(waitlistService) {
         this.waitlistService = waitlistService;
@@ -23,8 +24,14 @@ let WaitlistController = class WaitlistController {
     async createWaitlistEntry(dto) {
         return this.waitlistService.createWaitlistEntry(dto);
     }
+    async getAllWaitlist() {
+        return this.waitlistService.getAllWaitlist();
+    }
     async checkWaitlist(storyId) {
         return this.waitlistService.checkWaitlist(storyId);
+    }
+    async deleteWaitlistEntry(id) {
+        return this.waitlistService.deleteWaitlistEntry(parseInt(id));
     }
 };
 exports.WaitlistController = WaitlistController;
@@ -36,12 +43,27 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WaitlistController.prototype, "createWaitlistEntry", null);
 __decorate([
+    (0, common_1.Get)(),
+    (0, common_1.UseGuards)(basic_auth_guard_1.BasicAuthGuard),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], WaitlistController.prototype, "getAllWaitlist", null);
+__decorate([
     (0, common_1.Get)(':storyId/check'),
     __param(0, (0, common_1.Param)('storyId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], WaitlistController.prototype, "checkWaitlist", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(basic_auth_guard_1.BasicAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], WaitlistController.prototype, "deleteWaitlistEntry", null);
 exports.WaitlistController = WaitlistController = __decorate([
     (0, common_1.Controller)('api/waitlist'),
     __metadata("design:paramtypes", [waitlist_service_1.WaitlistService])

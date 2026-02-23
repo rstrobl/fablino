@@ -60,6 +60,7 @@ let StoriesService = class StoriesService {
                 createdAt: story.createdAt,
                 audioUrl: story.audioPath ? `/api/audio/${story.id}` : null,
                 coverUrl: story.coverUrl || null,
+                status: story.status || 'requested',
             };
         });
         return showAll ? formattedStories : formattedStories.filter(s => s.featured);
@@ -108,6 +109,17 @@ let StoriesService = class StoriesService {
             coverUrl: story.coverUrl || null,
             lines: story.lines,
         };
+    }
+    async updateStatus(id, status) {
+        const validStatuses = ['requested', 'draft', 'produced', 'sent', 'feedback'];
+        if (!validStatuses.includes(status)) {
+            throw new common_1.HttpException(`Invalid status. Must be one of: ${validStatuses.join(', ')}`, common_1.HttpStatus.BAD_REQUEST);
+        }
+        const story = await this.prisma.story.update({
+            where: { id },
+            data: { status },
+        });
+        return { status: 'ok', newStatus: story.status };
     }
     async toggleFeatured(id, featured) {
         try {
