@@ -20,6 +20,7 @@ const waitlist_module_1 = require("./modules/waitlist/waitlist.module");
 const sharing_module_1 = require("./modules/sharing/sharing.module");
 const admin_module_1 = require("./modules/admin/admin.module");
 const plays_module_1 = require("./modules/plays/plays.module");
+const settings_module_1 = require("./modules/settings/settings.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -42,6 +43,7 @@ exports.AppModule = AppModule = __decorate([
             sharing_module_1.SharingModule,
             admin_module_1.AdminModule,
             plays_module_1.PlaysModule,
+            settings_module_1.SettingsModule,
         ],
     })
 ], AppModule);

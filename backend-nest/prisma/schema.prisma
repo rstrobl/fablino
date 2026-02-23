@@ -14,8 +14,7 @@ model Story {
   id            String     @id @default(uuid()) @db.Uuid
   title         String?
   prompt        String?
-  mood          String?
-  ageGroup      String?    @map("age_group")
+  age           Decimal?   @db.Decimal(3, 1)
   createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz
   audioPath     String?    @map("audio_path")
   featured      Boolean    @default(false)
@@ -28,6 +27,9 @@ model Story {
   requesterSource String?    @map("requester_source")
   requesterContact String?   @map("requester_contact")
   interests       String?
+  heroName        String?    @map("hero_name") @db.VarChar(100)
+  testGroup       String?    @map("test_group") @db.VarChar(1)
+  scriptData      Json?      @map("script_data")
   characters      Character[]
   lines         Line[]
   plays         Play[]
@@ -41,6 +43,7 @@ model Play {
   playedAt  DateTime @default(now()) @map("played_at") @db.Timestamptz
   userAgent String?  @map("user_agent")
   ip        String?
+  completed Boolean  @default(false)
   story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@index([storyId])
@@ -74,15 +77,4 @@ model Line {
   @@map("lines")
 }
 
-model Waitlist {
-  id             Int      @id @default(autoincrement())
-  email          String
-  heroName       String?  @map("hero_name")
-  heroAge        String?  @map("hero_age")
-  prompt         String?
-  sideCharacters Json?    @map("side_characters")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
-  storyId        String?  @map("story_id") @db.Uuid
-
-  @@map("waitlist")
-}
+// waitlist table removed

@@ -34,5 +34,5 @@ export interface CharacterRequest {
 export declare class ClaudeService {
     private configService;
     constructor(configService: ConfigService);
-    generateScript(prompt: string, ageGroup?: string, characters?: CharacterRequest): Promise<GeneratedScript>;
+    generateScript(prompt: string, ageGroup?: string, characters?: CharacterRequest, systemPromptOverride?: string): Promise<GeneratedScript>;
 }

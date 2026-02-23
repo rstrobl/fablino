@@ -11,8 +11,10 @@ export declare class CharacterRequestDto {
     sideCharacters?: SideCharacterDto[];
 }
 export declare class GenerateStoryDto {
+    storyId?: string;
     prompt: string;
     ageGroup?: string;
+    systemPromptOverride?: string;
     characters?: CharacterRequestDto;
 }
 export declare class PreviewLineDto {

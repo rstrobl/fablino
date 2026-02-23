@@ -15,10 +15,10 @@ export function Dashboard() {
   const drafts = stories.filter((s: any) => s.status === 'draft');
 
   const stats = [
-    { label: 'Anfragen', value: requests.length, icon: FileText, color: 'text-gray-400' },
-    { label: 'Entwürfe', value: drafts.length, icon: Clock, color: 'text-blue-400' },
-    { label: 'Fertige Hörbücher', value: produced.length, icon: Headphones, color: 'text-purple-400' },
-    { label: 'Gesamt Plays', value: totalPlays, icon: Play, color: 'text-brand' },
+    { label: 'Anfragen', value: requests.length, icon: FileText, color: 'text-gray-400', link: '/stories?status=requested' },
+    { label: 'Entwürfe', value: drafts.length, icon: Clock, color: 'text-blue-400', link: '/stories?status=draft' },
+    { label: 'Hörbücher', value: produced.length, icon: Headphones, color: 'text-purple-400', link: '/stories?status=produced' },
+    { label: 'Gesamt Plays', value: totalPlays, icon: Play, color: 'text-brand', link: null },
   ];
 
   const recentProduced = produced
@@ -29,8 +29,8 @@ export function Dashboard() {
     <div className="p-6 space-y-6">
       <h2 className="text-2xl font-bold">Dashboard</h2>
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <div key={s.label} className="bg-surface rounded-xl p-5 border border-border">
+        {stats.map((s) => {
+          const content = (
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-text-muted text-sm">{s.label}</p>
@@ -38,8 +38,17 @@ export function Dashboard() {
               </div>
               <s.icon size={28} className={s.color} />
             </div>
-          </div>
-        ))}
+          );
+          return s.link ? (
+            <Link key={s.label} to={s.link} className="bg-surface rounded-xl p-5 border border-border hover:border-brand/50 transition-colors">
+              {content}
+            </Link>
+          ) : (
+            <div key={s.label} className="bg-surface rounded-xl p-5 border border-border">
+              {content}
+            </div>
+          );
+        })}
       </div>
       <div>
         <h3 className="text-lg font-semibold mb-3 flex items-center gap-2"><Headphones size={18} /> Fertige Hörbücher</h3>
@@ -62,7 +71,7 @@ export function Dashboard() {
                 )}
                 <p className="font-medium text-sm truncate">{s.title}</p>
                 <div className="flex items-center justify-between mt-1">
-                  <p className="text-xs text-text-muted">{s.ageGroup ? `${s.ageGroup} J.` : ''} · {s.requesterName || ''}</p>
+                  <p className="text-xs text-text-muted">{s.age ? `${s.age} J.` : ''} · {s.requesterName || ''}</p>
                   <span className="flex items-center gap-1 text-xs text-text-muted">
                     <Play size={10} /> {playMap.get(s.id) || 0}
                   </span>

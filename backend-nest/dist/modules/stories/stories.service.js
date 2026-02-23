@@ -55,7 +55,7 @@ let StoriesService = class StoriesService {
                 voiceMap,
                 prompt: story.prompt,
                 summary: story.summary,
-                ageGroup: story.ageGroup,
+                age: story.age,
                 featured: story.featured,
                 createdAt: story.createdAt,
                 audioUrl: story.audioPath ? `/api/audio/${story.id}` : null,
@@ -65,6 +65,8 @@ let StoriesService = class StoriesService {
                 requesterSource: story.requesterSource || null,
                 requesterContact: story.requesterContact || null,
                 interests: story.interests || null,
+                heroName: story.heroName || null,
+                testGroup: story.testGroup || null,
             };
         });
         return showAll ? formattedStories : formattedStories.filter(s => s.featured);
@@ -107,7 +109,7 @@ let StoriesService = class StoriesService {
             voiceMap,
             prompt: story.prompt,
             summary: story.summary,
-            ageGroup: story.ageGroup,
+            age: story.age,
             createdAt: story.createdAt,
             audioUrl: story.audioPath ? `/api/audio/${story.id}` : null,
             coverUrl: story.coverUrl || null,
@@ -116,7 +118,10 @@ let StoriesService = class StoriesService {
             requesterSource: story.requesterSource || null,
             requesterContact: story.requesterContact || null,
             interests: story.interests || null,
+            heroName: story.heroName || null,
             featured: story.featured,
+            testGroup: story.testGroup || null,
+            scriptData: story.scriptData || null,
             lines: story.lines,
         };
     }

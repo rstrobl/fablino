@@ -1,11 +1,8 @@
 import { Module } from '@nestjs/common';
-import { WaitlistController } from './waitlist.controller';
 import { ReserveController } from './reserve.controller';
-import { WaitlistService } from './waitlist.service';
+import { WaitlistNotifyController } from './waitlist-notify.controller';
 
 @Module({
-  controllers: [WaitlistController, ReserveController],
-  providers: [WaitlistService],
-  exports: [WaitlistService],
+  controllers: [ReserveController, WaitlistNotifyController],
 })
 export class WaitlistModule {}

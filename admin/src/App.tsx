@@ -14,7 +14,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import Login from './pages/Login';
 
 const qc = new QueryClient({
-  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+  defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false, staleTime: 30_000 } },
 });
 
 function AppRoutes() {

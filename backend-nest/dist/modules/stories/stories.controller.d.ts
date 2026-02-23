@@ -13,7 +13,7 @@ export declare class StoriesController {
         voiceMap: {};
         prompt: string;
         summary: string;
-        ageGroup: string;
+        age: import("@prisma/client/runtime/library").Decimal;
         featured: boolean;
         createdAt: Date;
         audioUrl: string;
@@ -23,6 +23,8 @@ export declare class StoriesController {
         requesterSource: string;
         requesterContact: string;
         interests: string;
+        heroName: string;
+        testGroup: string;
     }[]>;
     getStory(id: string): Promise<{
         id: string;
@@ -34,7 +36,7 @@ export declare class StoriesController {
         voiceMap: {};
         prompt: string;
         summary: string;
-        ageGroup: string;
+        age: import("@prisma/client/runtime/library").Decimal;
         createdAt: Date;
         audioUrl: string;
         coverUrl: string;
@@ -43,7 +45,10 @@ export declare class StoriesController {
         requesterSource: string;
         requesterContact: string;
         interests: string;
+        heroName: string;
         featured: boolean;
+        testGroup: string;
+        scriptData: string | number | true | import("@prisma/client/runtime/library").JsonObject | import("@prisma/client/runtime/library").JsonArray;
         lines: {
             id: number;
             audioPath: string | null;

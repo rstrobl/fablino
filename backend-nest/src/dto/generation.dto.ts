@@ -32,12 +32,20 @@ export class CharacterRequestDto {
 }
 
 export class GenerateStoryDto {
+  @IsOptional()
+  @IsString()
+  storyId?: string;
+
   @IsString()
   prompt: string;
 
   @IsOptional()
   @IsString()
   ageGroup?: string;
+
+  @IsOptional()
+  @IsString()
+  systemPromptOverride?: string;
 
   @IsOptional()
   @ValidateNested()

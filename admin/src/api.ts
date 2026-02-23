@@ -23,7 +23,7 @@ export async function fetchStory(id: string): Promise<Story> {
 }
 
 export async function deleteStory(id: string): Promise<void> {
-  const res = await fetch(`${API}/admin/stories/${id}`, {
+  const res = await fetch(`${API}/stories/${id}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });
@@ -31,9 +31,12 @@ export async function deleteStory(id: string): Promise<void> {
 }
 
 export async function toggleFeatured(id: string): Promise<void> {
-  const res = await fetch(`${API}/admin/stories/${id}/toggle-featured`, {
-    method: 'POST',
-    headers: authHeaders(),
+  // First get current state, then toggle
+  const story = await fetchStory(id);
+  const res = await fetch(`${API}/stories/${id}/featured`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ featured: !story.featured }),
   });
   if (!res.ok) throw new Error('Failed to toggle featured');
 }
@@ -111,8 +114,24 @@ export async function generateAudio(data: any): Promise<any> {
 
 export async function fetchPlayStats(): Promise<{ storyId: string; plays: number }[]> {
   const res = await fetch(`${API}/plays/stats`, { headers: authHeaders() });
-  if (!res.ok) throw new Error('Failed to fetch play stats');
+  if (!res.ok) return []; // graceful fallback if not authed
   return res.json();
+}
+
+export async function getSystemPrompt(): Promise<string> {
+  const res = await fetch(`${API}/settings/system-prompt`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch system prompt');
+  const data = await res.json();
+  return data.prompt;
+}
+
+export async function updateSystemPrompt(prompt: string): Promise<void> {
+  const res = await fetch(`${API}/settings/system-prompt`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!res.ok) throw new Error('Failed to update system prompt');
 }
 
 export async function checkHealth(): Promise<{ status: string }> {

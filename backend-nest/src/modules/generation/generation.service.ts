@@ -50,13 +50,13 @@ export class GenerationService {
   }
 
   async generateStory(dto: GenerateStoryDto) {
-    const { prompt, ageGroup = '5-7', characters } = dto;
+    const { prompt, ageGroup = '5-7', characters, systemPromptOverride, storyId } = dto;
 
     if (!prompt) {
       throw new HttpException('Prompt ist erforderlich', HttpStatus.BAD_REQUEST);
     }
 
-    const id = uuidv4();
+    const id = storyId || uuidv4();
     this.jobs[id] = {
       status: 'waiting_for_script',
       progress: 'Skript wird geschrieben...',
@@ -64,19 +64,20 @@ export class GenerationService {
     };
 
     // Start generation async
-    this.generateScriptAsync(id, prompt, ageGroup, characters);
+    this.generateScriptAsync(id, prompt, ageGroup, characters, systemPromptOverride);
 
     return { id, status: 'accepted' };
   }
 
-  private async generateScriptAsync(id: string, prompt: string, ageGroup: string, characters: any) {
+  private async generateScriptAsync(id: string, prompt: string, ageGroup: string, characters: any, systemPromptOverride?: string) {
     try {
       this.jobs[id].progress = 'Skript wird geschrieben...';
       
       const { script, systemPrompt } = await this.claudeService.generateScript(
         prompt, 
         ageGroup, 
-        characters
+        characters,
+        systemPromptOverride,
       );
 
       // Post-processing: remove onomatopoeia from non-narrator lines
@@ -108,6 +109,33 @@ export class GenerationService {
 
       // Preview mode: stop here and let user confirm
       const voiceMap = this.ttsService.assignVoices(script.characters);
+
+      // Persist draft to DB so it survives restarts
+      const existingStory = await this.prisma.story.findUnique({ where: { id } });
+      if (existingStory) {
+        await this.prisma.story.update({
+          where: { id },
+          data: {
+            status: 'draft',
+            title: script.title,
+            summary: script.summary || null,
+            scriptData: { script, voiceMap, systemPrompt } as any,
+          },
+        });
+      } else {
+        await this.prisma.story.create({
+          data: {
+            id,
+            status: 'draft',
+            title: script.title,
+            prompt,
+            summary: script.summary || null,
+            age: parseFloat(ageGroup) || null,
+            scriptData: { script, voiceMap, systemPrompt } as any,
+          },
+        });
+      }
+
       this.jobs[id] = {
         status: 'preview',
         script,
@@ -127,9 +155,25 @@ export class GenerationService {
   }
 
   async confirmScript(id: string) {
-    const job = this.jobs[id];
+    let job = this.jobs[id];
+    
+    // Try restore from DB if not in memory
     if (!job || job.status !== 'preview') {
-      throw new NotFoundException('Kein Skript zur Bestätigung gefunden');
+      const story = await this.prisma.story.findUnique({ where: { id } });
+      if (story?.scriptData && story.status === 'draft') {
+        const { script, voiceMap, systemPrompt } = story.scriptData as any;
+        job = {
+          status: 'preview',
+          script,
+          voiceMap,
+          prompt: story.prompt,
+          ageGroup: String(story.age || '5'),
+          systemPrompt,
+        };
+        this.jobs[id] = job;
+      } else {
+        throw new NotFoundException('Kein Skript zur Bestätigung gefunden');
+      }
     }
 
     const { script, voiceMap, prompt, ageGroup, systemPrompt } = job;
@@ -236,6 +280,12 @@ export class GenerationService {
     coverUrl?: string,
   ) {
     return this.prisma.$transaction(async (tx) => {
+      // Determine test group based on what was provided
+      // A = hero name + side characters (Bezugspersonen), B = hero name only, C = no hero name
+      const hasHeroName = /^Name:/.test(prompt);
+      const hasSideChars = script.characters.length > 2; // narrator + hero + others = Bezugspersonen
+      const testGroup = hasHeroName ? (hasSideChars ? 'A' : 'B') : 'C';
+
       // Insert story
       const story = await tx.story.create({
         data: {
@@ -243,11 +293,12 @@ export class GenerationService {
           title: script.title,
           prompt: prompt,
           summary: script.summary || null,
-          ageGroup: ageGroup,
+          age: parseInt(ageGroup) || null,
           createdAt: new Date(),
           audioPath: `audio/${storyId}.mp3`,
           systemPrompt: systemPrompt || null,
           coverUrl: coverUrl || null,
+          testGroup,
         },
       });
 
@@ -322,11 +373,25 @@ export class GenerationService {
     }
   }
 
-  getJobStatus(id: string): Job | { status: 'not_found' } {
+  async getJobStatus(id: string): Promise<Job | { status: 'not_found' }> {
     const job = this.jobs[id];
-    if (!job) {
-      return { status: 'not_found' as const };
+    if (job) return job;
+
+    // Try to restore from DB
+    const story = await this.prisma.story.findUnique({ where: { id } });
+    if (story?.scriptData && story.status === 'draft') {
+      const { script, voiceMap, systemPrompt } = story.scriptData as any;
+      this.jobs[id] = {
+        status: 'preview',
+        script,
+        voiceMap,
+        prompt: story.prompt,
+        ageGroup: String(story.age || '5'),
+        systemPrompt,
+      };
+      return this.jobs[id];
     }
-    return job;
+
+    return { status: 'not_found' as const };
   }
 }

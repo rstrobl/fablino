@@ -39,7 +39,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       });
     }
     const audio = audioRef.current;
-    audio.src = `/audio/${id}`;
+    audio.src = `/api/audio/${id}`;
     audio.volume = volume;
     audio.play();
     setStoryId(id);

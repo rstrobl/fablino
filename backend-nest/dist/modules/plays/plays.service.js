@@ -36,6 +36,27 @@ let PlaysService = class PlaysService {
         await this.notifyPlay(story?.title || 'Unbekannt', storyId, totalPlays);
         return { ok: true, totalPlays };
     }
+    async recordComplete(storyId) {
+        const lastPlay = await this.prisma.play.findFirst({
+            where: { storyId },
+            orderBy: { playedAt: 'desc' },
+        });
+        if (lastPlay && !lastPlay.completed) {
+            await this.prisma.play.update({
+                where: { id: lastPlay.id },
+                data: { completed: true },
+            });
+        }
+        const story = await this.prisma.story.findUnique({
+            where: { id: storyId },
+            select: { title: true },
+        });
+        const totalCompleted = await this.prisma.play.count({
+            where: { storyId, completed: true },
+        });
+        await this.notifyComplete(story?.title || 'Unbekannt', storyId, totalCompleted);
+        return { ok: true, totalCompleted };
+    }
     async getPlays(storyId) {
         const plays = await this.prisma.play.findMany({
             where: { storyId },
@@ -50,7 +71,32 @@ let PlaysService = class PlaysService {
             _count: { id: true },
             orderBy: { _count: { id: 'desc' } },
         });
-        return stats.map(s => ({ storyId: s.storyId, plays: s._count.id }));
+        const completedStats = await this.prisma.play.groupBy({
+            by: ['storyId'],
+            where: { completed: true },
+            _count: { id: true },
+        });
+        const completedMap = new Map(completedStats.map(s => [s.storyId, s._count.id]));
+        return stats.map(s => ({ storyId: s.storyId, plays: s._count.id, completed: completedMap.get(s.storyId) || 0 }));
+    }
+    async notifyComplete(title, storyId, totalCompleted) {
+        try {
+            const botToken = '7864521445:AAHocdoKrms2HG3kshkoETC1kVAO5tAiUus';
+            const chatId = '5559274578';
+            const text = `✅ *Komplett angehört!*\n📖 ${title}\n🔢 Insgesamt komplett: ${totalCompleted}x\n🔗 https://fablino.de/story/${storyId}`;
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text,
+                    parse_mode: 'Markdown',
+                }),
+            });
+        }
+        catch (err) {
+            console.error('Complete notification error:', err);
+        }
     }
     async notifyPlay(title, storyId, totalPlays) {
         try {

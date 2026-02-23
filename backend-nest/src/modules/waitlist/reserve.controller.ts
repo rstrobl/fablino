@@ -11,20 +11,16 @@ export class ReserveController {
   async reserve(@Body() dto: ReserveDto) {
     const id = randomUUID();
     const title = dto.heroName ? `${dto.heroName}s Hörspiel` : 'Dein Hörspiel';
-    const ageGroup = (parseInt(dto.heroAge || '5') || 5) <= 5 ? '3-5' : '6-9';
-    const meta = JSON.stringify({
-      heroName: dto.heroName,
-      heroAge: dto.heroAge,
-      prompt: dto.prompt || null,
-    });
-
+    const age = dto.heroAge ? parseFloat(dto.heroAge.replace(',', '.')) || null : null;
     await this.prisma.story.create({
       data: {
         id,
         title,
+        heroName: dto.heroName || null,
         prompt: dto.prompt || null,
-        ageGroup,
-        summary: meta,
+        age,
+        interests: dto.prompt || null,
+        status: 'requested',
       },
     });
 

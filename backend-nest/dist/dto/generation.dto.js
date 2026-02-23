@@ -55,6 +55,11 @@ class GenerateStoryDto {
 }
 exports.GenerateStoryDto = GenerateStoryDto;
 __decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], GenerateStoryDto.prototype, "storyId", void 0);
+__decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], GenerateStoryDto.prototype, "prompt", void 0);
@@ -63,6 +68,11 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], GenerateStoryDto.prototype, "ageGroup", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], GenerateStoryDto.prototype, "systemPromptOverride", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.ValidateNested)(),

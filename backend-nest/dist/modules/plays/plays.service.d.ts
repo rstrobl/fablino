@@ -8,6 +8,10 @@ export declare class PlaysService {
         ok: boolean;
         totalPlays: number;
     }>;
+    recordComplete(storyId: string): Promise<{
+        ok: boolean;
+        totalCompleted: number;
+    }>;
     getPlays(storyId: string): Promise<{
         storyId: string;
         count: number;
@@ -17,11 +21,14 @@ export declare class PlaysService {
             playedAt: Date;
             userAgent: string | null;
             ip: string | null;
+            completed: boolean;
         }[];
     }>;
     getAllPlayStats(): Promise<{
         storyId: string;
         plays: number;
+        completed: number;
     }[]>;
+    private notifyComplete;
     private notifyPlay;
 }

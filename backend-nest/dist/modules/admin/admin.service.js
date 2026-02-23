@@ -182,7 +182,7 @@ let AdminService = class AdminService {
           <p style="color: #666; margin: 5px 0;">${this.escapeHtml(story.summary || 'No summary')}</p>
           <div class="story-meta">
             ${story.featured ? '<span class="badge featured">Featured</span>' : ''}
-            <span class="badge age">${story.ageGroup || 'Unknown Age'}</span>
+            <span class="badge age">${story.age || 'Unknown Age'}</span>
             ${story.audioPath ? '<span class="badge audio">Has Audio</span>' : '<span class="badge no-audio">No Audio</span>'}
             <span class="badge">${story._count.characters} characters</span>
           </div>
@@ -238,9 +238,7 @@ let AdminService = class AdminService {
     }
     async renderWaitlistPage(res) {
         try {
-            const waitlist = await this.prisma.waitlist.findMany({
-                orderBy: { createdAt: 'desc' },
-            });
+            const waitlist = [];
             const waitlistWithStories = await Promise.all(waitlist.map(async (entry) => {
                 if (entry.storyId) {
                     const story = await this.prisma.story.findUnique({
@@ -439,7 +437,6 @@ let AdminService = class AdminService {
     }
     async deleteWaitlist(id) {
         try {
-            await this.prisma.waitlist.delete({ where: { id: parseInt(id) } });
             return { success: true };
         }
         catch (error) {

@@ -42,7 +42,7 @@ export declare class GenerationService {
     private generateAudioAsync;
     private insertStory;
     previewLine(dto: PreviewLineDto, res: Response): Promise<void>;
-    getJobStatus(id: string): Job | {
+    getJobStatus(id: string): Promise<Job | {
         status: 'not_found';
-    };
+    }>;
 }

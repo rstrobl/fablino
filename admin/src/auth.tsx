@@ -17,7 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     const cred = 'Basic ' + btoa(`${username}:${password}`);
     try {
-      const res = await fetch('/api/admin/stories', {
+      const res = await fetch('/api/plays/stats', {
         headers: { Authorization: cred },
       });
       if (res.ok) {

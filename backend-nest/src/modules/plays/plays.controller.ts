@@ -14,6 +14,11 @@ export class PlaysController {
     return this.playsService.recordPlay(storyId, userAgent, ip);
   }
 
+  @Post(':storyId/complete')
+  async recordComplete(@Param('storyId') storyId: string) {
+    return this.playsService.recordComplete(storyId);
+  }
+
   @Get('stats')
   @UseGuards(BasicAuthGuard)
   async getAllStats() {

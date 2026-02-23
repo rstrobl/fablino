@@ -6,16 +6,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WaitlistModule = void 0;
+exports.SettingsModule = void 0;
 const common_1 = require("@nestjs/common");
-const reserve_controller_1 = require("./reserve.controller");
-const waitlist_notify_controller_1 = require("./waitlist-notify.controller");
-let WaitlistModule = class WaitlistModule {
+const settings_controller_1 = require("./settings.controller");
+let SettingsModule = class SettingsModule {
 };
-exports.WaitlistModule = WaitlistModule;
-exports.WaitlistModule = WaitlistModule = __decorate([
+exports.SettingsModule = SettingsModule;
+exports.SettingsModule = SettingsModule = __decorate([
     (0, common_1.Module)({
-        controllers: [reserve_controller_1.ReserveController, waitlist_notify_controller_1.WaitlistNotifyController],
+        controllers: [settings_controller_1.SettingsController],
     })
-], WaitlistModule);
-//# sourceMappingURL=waitlist.module.js.map
+], SettingsModule);
+//# sourceMappingURL=settings.module.js.map

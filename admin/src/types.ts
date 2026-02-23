@@ -22,7 +22,7 @@ export interface Story {
   title: string;
   prompt: string;
   mood: string;
-  ageGroup: string;
+  age: number | string | null;
   createdAt: string;
   audioPath: string | null;
   featured: boolean;

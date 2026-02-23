@@ -173,7 +173,7 @@ export class AdminService {
           <p style="color: #666; margin: 5px 0;">${this.escapeHtml(story.summary || 'No summary')}</p>
           <div class="story-meta">
             ${story.featured ? '<span class="badge featured">Featured</span>' : ''}
-            <span class="badge age">${story.ageGroup || 'Unknown Age'}</span>
+            <span class="badge age">${story.age || 'Unknown Age'}</span>
             ${story.audioPath ? '<span class="badge audio">Has Audio</span>' : '<span class="badge no-audio">No Audio</span>'}
             <span class="badge">${story._count.characters} characters</span>
           </div>
@@ -230,9 +230,7 @@ export class AdminService {
 
   async renderWaitlistPage(res: Response) {
     try {
-      const waitlist = await this.prisma.waitlist.findMany({
-        orderBy: { createdAt: 'desc' },
-      });
+      const waitlist: any[] = [];
 
       // Also get story titles for waitlist entries that have stories
       const waitlistWithStories = await Promise.all(
@@ -439,7 +437,7 @@ export class AdminService {
 
   async deleteWaitlist(id: string) {
     try {
-      await this.prisma.waitlist.delete({ where: { id: parseInt(id) } });
+      // waitlist table removed
       return { success: true };
     } catch (error) {
       console.error('Delete waitlist error:', error);

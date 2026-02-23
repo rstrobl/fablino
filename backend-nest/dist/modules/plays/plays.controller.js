@@ -25,6 +25,9 @@ let PlaysController = class PlaysController {
         const ip = req.headers['x-forwarded-for'] || req.ip;
         return this.playsService.recordPlay(storyId, userAgent, ip);
     }
+    async recordComplete(storyId) {
+        return this.playsService.recordComplete(storyId);
+    }
     async getAllStats() {
         return this.playsService.getAllPlayStats();
     }
@@ -41,6 +44,13 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], PlaysController.prototype, "recordPlay", null);
+__decorate([
+    (0, common_1.Post)(':storyId/complete'),
+    __param(0, (0, common_1.Param)('storyId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], PlaysController.prototype, "recordComplete", null);
 __decorate([
     (0, common_1.Get)('stats'),
     (0, common_1.UseGuards)(basic_auth_guard_1.BasicAuthGuard),

@@ -39,23 +39,23 @@ let GenerationService = class GenerationService {
         }, 5 * 60 * 1000);
     }
     async generateStory(dto) {
-        const { prompt, ageGroup = '5-7', characters } = dto;
+        const { prompt, ageGroup = '5-7', characters, systemPromptOverride, storyId } = dto;
         if (!prompt) {
             throw new common_1.HttpException('Prompt ist erforderlich', common_1.HttpStatus.BAD_REQUEST);
         }
-        const id = (0, uuid_1.v4)();
+        const id = storyId || (0, uuid_1.v4)();
         this.jobs[id] = {
             status: 'waiting_for_script',
             progress: 'Skript wird geschrieben...',
             startedAt: Date.now(),
         };
-        this.generateScriptAsync(id, prompt, ageGroup, characters);
+        this.generateScriptAsync(id, prompt, ageGroup, characters, systemPromptOverride);
         return { id, status: 'accepted' };
     }
-    async generateScriptAsync(id, prompt, ageGroup, characters) {
+    async generateScriptAsync(id, prompt, ageGroup, characters, systemPromptOverride) {
         try {
             this.jobs[id].progress = 'Skript wird geschrieben...';
-            const { script, systemPrompt } = await this.claudeService.generateScript(prompt, ageGroup, characters);
+            const { script, systemPrompt } = await this.claudeService.generateScript(prompt, ageGroup, characters, systemPromptOverride);
             const onomatopoeiaPattern = /\b(H[aie]h[aie]h?[aie]?|Buhuhu|Hihihi|Ächz|Seufz|Grr+|Brumm+|Miau|Wuff|Schnurr|Piep|Prust|Uff|Autsch|Hmpf|Pah|Tss|Juhu|Juchhu|Hurra|Wiehern?)\b\.{0,3}\s*/gi;
             for (const scene of script.scenes) {
                 for (const line of scene.lines) {
@@ -80,6 +80,31 @@ let GenerationService = class GenerationService {
                 });
             }
             const voiceMap = this.ttsService.assignVoices(script.characters);
+            const existingStory = await this.prisma.story.findUnique({ where: { id } });
+            if (existingStory) {
+                await this.prisma.story.update({
+                    where: { id },
+                    data: {
+                        status: 'draft',
+                        title: script.title,
+                        summary: script.summary || null,
+                        scriptData: { script, voiceMap, systemPrompt },
+                    },
+                });
+            }
+            else {
+                await this.prisma.story.create({
+                    data: {
+                        id,
+                        status: 'draft',
+                        title: script.title,
+                        prompt,
+                        summary: script.summary || null,
+                        age: parseFloat(ageGroup) || null,
+                        scriptData: { script, voiceMap, systemPrompt },
+                    },
+                });
+            }
             this.jobs[id] = {
                 status: 'preview',
                 script,
@@ -99,9 +124,24 @@ let GenerationService = class GenerationService {
         }
     }
     async confirmScript(id) {
-        const job = this.jobs[id];
+        let job = this.jobs[id];
         if (!job || job.status !== 'preview') {
-            throw new common_1.NotFoundException('Kein Skript zur Bestätigung gefunden');
+            const story = await this.prisma.story.findUnique({ where: { id } });
+            if (story?.scriptData && story.status === 'draft') {
+                const { script, voiceMap, systemPrompt } = story.scriptData;
+                job = {
+                    status: 'preview',
+                    script,
+                    voiceMap,
+                    prompt: story.prompt,
+                    ageGroup: String(story.age || '5'),
+                    systemPrompt,
+                };
+                this.jobs[id] = job;
+            }
+            else {
+                throw new common_1.NotFoundException('Kein Skript zur Bestätigung gefunden');
+            }
         }
         const { script, voiceMap, prompt, ageGroup, systemPrompt } = job;
         this.jobs[id] = {
@@ -163,17 +203,21 @@ let GenerationService = class GenerationService {
     }
     async insertStory(storyId, script, voiceMap, prompt, ageGroup, systemPrompt, coverUrl) {
         return this.prisma.$transaction(async (tx) => {
+            const hasHeroName = /^Name:/.test(prompt);
+            const hasSideChars = script.characters.length > 2;
+            const testGroup = hasHeroName ? (hasSideChars ? 'A' : 'B') : 'C';
             const story = await tx.story.create({
                 data: {
                     id: storyId,
                     title: script.title,
                     prompt: prompt,
                     summary: script.summary || null,
-                    ageGroup: ageGroup,
+                    age: parseInt(ageGroup) || null,
                     createdAt: new Date(),
                     audioPath: `audio/${storyId}.mp3`,
                     systemPrompt: systemPrompt || null,
                     coverUrl: coverUrl || null,
+                    testGroup,
                 },
             });
             for (const char of script.characters) {
@@ -238,12 +282,24 @@ let GenerationService = class GenerationService {
             throw new common_1.HttpException(err.message, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-    getJobStatus(id) {
+    async getJobStatus(id) {
         const job = this.jobs[id];
-        if (!job) {
-            return { status: 'not_found' };
+        if (job)
+            return job;
+        const story = await this.prisma.story.findUnique({ where: { id } });
+        if (story?.scriptData && story.status === 'draft') {
+            const { script, voiceMap, systemPrompt } = story.scriptData;
+            this.jobs[id] = {
+                status: 'preview',
+                script,
+                voiceMap,
+                prompt: story.prompt,
+                ageGroup: String(story.age || '5'),
+                systemPrompt,
+            };
+            return this.jobs[id];
         }
-        return job;
+        return { status: 'not_found' };
     }
 };
 exports.GenerationService = GenerationService;

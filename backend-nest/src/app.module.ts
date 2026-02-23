@@ -12,6 +12,7 @@ import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { SharingModule } from './modules/sharing/sharing.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { PlaysModule } from './modules/plays/plays.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { PlaysModule } from './modules/plays/plays.module';
     SharingModule,
     AdminModule,
     PlaysModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}

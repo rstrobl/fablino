@@ -7,9 +7,14 @@ export declare class PlaysController {
         ok: boolean;
         totalPlays: number;
     }>;
+    recordComplete(storyId: string): Promise<{
+        ok: boolean;
+        totalCompleted: number;
+    }>;
     getAllStats(): Promise<{
         storyId: string;
         plays: number;
+        completed: number;
     }[]>;
     getPlays(storyId: string): Promise<{
         storyId: string;
@@ -20,6 +25,7 @@ export declare class PlaysController {
             playedAt: Date;
             userAgent: string | null;
             ip: string | null;
+            completed: boolean;
         }[];
     }>;
 }
