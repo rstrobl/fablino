@@ -12,7 +12,6 @@ export class BasicAuthGuard implements CanActivate {
     const auth = request.headers.authorization;
     
     if (!auth) {
-      response.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
       throw new UnauthorizedException('Authentication required');
     }
 
@@ -23,7 +22,6 @@ export class BasicAuthGuard implements CanActivate {
     const adminPassword = this.configService.get<string>('ADMIN_PASSWORD') || 'fablino2026';
 
     if (username !== 'admin' || password !== adminPassword) {
-      response.setHeader('WWW-Authenticate', 'Basic realm="Admin"');
       throw new UnauthorizedException('Invalid credentials');
     }
 

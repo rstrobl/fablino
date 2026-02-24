@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStories, deleteStory, toggleFeatured, updateStoryStatus, fetchPlayStats } from '../api';
-import { Star, Trash2, Search, Play, User, FileText, Clock, Headphones } from 'lucide-react';
+import { Star, Trash2, Search, Play, User, FileText, Clock, Headphones, Copy } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -148,7 +148,7 @@ export function Stories() {
                 <tr key={s.id} className="border-b border-border hover:bg-surface-hover transition-colors cursor-pointer" onClick={(e) => { if (!(e.target as HTMLElement).closest('button, select')) nav(`/stories/${s.id}`); }}>
                   <td className="p-3">
                     {s.coverUrl ? (
-                      <img src={s.coverUrl} alt="" className="w-12 h-12 rounded object-cover" />
+                      <img src={s.coverUrl.replace('/covers/', '/covers/thumb/').replace(/\.(png|webp)$/, '.jpg')} alt="" className="w-12 h-12 rounded object-cover" />
                     ) : (
                       <div className="w-12 h-12 rounded bg-surface-alt flex items-center justify-center text-text-muted text-lg">
                         📖
@@ -222,7 +222,16 @@ export function Stories() {
                       </button>
                     </td>
                   )}
-                  <td className="p-3">
+                  <td className="p-3 flex items-center gap-1">
+                    {isLateStage && (
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(`https://fablino.de/story/${s.id}`); toast.success('Link kopiert'); }}
+                        className="text-text-muted hover:text-brand hover:bg-brand/10 transition-colors p-2 rounded-lg"
+                        title="Link kopieren"
+                      >
+                        <Copy size={16} />
+                      </button>
+                    )}
                     <button
                       onClick={() => { if (confirm('Story wirklich löschen?')) delMut.mutate(s.id); }}
                       className="text-red-400 hover:text-red-300 hover:bg-red-900/30 transition-colors p-2 rounded-lg"

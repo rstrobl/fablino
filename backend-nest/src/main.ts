@@ -20,13 +20,19 @@ async function bootstrap() {
   // Static file serving
   app.useStaticAssets(join(process.cwd(), 'covers'), {
     prefix: '/covers',
-    maxAge: '7d'
+    maxAge: 0
   });
   
   // Serve OG images with specific path
   app.useStaticAssets(join(process.cwd(), 'covers', 'og'), {
     prefix: '/covers/og',
-    maxAge: '7d'
+    maxAge: 0
+  });
+
+  // Serve thumbnails (100x100)
+  app.useStaticAssets(join(process.cwd(), 'covers', 'thumb'), {
+    prefix: '/covers/thumb',
+    maxAge: 0
   });
 
   // Audio serving from parent directory

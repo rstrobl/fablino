@@ -65,7 +65,7 @@ export function Dashboard() {
                 className="bg-surface border border-border rounded-lg p-3 hover:border-brand/50 transition-colors"
               >
                 {s.coverUrl ? (
-                  <img src={s.coverUrl} alt="" className="w-full h-28 object-cover rounded mb-2" />
+                  <img src={s.coverUrl.replace('/covers/', '/covers/thumb/').replace(/\.(png|webp)$/, '.jpg')} alt="" className="w-full h-28 object-cover rounded mb-2" />
                 ) : (
                   <div className="w-full h-28 rounded bg-surface-alt flex items-center justify-center text-3xl mb-2">🎧</div>
                 )}

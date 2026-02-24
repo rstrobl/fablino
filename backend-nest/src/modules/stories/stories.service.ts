@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, HttpException, HttpStatus } from '@nestj
 import { PrismaService } from '../prisma/prisma.service';
 import { TtsService } from '../../services/tts.service';
 import { AudioService } from '../../services/audio.service';
+import { VoicesService } from '../voices/voices.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -13,6 +14,7 @@ export class StoriesService {
     private prisma: PrismaService,
     private ttsService: TtsService,
     private audioService: AudioService,
+    private voicesService: VoicesService,
   ) {}
 
   async getStories(showAll: boolean = false) {
@@ -193,7 +195,7 @@ export class StoriesService {
         return { status: 'no_lines', message: 'No lines in DB to regenerate' };
       }
 
-      const voiceSettings = this.ttsService.DEFAULT_VOICE_SETTINGS;
+      const voiceSettings = await this.voicesService.getSettingsForVoice(voiceId) || this.ttsService.DEFAULT_VOICE_SETTINGS;
       const linesDir = path.join(this.AUDIO_DIR, 'lines', storyId);
       fs.mkdirSync(linesDir, { recursive: true });
 

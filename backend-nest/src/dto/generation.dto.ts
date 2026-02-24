@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsArray, ValidateNested, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class SideCharacterDto {
@@ -40,7 +40,7 @@ export class GenerateStoryDto {
   prompt: string;
 
   @IsOptional()
-  @IsString()
+  @IsNumber()
   age?: number;
 
   @IsOptional()

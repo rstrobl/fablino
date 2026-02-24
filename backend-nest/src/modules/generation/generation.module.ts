@@ -6,8 +6,10 @@ import { ClaudeService } from '../../services/claude.service';
 import { TtsService } from '../../services/tts.service';
 import { AudioService } from '../../services/audio.service';
 import { ReplicateService } from '../../services/replicate.service';
+import { VoicesModule } from '../voices/voices.module';
 
 @Module({
+  imports: [VoicesModule],
   controllers: [GenerationController, StatusController],
   providers: [
     GenerationService,

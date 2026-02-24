@@ -1,9 +1,10 @@
 import { Injectable, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ClaudeService, Script, Character } from '../../services/claude.service';
+import { ClaudeService, Script, Character, ReviewResult, ReviewSuggestion } from '../../services/claude.service';
 import { TtsService } from '../../services/tts.service';
 import { AudioService } from '../../services/audio.service';
 import { ReplicateService } from '../../services/replicate.service';
+import { VoicesService } from '../voices/voices.service';
 import { GenerateStoryDto, PreviewLineDto } from '../../dto/generation.dto';
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
@@ -37,6 +38,7 @@ export class GenerationService {
     private ttsService: TtsService,
     private audioService: AudioService,
     private replicateService: ReplicateService,
+    private voicesService: VoicesService,
   ) {
     // Periodic cleanup of old jobs
     setInterval(() => {
@@ -210,11 +212,21 @@ export class GenerationService {
     );
 
     try {
-      const voiceSettings = this.ttsService.DEFAULT_VOICE_SETTINGS;
       const segments = [];
+      const sceneBreaks: number[] = [];
       let lineIdx = 0;
-      const allLines = script.scenes.flatMap(s => s.lines);
+      const allLines: { speaker: string; text: string }[] = [];
+      for (const scene of script.scenes) {
+        if (allLines.length > 0) sceneBreaks.push(allLines.length - 1);
+        allLines.push(...scene.lines);
+      }
       const totalLines = allLines.length;
+
+      // Load per-voice settings from DB
+      const voiceSettingsMap: { [voiceId: string]: any } = {};
+      for (const voiceId of new Set(Object.values(voiceMap))) {
+        voiceSettingsMap[voiceId] = await this.voicesService.getSettingsForVoice(voiceId);
+      }
 
       for (let i = 0; i < allLines.length; i++) {
         const line = allLines[i];
@@ -230,7 +242,7 @@ export class GenerationService {
           line.text,
           voice,
           ttsPath,
-          voiceSettings,
+          voiceSettingsMap[voice] || this.ttsService.DEFAULT_VOICE_SETTINGS,
           { previous_text, next_text },
         );
         
@@ -241,7 +253,16 @@ export class GenerationService {
 
       this.jobs[id].progress = 'Audio wird zusammengemischt...';
       const finalPath = path.join(this.AUDIO_DIR, `${id}.mp3`);
-      await this.audioService.combineAudio(segments, finalPath, this.AUDIO_DIR);
+
+      // Load audio mix settings from DB
+      const { DEFAULT_AUDIO_SETTINGS } = require('../../services/audio.service');
+      let mixSettings = { ...DEFAULT_AUDIO_SETTINGS };
+      try {
+        const rows = await this.prisma.$queryRaw`SELECT key, value FROM audio_settings` as any[];
+        rows.forEach((r: any) => { mixSettings[r.key] = Number(r.value); });
+      } catch {}
+
+      await this.audioService.combineAudio(segments, finalPath, this.AUDIO_DIR, sceneBreaks, mixSettings);
 
       // Wait for cover to finish (may already be done)
       const coverUrl = await coverPromise;
@@ -380,7 +401,75 @@ export class GenerationService {
     }
   }
 
+  async replaceLine(body: { storyId: string; lineId: number; voiceId: string; text: string; voiceSettings?: any }) {
+    const { storyId, lineId, voiceId, text, voiceSettings } = body;
+
+    // Get the line and its context
+    const line = await this.prisma.line.findUnique({ where: { id: lineId } });
+    if (!line) throw new NotFoundException('Line not found');
+
+    const allLines = await this.prisma.line.findMany({
+      where: { storyId },
+      orderBy: [{ sceneIdx: 'asc' }, { lineIdx: 'asc' }],
+    });
+
+    const lineIndex = allLines.findIndex(l => l.id === lineId);
+    const previous_text = lineIndex > 0
+      ? allLines.slice(Math.max(0, lineIndex - 2), lineIndex).map(l => l.text).join(' ')
+      : undefined;
+    const next_text = lineIndex < allLines.length - 1 ? allLines[lineIndex + 1].text : undefined;
+
+    // Get voice settings: use provided, or load from DB, or defaults
+    let settings = voiceSettings;
+    if (!settings) {
+      settings = await this.voicesService.getSettingsForVoice(voiceId) || this.ttsService.DEFAULT_VOICE_SETTINGS;
+    }
+
+    // Find the line's audio file index
+    const globalIdx = lineIndex;
+    const linesDir = path.join(this.AUDIO_DIR, 'lines', storyId);
+    const linePath = path.join(linesDir, `line_${globalIdx}.mp3`);
+
+    // Generate new TTS for this line
+    await this.ttsService.generateTTS(text, voiceId, linePath, settings, { previous_text, next_text });
+
+    // Update line text in DB if changed
+    if (text !== line.text) {
+      await this.prisma.line.update({ where: { id: lineId }, data: { text } });
+    }
+
+    // Remix the full audio
+    const segments: string[] = [];
+    const sceneBreaks: number[] = [];
+    let lastScene = -1;
+    for (let i = 0; i < allLines.length; i++) {
+      if (lastScene >= 0 && allLines[i].sceneIdx !== lastScene) {
+        sceneBreaks.push(i - 1);
+      }
+      lastScene = allLines[i].sceneIdx;
+      segments.push(path.join(linesDir, `line_${i}.mp3`));
+    }
+
+    // Load audio mix settings
+    const { DEFAULT_AUDIO_SETTINGS } = require('../../services/audio.service');
+    let mixSettings = { ...DEFAULT_AUDIO_SETTINGS };
+    try {
+      const rows = await this.prisma.$queryRaw`SELECT key, value FROM audio_settings` as any[];
+      rows.forEach((r: any) => { mixSettings[r.key] = Number(r.value); });
+    } catch {}
+
+    const finalPath = path.join(this.AUDIO_DIR, `${storyId}.mp3`);
+    await this.audioService.combineAudio(segments, finalPath, this.AUDIO_DIR, sceneBreaks, mixSettings);
+
+    return { ok: true, lineIndex: globalIdx, audioPath: `audio/lines/${storyId}/line_${globalIdx}.mp3` };
+  }
+
   async getJobStatus(id: string): Promise<Job | { status: 'not_found' }> {
+    // Validate UUID format
+    if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return { status: 'not_found' as const };
+    }
+
     const job = this.jobs[id];
     if (job) return job;
 
@@ -400,5 +489,74 @@ export class GenerationService {
     }
 
     return { status: 'not_found' as const };
+  }
+
+  async reviewScript(storyId: string): Promise<ReviewResult> {
+    const story = await this.prisma.story.findUnique({ where: { id: storyId } });
+    if (!story) throw new NotFoundException('Story not found');
+    if (!story.scriptData) throw new HttpException('No script data', HttpStatus.BAD_REQUEST);
+
+    const { script } = story.scriptData as any;
+    const age = Number(story.age) || 6;
+
+    return this.claudeService.reviewScript(script, age);
+  }
+
+  async applyReview(storyId: string, acceptedIndices: number[]): Promise<{ script: Script }> {
+    const story = await this.prisma.story.findUnique({ where: { id: storyId } });
+    if (!story) throw new NotFoundException('Story not found');
+    if (!story.scriptData) throw new HttpException('No script data', HttpStatus.BAD_REQUEST);
+
+    const scriptData = story.scriptData as any;
+    const script: Script = JSON.parse(JSON.stringify(scriptData.script)); // deep clone
+
+    // Get the review from cache (client sends suggestions back)
+    // We'll receive the suggestions directly from the client
+    return { script };
+  }
+
+  async applyReviewSuggestions(storyId: string, suggestions: ReviewSuggestion[]): Promise<Script> {
+    const story = await this.prisma.story.findUnique({ where: { id: storyId } });
+    if (!story) throw new NotFoundException('Story not found');
+    if (!story.scriptData) throw new HttpException('No script data', HttpStatus.BAD_REQUEST);
+
+    const scriptData = story.scriptData as any;
+    const script: Script = JSON.parse(JSON.stringify(scriptData.script));
+
+    // Sort suggestions by scene desc, lineIndex desc to apply from bottom up (avoid index shifts)
+    const sorted = [...suggestions].sort((a, b) => {
+      if (a.scene !== b.scene) return b.scene - a.scene;
+      return b.lineIndex - a.lineIndex;
+    });
+
+    for (const s of sorted) {
+      const scene = script.scenes[s.scene];
+      if (!scene) continue;
+
+      if (s.type === 'delete') {
+        scene.lines.splice(s.lineIndex, 1);
+      } else if (s.type === 'replace' && s.replacement) {
+        if (scene.lines[s.lineIndex]) {
+          scene.lines[s.lineIndex].text = s.replacement;
+        }
+      } else if (s.type === 'insert' && s.replacement && s.speaker) {
+        scene.lines.splice(s.lineIndex, 0, { speaker: s.speaker, text: s.replacement });
+      }
+    }
+
+    // Update script_data in DB
+    scriptData.script = script;
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
+      JSON.stringify(scriptData),
+      storyId,
+    );
+
+    // Also update job cache if exists
+    if (this.jobs[storyId]) {
+      this.jobs[storyId].script = script;
+    }
+
+    return script;
   }
 }

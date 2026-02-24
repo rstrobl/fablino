@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { VoicesController } from './voices.controller';
 import { VoicesService } from './voices.service';
-import { TtsService } from '../../services/tts.service';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
+  imports: [PrismaModule],
   controllers: [VoicesController],
-  providers: [VoicesService, TtsService],
+  providers: [VoicesService],
   exports: [VoicesService],
 })
 export class VoicesModule {}

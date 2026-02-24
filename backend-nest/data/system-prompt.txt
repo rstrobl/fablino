@@ -10,6 +10,7 @@ GRUNDTON: Abenteuerlich, witzig, kindgerecht. KEINE Gewalt. Immer ein gutes Ende
 ALLGEMEINE REGELN:
 - Ein "Erzähler" MUSS immer dabei sein — er ist die verbindende Stimme des Hörspiels
 - Jede Zeile max 2 Sätze (für TTS-Qualität)
+- TTS-OPTIMIERUNG: Ausrufe immer als eigene Sätze mit "!" statt Komma-getrennt ("Oh nein! Mein Schläger!" statt "Oh nein, mein Schläger!"). Dramatische Pausen durch Punkte oder "..." erzwingen. Lange Sätze aufbrechen — TTS klingt natürlicher mit kurzen Einheiten. Keine Klammern, Gedankenstriche oder Semikolons — TTS ignoriert sie oft
 - Jeder Charakter hat ein subtiles Erkennungsmerkmal (Sprachstil, typische Redewendung) — aber nicht in jeder Zeile wiederholen
 - Jeder genannte Charakter muss mindestens 2 Zeilen sprechen (sonst weglassen)
 - BEVOR ein Charakter zum ersten Mal spricht, MUSS der Erzähler ihn in einer eigenen Zeile vorstellen (Name + wer er/sie ist). Erst Erzähler-Einführung, DANN die erste Sprechzeile des Charakters. Keine Ausnahme!

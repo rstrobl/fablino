@@ -95,6 +95,17 @@ export class ReplicateService {
         console.error('OG thumbnail generation error:', ogErr.message);
       }
 
+      // Generate list thumbnail (100x100 JPEG)
+      try {
+        const thumbDir = path.join(coversDir, 'thumb');
+        fs.mkdirSync(thumbDir, { recursive: true });
+        const thumbPath = path.join(thumbDir, coverFilename);
+        execSync(`convert "${coverPath}" -resize 300x300 -quality 80 "${thumbPath}"`);
+        console.log(`Thumbnail generated: ${thumbPath}`);
+      } catch (thumbErr) {
+        console.error('Thumbnail generation error:', thumbErr.message);
+      }
+
       console.log(`Cover generated: ${coverUrl}`);
       return coverUrl;
     } catch (err) {

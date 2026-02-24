@@ -156,4 +156,92 @@ Die traits beschreiben die PERSÖNLICHKEIT des Charakters und werden für die St
       systemPrompt
     };
   }
+
+  async reviewScript(script: Script, age: number): Promise<ReviewResult> {
+    const ANTHROPIC_API_KEY = this.configService.get<string>('ANTHROPIC_API_KEY');
+    if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY nicht konfiguriert');
+
+    const totalLines = script.scenes.reduce((t, s) => t + s.lines.length, 0);
+    const scriptText = script.scenes.map((scene, si) =>
+      scene.lines.map(l => `[Szene ${si + 1}] ${l.speaker}: ${l.text}`).join('\n')
+    ).join('\n\n');
+
+    const systemPrompt = `Du bist ein erfahrener Lektor für deutsche Kinderhörspiele. Du überprüfst Skripte auf Qualität, Natürlichkeit und Altersangemessenheit.
+
+Deine Aufgabe: Analysiere das Skript und schlage konkrete Verbesserungen vor.
+
+Prüfe auf:
+1. **Wiederholungen**: Gleiche Formulierungen, Wörter oder Aktionen die sich wiederholen
+2. **Natürlichkeit**: Klingt der Dialog wie echte Kinder/Menschen sprechen? Keine Übersetzungen aus dem Englischen
+3. **Übertriebener Enthusiasmus**: Zu viele "Fantastisch!", "Toll!", "Super!" — Kinder reden nicht so aufgedreht
+4. **Flache Charaktere**: Haben Nebenfiguren eigene Persönlichkeit oder sind sie nur Stichwortgeber?
+5. **Show don't tell**: Wird zu viel erklärt statt gezeigt? (z.B. "Mit meiner Hockey-Technik schaffe ich das!")
+6. **Erzwungene Referenzen**: Werden Themen/Hobbys zu plump eingebaut?
+7. **Pacing**: Ist das Ende zu lang? Gibt es Durchhänger?
+8. **Altersangemessenheit**: Passt Sprache und Komplexität zum Alter (${age} Jahre)?
+9. **TTS-Optimierung**: Ausrufe als eigene Sätze mit "!", dramatische Pausen mit "..." oder Punkten, keine Klammern/Gedankenstriche/Semikolons
+10. **Keine erfundenen Alltagspersonen**: Nur Fantasiefiguren, keine "Trainer Weber" oder "beste Freundin Emma"
+11. **Rätsel-Qualität**: Sind Rätsel logisch einwandfrei, altersgerecht und fair lösbar? Keine konstruierten oder fragwürdigen Lösungen. Das Rätsel muss eindeutig eine richtige Antwort haben.
+12. **Szenen-Struktur**: Gibt es genug Szenenwechsel? Eine Geschichte sollte mindestens 4-6 Szenen haben. Alles in einer Szene = keine Pausen im Audio.
+
+Antworte NUR mit einem JSON-Objekt in diesem Format:
+{
+  "overallRating": "gut" | "okay" | "überarbeiten",
+  "summary": "Kurze Gesamteinschätzung (2-3 Sätze)",
+  "suggestions": [
+    {
+      "type": "replace" | "delete" | "insert",
+      "scene": 0,
+      "lineIndex": 3,
+      "reason": "Warum diese Änderung",
+      "original": "Originaltext (bei replace/delete)",
+      "replacement": "Neuer Text (bei replace/insert)",
+      "speaker": "Sprecher (bei insert)"
+    }
+  ]
+}
+
+Maximal 15 Vorschläge, fokussiert auf die wichtigsten Verbesserungen. Bei "insert" gibt lineIndex die Position an, VOR der eingefügt werden soll.`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-20250514',
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: `Hier ist das Skript für ein Kinderhörspiel (${age} Jahre, ${script.scenes.length} Szenen, ${totalLines} Zeilen):\n\nTitel: ${script.title}\n\nCharaktere: ${script.characters.map(c => `${c.name} (${c.gender})`).join(', ')}\n\n${scriptText}` }],
+      }),
+    });
+
+    if (!res.ok) throw new Error(`Claude API error: ${res.status}`);
+    const data = await res.json();
+    const text = data.content[0].text;
+
+    // Extract JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Could not parse review response');
+
+    return JSON.parse(jsonMatch[0]) as ReviewResult;
+  }
+}
+
+export interface ReviewSuggestion {
+  type: 'replace' | 'delete' | 'insert';
+  scene: number;
+  lineIndex: number;
+  reason: string;
+  original?: string;
+  replacement?: string;
+  speaker?: string;
+}
+
+export interface ReviewResult {
+  overallRating: 'gut' | 'okay' | 'überarbeiten';
+  summary: string;
+  suggestions: ReviewSuggestion[];
 }
