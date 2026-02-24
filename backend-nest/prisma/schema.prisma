@@ -16,6 +16,7 @@ model Story {
   prompt        String?
   age           Decimal?   @db.Decimal(3, 1)
   createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime   @default(now()) @map("updated_at") @db.Timestamptz
   audioPath     String?    @map("audio_path")
   featured      Boolean    @default(false)
   summary       String?
@@ -30,11 +31,31 @@ model Story {
   heroName        String?    @map("hero_name") @db.VarChar(100)
   testGroup       String?    @map("test_group") @db.VarChar(1)
   scriptData      Json?      @map("script_data")
+  durationSeconds Int?       @map("duration_seconds")
   characters      Character[]
   lines         Line[]
   plays         Play[]
+  costs         Cost[]
 
   @@map("stories")
+}
+
+model Cost {
+  id             Int      @id @default(autoincrement())
+  storyId        String?  @map("story_id") @db.Uuid
+  service        String   @db.VarChar(20)
+  operation      String   @db.VarChar(30)
+  inputTokens    Int?     @map("input_tokens")
+  outputTokens   Int?     @map("output_tokens")
+  thinkingTokens Int?     @map("thinking_tokens")
+  characters     Int?
+  costUsd        Decimal? @map("cost_usd") @db.Decimal(10, 6)
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  story          Story?   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@index([storyId])
+  @@map("costs")
 }
 
 model Play {
@@ -56,7 +77,9 @@ model Character {
   name    String?
   gender  String?
   voiceId String? @map("voice_id")
-  story   Story   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  emoji       String?
+  description String?
+  story       Story   @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@index([storyId])
   @@map("characters")

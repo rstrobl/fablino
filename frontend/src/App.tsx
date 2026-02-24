@@ -7,72 +7,7 @@ import {
 } from 'lucide-react'
 import './App.css'
 
-const CHAR_EMOJI: Record<string, string> = {
-  child_m: '👦',
-  child_f: '👧',
-  adult_m: '👨',
-  adult_f: '👩',
-  elder_m: '👴',
-  elder_f: '👵',
-  creature: '🐾',
-  male: '👨',
-  female: '👩',
-  männlich: '👨',
-  weiblich: '👩',
-}
 
-function charEmoji(name: string, gender: string, _index: number): string {
-  const n = name.toLowerCase()
-  if (n === 'erzähler' || n === 'berättare') return '📖'
-  // Name-based overrides
-  if (n === 'elsa') return '👑'
-  if (n.includes('schneebär')) return '🐻‍❄️'
-  if (n.includes('schneeball') || n.includes('schnee')) return '❄️'
-  if (gender === 'creature') {
-    const n = name.toLowerCase()
-    if (n.includes('drach') || n.includes('dragon')) return '🐉'
-    if (n.includes('fuchs') || n.includes('fox')) return '🦊'
-    if (n.includes('bär') || n.includes('bear')) return '🐻'
-    if (n.includes('wolf')) return '🐺'
-    if (n.includes('löwe') || n.includes('lion')) return '🦁'
-    if (n.includes('frosch') || n.includes('frog')) return '🐸'
-    if (n.includes('einhorn') || n.includes('unicorn')) return '🦄'
-    if (n.includes('katze') || n.includes('cat')) return '🐱'
-    if (n.includes('hund') || n.includes('dog')) return '🐶'
-    if (n.includes('vogel') || n.includes('bird')) return '🐦'
-    if (n.includes('eule') || n.includes('owl')) return '🦉'
-    if (n.includes('hase') || n.includes('rabbit')) return '🐰'
-    if (n.includes('maus') || n.includes('mouse')) return '🐭'
-    if (n.includes('igel')) return '🦔'
-    if (n.includes('schlange') || n.includes('snake')) return '🐍'
-    if (n.includes('fisch') || n.includes('fish')) return '🐟'
-    if (n.includes('papagei') || n.includes('parrot')) return '🦜'
-    if (n.includes('seestern') || n.includes('starfish')) return '⭐'
-    if (n.includes('krabbe') || n.includes('crab')) return '🦀'
-    if (n.includes('schildkröte') || n.includes('turtle')) return '🐢'
-    if (n.includes('oktopus') || n.includes('krake') || n.includes('octopus')) return '🐙'
-    if (n.includes('wal') || n.includes('whale')) return '🐳'
-    if (n.includes('delfin') || n.includes('dolphin')) return '🐬'
-    if (n.includes('pinguin') || n.includes('penguin')) return '🐧'
-    if (n.includes('schmetterling') || n.includes('butterfly')) return '🦋'
-    if (n.includes('biene') || n.includes('bee')) return '🐝'
-    if (n.includes('affe') || n.includes('monkey')) return '🐒'
-    if (n.includes('elefant') || n.includes('elephant')) return '🐘'
-    if (n.includes('kobold')) return '🧌'
-    if (n.includes('fee') || n.includes('fairy')) return '🧚'
-    if (n.includes('hexe') || n.includes('witch')) return '🧙'
-    if (n.includes('wuschel') || n.includes('flausch')) return '🧶'
-    return '🐾'
-  }
-  // Role-based icons (any gender)
-  if ((n.includes('kapitän') || n.includes('captain') || n.includes('pirat') || n.includes('pirate')) && (n.includes('grimm') || n.includes('böse') || n.includes('finster') || n.includes('schwarz'))) return '☠️'
-  if (n.includes('kapitän') || n.includes('captain') || n.includes('pirat') || n.includes('pirate')) return '⚓'
-  if (n.includes('könig') || n.includes('king')) return '🤴'
-  if (n.includes('königin') || n.includes('queen')) return '👸'
-  if (n.includes('ritter') || n.includes('knight')) return '⚔️'
-  if (n.includes('zauberer') || n.includes('wizard') || n.includes('magier')) return '🧙'
-  return CHAR_EMOJI[gender] || '✨'
-}
 
 // Convert emoji to Twemoji CDN URL
 function emojiToTwemoji(emoji: string): string {
@@ -97,7 +32,7 @@ function TwemojiIcon({ emoji, size = 20 }: { emoji: string; size?: number }) {
 interface Story {
   id: string
   title: string
-  characters: { name: string; gender: string }[]
+  characters: { name: string; gender: string; emoji?: string }[]
   voiceMap: Record<string, string>
   prompt: string
   summary?: string
@@ -119,7 +54,7 @@ interface ScriptScene {
 
 interface ScriptPreview {
   title: string
-  characters: { name: string; gender: string }[]
+  characters: { name: string; gender: string; emoji?: string }[]
   scenes: ScriptScene[]
 }
 
@@ -669,6 +604,7 @@ function App() {
                           <img src={s.coverUrl} alt={s.title} className="featured-cover" />
                         )}
                         <h3>{s.title}</h3>
+                        {s.heroName && <span className="story-hero">Für {s.heroName}{s.age ? `, ${Math.round(s.age)} Jahre` : ''}</span>}
                         {dur && <span className="story-meta"><Clock size={12} /> {fmt(dur)}</span>}
                       </div>
                       {s.audioUrl && (
@@ -758,7 +694,7 @@ function App() {
             <div className="preview-characters">
               {previewScript.characters.filter(c => c.name !== 'Erzähler').map((c, i) => (
                 <span key={c.name} className="char-badge">
-                  <TwemojiIcon emoji={charEmoji(c.name, c.gender, i)} size={18} /> {c.name}
+                  <TwemojiIcon emoji={c.emoji || '✨'} size={18} /> {c.name}
                 </span>
               ))}
             </div>
@@ -861,7 +797,7 @@ function App() {
                 <p className="player-prompt">{currentStory.summary || currentStory.prompt}</p>
                 <div className="characters">
                   {currentStory.characters.filter(c => c.name !== 'Erzähler').map((c, i) => (
-                    <span key={c.name} className="char-badge"><TwemojiIcon emoji={charEmoji(c.name, c.gender, i)} size={18} /> {c.name}</span>
+                    <span key={c.name} className="char-badge"><TwemojiIcon emoji={c.emoji || '✨'} size={18} /> {c.name}</span>
                   ))}
                 </div>
               </div>

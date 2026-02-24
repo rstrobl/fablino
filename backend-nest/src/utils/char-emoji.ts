@@ -1,7 +1,6 @@
 const CHAR_EMOJI: Record<string, string> = {
   child_m: '👦', child_f: '👧', adult_m: '👨', adult_f: '👩',
   elder_m: '👴', elder_f: '👵', creature: '🐾',
-  male: '👨', female: '👩', männlich: '👨', weiblich: '👩',
 };
 
 export function charEmoji(name: string, gender: string): string {
@@ -10,7 +9,7 @@ export function charEmoji(name: string, gender: string): string {
   if (n.includes('schneebär')) return '🐻‍❄️';
   if (n.includes('schneeball') || n.includes('schnee')) return '❄️';
   if (gender === 'creature') {
-    // Minecraft specific
+    // Minecraft
     if (n.includes('creeper')) return '💚';
     if (n.includes('enderman') || n.includes('grimmstein')) return '🟣';
     if (n.includes('enderdrach') || n.includes('violetta')) return '🐲';
@@ -62,9 +61,10 @@ export function charEmoji(name: string, gender: string): string {
     if (n.includes('riese') || n.includes('giant')) return '🗻';
     if (n.includes('roboter') || n.includes('robot')) return '🤖';
     if (n.includes('alien')) return '👽';
+    if (n.includes('wuschel') || n.includes('flausch')) return '🧶';
     return '🐾';
   }
-  // Role-based icons (any gender)
+  // Role-based
   if ((n.includes('kapitän') || n.includes('captain') || n.includes('pirat') || n.includes('pirate')) && (n.includes('grimm') || n.includes('böse') || n.includes('finster') || n.includes('schwarz'))) return '☠️';
   if (n.includes('kapitän') || n.includes('captain') || n.includes('pirat') || n.includes('pirate')) return '⚓';
   if (n.includes('könig') || n.includes('king')) return '🤴';
@@ -72,23 +72,4 @@ export function charEmoji(name: string, gender: string): string {
   if (n.includes('ritter') || n.includes('knight')) return '⚔️';
   if (n.includes('zauberer') || n.includes('wizard') || n.includes('magier')) return '🧙';
   return CHAR_EMOJI[gender] || '✨';
-}
-
-function emojiToTwemoji(emoji: string): string {
-  const codepoints = [...emoji]
-    .map(c => c.codePointAt(0)!.toString(16))
-    .filter(cp => cp !== 'fe0f')
-    .join('-');
-  return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints}.svg`;
-}
-
-export function TwemojiIcon({ emoji, size = 20 }: { emoji: string; size?: number }) {
-  return (
-    <img
-      src={emojiToTwemoji(emoji)}
-      alt={emoji}
-      style={{ width: size, height: size, verticalAlign: 'middle', display: 'inline-block' }}
-      draggable={false}
-    />
-  );
 }

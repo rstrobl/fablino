@@ -1273,6 +1273,14 @@ textarea::placeholder { color: var(--text-muted); }
   flex-wrap: wrap;
 }
 
+.story-hero {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+  margin-bottom: 0.25rem;
+}
+
 .story-meta {
   display: inline-flex;
   align-items: center;

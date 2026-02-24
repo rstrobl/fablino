@@ -34,6 +34,12 @@ export class GenerationController {
     return this.generationService.getJobStatus(id);
   }
 
+  @Post(':id/regenerate')
+  @UseGuards(BasicAuthGuard)
+  async regenerateScript(@Param('id') id: string, @Body() body?: { prompt?: string }) {
+    return this.generationService.regenerateScript(id, body?.prompt);
+  }
+
   @Post(':id/review')
   @UseGuards(BasicAuthGuard)
   async reviewScript(@Param('id') id: string) {

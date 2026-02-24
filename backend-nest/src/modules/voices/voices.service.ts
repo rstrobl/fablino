@@ -17,7 +17,7 @@ export class VoicesService {
     const voices = await this.prisma.$queryRaw`
       SELECT voice_id, name, category, description, 
              stability, similarity_boost, style, use_speaker_boost, 
-             traits, active
+             traits, active, preview_url
       FROM voices 
       ORDER BY category, name
     ` as any[];

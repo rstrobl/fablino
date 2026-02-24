@@ -5,6 +5,8 @@ export interface Character {
   name: string;
   gender: 'child_m' | 'child_f' | 'adult_m' | 'adult_f' | 'elder_m' | 'elder_f' | 'creature';
   traits: string[];
+  emoji?: string;
+  description?: string;
 }
 
 export interface Line {
@@ -26,6 +28,7 @@ export interface Script {
 export interface GeneratedScript {
   script: Script;
   systemPrompt: string;
+  usage?: { input_tokens: number; output_tokens: number; thinking_tokens: number };
 }
 
 export interface CharacterRequest {
@@ -108,7 +111,7 @@ Antworte NUR mit validem JSON (kein Markdown, kein \`\`\`):
 {
   "title": "Kreativer Titel",
   "summary": "Ein kurzer Teaser-Satz, der neugierig macht und mit einer offenen Frage endet (z.B. 'Wird sie es schaffen?', 'Ob das gut geht?'). Maximal EIN Satz. Nicht spoilern!",
-  "characters": [{ "name": "Name", "gender": "child_m|child_f|adult_m|adult_f|elder_m|elder_f|creature", "traits": ["trait1", "trait2"] }],
+  "characters": [{ "name": "Name", "gender": "child_m|child_f|adult_m|adult_f|elder_m|elder_f|creature", "traits": ["trait1", "trait2"], "description": "kurze visuelle Beschreibung mit Rolle, z.B. 'griesgrämiger Waldgeist mit moosigem Bart' oder 'mutiges Mädchen mit Pferdeschwanz'" }],
   "scenes": [{ "lines": [{ "speaker": "Name", "text": "Dialog" }] }]
 }
 
@@ -133,8 +136,12 @@ Die traits beschreiben die PERSÖNLICHKEIT des Charakters und werden für die St
       },
       body: JSON.stringify({
         model: 'claude-opus-4-20250514',
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: `Schreibe ein Hörspiel basierend auf diesem Prompt:\n\n${prompt}` }],
+        max_tokens: 16000,
+        thinking: {
+          type: 'enabled',
+          budget_tokens: 10000,
+        },
+        messages: [{ role: 'user', content: `Schreibe ein Hörspiel basierend auf diesem Prompt:\n\n${prompt}\n\nDenke zuerst gründlich nach: Plane die Story-Struktur, die Charaktere und ihre Beziehungen, den Spannungsbogen, und wie der Held das Problem clever löst. Prüfe auf Logikfehler und Widersprüche. Dann schreibe das finale JSON.` }],
         system: systemPrompt,
       }),
     });
@@ -145,15 +152,26 @@ Die traits beschreiben die PERSÖNLICHKEIT des Charakters und werden für die St
     }
 
     const data = await response.json();
-    const text = data.content[0].text.trim();
+    // With extended thinking, content has thinking blocks + text block
+    const textBlock = data.content.find((b: any) => b.type === 'text');
+    if (!textBlock) throw new Error('No text block in Claude response');
+    const text = textBlock.text.trim();
     // Parse JSON, handle potential markdown wrapping
     const jsonStr = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '');
     const script = JSON.parse(jsonStr);
     
-    // Return both the script and the system prompt used
+    // Extract thinking tokens
+    const thinkingBlock = data.content.find((b: any) => b.type === 'thinking');
+    const thinkingTokens = thinkingBlock ? (data.usage?.cache_creation_input_tokens || 0) : 0;
+
     return {
       script,
-      systemPrompt
+      systemPrompt,
+      usage: data.usage ? {
+        input_tokens: data.usage.input_tokens || 0,
+        output_tokens: data.usage.output_tokens || 0,
+        thinking_tokens: thinkingTokens,
+      } : undefined,
     };
   }
 
@@ -226,7 +244,12 @@ Maximal 15 Vorschläge, fokussiert auf die wichtigsten Verbesserungen. Bei "inse
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('Could not parse review response');
 
-    return JSON.parse(jsonMatch[0]) as ReviewResult;
+    const result = JSON.parse(jsonMatch[0]) as ReviewResult;
+    (result as any).usage = data.usage ? {
+      input_tokens: data.usage.input_tokens || 0,
+      output_tokens: data.usage.output_tokens || 0,
+    } : undefined;
+    return result;
   }
 }
 

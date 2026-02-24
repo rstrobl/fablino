@@ -5,6 +5,23 @@ import { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
+function timeAgo(date: string) {
+  const now = Date.now();
+  const then = new Date(date).getTime();
+  const diff = now - then;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'gerade eben';
+  if (mins < 60) return `vor ${mins} Min.`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `vor ${hours} Std.`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `vor ${days} T.`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `vor ${weeks} Wo.`;
+  const months = Math.floor(days / 30);
+  return `vor ${months} Mon.`;
+}
+
 const STATUSES = [
   { value: 'requested', label: 'Anfragen', icon: 'FileText' },
   { value: 'draft', label: 'Entwürfe', icon: 'Clock' },
@@ -71,7 +88,7 @@ export function Stories() {
   const filtered = stories
     .filter((s: any) => !search || (s.title || '').toLowerCase().includes(search.toLowerCase()) || (s.interests || '').toLowerCase().includes(search.toLowerCase()) || (s.requesterName || '').toLowerCase().includes(search.toLowerCase()))
     .filter((s: any) => !statusFilter || s.status === statusFilter)
-    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .sort((a: any, b: any) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
 
   const pipelineCounts = STATUSES.map(s => ({
     ...s,
@@ -133,13 +150,12 @@ export function Stories() {
               <tr className="border-b border-border text-text-muted text-left">
                 <th className="p-3">Cover</th>
                 <th className="p-3">{isRequest ? 'Held' : 'Titel'}</th>
-                {(isLateStage || isDraftStage) && <th className="p-3">Held</th>}
+                {(isLateStage || isDraftStage) && <th className="p-3">Kind</th>}
                 <th className="p-3">Alter</th>
                 {isEarlyStage && <th className="p-3">Interessen</th>}
                 {isEarlyStage && <th className="p-3">Anfrage von</th>}
+                {isLateStage && <th className="p-3">Länge</th>}
                 {isLateStage && <th className="p-3">Plays</th>}
-                {isLateStage && <th className="p-3">Gruppe</th>}
-                {isLateStage && <th className="p-3">Featured</th>}
                 <th className="p-3">Aktionen</th>
               </tr>
             </thead>
@@ -161,6 +177,7 @@ export function Stories() {
                         ? (s.heroName || s.title?.replace(/s Hörspiel$/, '') || s.title || '(Untitled)')
                         : (s.title || '(Untitled)')}
                     </Link>
+                    <span className="block text-xs text-text-muted mt-0.5">{timeAgo(s.updatedAt || s.createdAt)}</span>
                   </td>
                   {(isLateStage || isDraftStage) && (
                     <td className="p-3 whitespace-nowrap">
@@ -194,35 +211,27 @@ export function Stories() {
                     </td>
                   )}
                   {isLateStage && (
+                    <td className="p-3 text-text-muted whitespace-nowrap">
+                      {s.durationSeconds ? `${Math.floor(s.durationSeconds / 60)}:${String(s.durationSeconds % 60).padStart(2, '0')}` : '—'}
+                    </td>
+                  )}
+                  {isLateStage && (
                     <td className="p-3">
                       <span className="flex items-center gap-1 text-text-muted">
                         <Play size={12} /> {playMap.get(s.id) || 0}
                       </span>
                     </td>
                   )}
-                  {isLateStage && (
-                    <td className="p-3">
-                      {s.testGroup ? (
-                        <span title={
-                          s.testGroup === 'A' ? 'Kind als Held + Bezugspersonen' :
-                          s.testGroup === 'B' ? 'Kind als Held, keine Bezugspersonen' :
-                          'Fiktiver Held, nur Interessen'
-                        } className={`px-2 py-0.5 rounded text-xs font-bold cursor-help ${
-                          s.testGroup === 'A' ? 'bg-green-900 text-green-300' :
-                          s.testGroup === 'B' ? 'bg-blue-900 text-blue-300' :
-                          'bg-orange-900 text-orange-300'
-                        }`}>{s.testGroup}</span>
-                      ) : <span className="text-text-muted">—</span>}
-                    </td>
-                  )}
-                  {isLateStage && (
-                    <td className="p-3">
-                      <button onClick={() => featMut.mutate(s.id)} className="hover:scale-110 transition-transform">
-                        <Star size={18} className={s.featured ? 'text-yellow-400 fill-yellow-400' : 'text-text-muted'} />
-                      </button>
-                    </td>
-                  )}
                   <td className="p-3 flex items-center gap-1">
+                    {isLateStage && (
+                      <button
+                        onClick={() => featMut.mutate(s.id)}
+                        className="hover:scale-110 transition-transform p-2 rounded-lg hover:bg-yellow-900/20"
+                        title={s.featured ? 'Featured entfernen' : 'Als Featured markieren'}
+                      >
+                        <Star size={16} className={s.featured ? 'text-yellow-400 fill-yellow-400' : 'text-text-muted'} />
+                      </button>
+                    )}
                     {isLateStage && (
                       <button
                         onClick={() => { navigator.clipboard.writeText(`https://fablino.de/story/${s.id}`); toast.success('Link kopiert'); }}

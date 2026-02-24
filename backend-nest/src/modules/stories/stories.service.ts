@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TtsService } from '../../services/tts.service';
 import { AudioService } from '../../services/audio.service';
 import { VoicesService } from '../voices/voices.service';
+import { CostTrackingService } from '../../services/cost-tracking.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -15,6 +16,7 @@ export class StoriesService {
     private ttsService: TtsService,
     private audioService: AudioService,
     private voicesService: VoicesService,
+    private costTracking: CostTrackingService,
   ) {}
 
   async getStories(showAll: boolean = false) {
@@ -25,11 +27,12 @@ export class StoriesService {
             name: true,
             gender: true,
             voiceId: true,
+            emoji: true,
           },
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        updatedAt: 'desc',
       },
     });
 
@@ -38,6 +41,7 @@ export class StoriesService {
         name: c.name,
         gender: c.gender,
         voiceId: c.voiceId || null,
+        emoji: c.emoji || null,
       }));
 
       const voiceMap = {};
@@ -55,6 +59,7 @@ export class StoriesService {
         age: story.age,
         featured: story.featured,
         createdAt: story.createdAt,
+        updatedAt: story.updatedAt,
         audioUrl: story.audioPath ? `/api/audio/${story.id}` : null,
         coverUrl: story.coverUrl || null,
         status: story.status || 'requested',
@@ -64,6 +69,7 @@ export class StoriesService {
         interests: story.interests || null,
         heroName: story.heroName || null,
         testGroup: story.testGroup || null,
+        durationSeconds: story.durationSeconds || null,
       };
     });
 
@@ -79,6 +85,7 @@ export class StoriesService {
             name: true,
             gender: true,
             voiceId: true,
+            emoji: true,
           },
         },
         lines: {
@@ -98,6 +105,7 @@ export class StoriesService {
       name: c.name,
       gender: c.gender,
       voiceId: c.voiceId || null,
+      emoji: c.emoji || null,
     }));
 
     const voiceMap = {};
@@ -114,6 +122,7 @@ export class StoriesService {
       summary: story.summary,
       age: story.age,
       createdAt: story.createdAt,
+        updatedAt: story.updatedAt,
       audioUrl: story.audioPath ? `/api/audio/${story.id}` : null,
       coverUrl: story.coverUrl || null,
       status: story.status || 'requested',
@@ -125,6 +134,7 @@ export class StoriesService {
       featured: story.featured,
       testGroup: story.testGroup || null,
       scriptData: story.scriptData || null,
+      durationSeconds: story.durationSeconds || null,
       lines: story.lines,
     };
   }
@@ -152,6 +162,19 @@ export class StoriesService {
     } catch (error) {
       throw new HttpException('DB error', HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  async updateVoiceMap(id: string, voiceMap: Record<string, string>) {
+    const story = await this.prisma.story.findUnique({ where: { id } });
+    if (!story) throw new NotFoundException('Story not found');
+    const scriptData = (story as any).scriptData as any;
+    if (!scriptData) throw new HttpException('No script data', HttpStatus.BAD_REQUEST);
+    scriptData.voiceMap = voiceMap;
+    await this.prisma.story.update({
+      where: { id },
+      data: { scriptData: scriptData as any },
+    });
+    return { status: 'ok', voiceMap };
   }
 
   async voiceSwap(storyId: string, character: string, voiceId: string) {
@@ -242,6 +265,8 @@ export class StoriesService {
       }
 
       const linesRegenerated = allLines.filter(l => l.speaker === character).length;
+      const charsRegenerated = allLines.filter(l => l.speaker === character || character.includes(l.speaker) || l.speaker?.includes(character)).reduce((sum, l) => sum + l.text.length, 0);
+      await this.costTracking.trackElevenLabs(storyId, 'tts_voice_swap', charsRegenerated).catch(() => {});
       return { status: 'ok', character, voiceId, linesRegenerated };
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof HttpException) {

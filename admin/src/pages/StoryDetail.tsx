@@ -5,7 +5,10 @@ import { useAudio } from '../audioContext';
 import { ArrowLeft, Play, Pause, Star, Trash2, Wand2, Loader2, Check, ChevronRight, Save, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useState, useEffect, useRef } from 'react';
-import { charEmoji, TwemojiIcon } from '../charEmoji';
+import { TwemojiIcon } from '../charEmoji';
+import { fetchVoices } from '../api';
+import { Volume2, VolumeX } from 'lucide-react';
+import { VoicePicker } from '../components/VoicePicker';
 
 function getAuth(): string {
   return sessionStorage.getItem('fablino_auth') || '';
@@ -26,7 +29,46 @@ function GenerateForm({ story, onDone }: { story: any; onDone: () => void }) {
   const [voiceMap, setVoiceMap] = useState<any>(null);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
+  const [allVoices, setAllVoices] = useState<any[]>([]);
+  const [pickerChar, setPickerChar] = useState<string | null>(null);
+  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const pollRef = useRef<any>(null);
+
+  // Load all voices when voiceMap is available
+  useEffect(() => {
+    if (!voiceMap) return;
+    fetchVoices().then(setAllVoices).catch(() => {});
+  }, [voiceMap]);
+
+  const getVoicePreviewUrl = (charName: string) => {
+    const voiceId = voiceMap?.[charName];
+    if (!voiceId) return null;
+    return allVoices.find((v: any) => v.voice_id === voiceId)?.preview_url || null;
+  };
+
+  const getVoiceName = (charName: string) => {
+    const voiceId = voiceMap?.[charName];
+    if (!voiceId) return null;
+    return allVoices.find((v: any) => v.voice_id === voiceId)?.name || null;
+  };
+
+  const playVoicePreview = (charName: string) => {
+    if (previewAudioRef.current) { previewAudioRef.current.pause(); previewAudioRef.current = null; }
+    if (playingVoice === charName) { setPlayingVoice(null); return; }
+    const url = getVoicePreviewUrl(charName);
+    if (!url) return;
+    const audio = new Audio(url);
+    audio.onended = () => setPlayingVoice(null);
+    audio.play();
+    previewAudioRef.current = audio;
+    setPlayingVoice(charName);
+  };
+
+  const handleVoiceChange = (charName: string, voiceId: string) => {
+    setVoiceMap((prev: any) => ({ ...prev, [charName]: voiceId }));
+    setPickerChar(null);
+  };
 
   const addSideChar = () => setSideChars([...sideChars, { name: '', role: '' }]);
   const updateSideChar = (i: number, field: string, val: string) => {
@@ -127,11 +169,7 @@ function GenerateForm({ story, onDone }: { story: any; onDone: () => void }) {
             <input type="checkbox" checked={useHeroName} onChange={e => setUseHeroName(e.target.checked)} className="rounded" />
             Kind als Held (Name im Hörspiel verwenden)
           </label>
-          {(story as any).testGroup && (
-            <span className="text-xs text-text-muted">
-              Gruppe {(story as any).testGroup}: {(story as any).testGroup === 'A' ? 'Voll personalisiert' : (story as any).testGroup === 'B' ? 'Nur Name' : 'Fiktiver Held'}
-            </span>
-          )}
+
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -235,15 +273,33 @@ function GenerateForm({ story, onDone }: { story: any; onDone: () => void }) {
           </div>
 
           <div>
-            <h4 className="text-sm font-medium mb-2">Charaktere</h4>
+            <h4 className="text-sm font-medium mb-2">Charaktere & Stimmen <span className="text-text-muted">(klicken zum Ändern)</span></h4>
             <div className="flex gap-2 flex-wrap">
-              {script.characters?.filter((c: any) => c.name !== 'Erzähler').map((c: any) => (
-                <span key={c.name} className="px-3 py-1 bg-gray-800 border border-border rounded-full text-xs">
-                  <TwemojiIcon emoji={charEmoji(c.name, c.gender)} size={16} /> {c.name}
-                </span>
+              {script.characters?.map((c: any) => (
+                <button
+                  key={c.name}
+                  onClick={() => setPickerChar(c.name)}
+                  className={`px-3 py-1.5 bg-gray-800 border rounded-full text-xs flex items-center gap-1.5 transition-colors border-border hover:border-brand/50 cursor-pointer`}
+                >
+                  <TwemojiIcon emoji={c.emoji || '✨'} size={16} />
+                  <span>{c.name}</span>
+                  {getVoiceName(c.name) && <span className="text-text-muted">({getVoiceName(c.name)})</span>}
+                  <Volume2 size={12} className="text-text-muted" />
+                </button>
               ))}
             </div>
           </div>
+
+          {pickerChar && voiceMap && (
+            <VoicePicker
+              characterName={pickerChar}
+              currentVoiceId={voiceMap[pickerChar] || ''}
+              category={script.characters?.find((c: any) => c.name === pickerChar)?.gender || 'adult_m'}
+              voices={allVoices}
+              onSelect={(voiceId) => handleVoiceChange(pickerChar, voiceId)}
+              onClose={() => setPickerChar(null)}
+            />
+          )}
 
           <div className="flex gap-4 text-xs text-text-muted">
             <span>{script.scenes?.length} Szenen</span>
@@ -257,7 +313,7 @@ function GenerateForm({ story, onDone }: { story: any; onDone: () => void }) {
                 <p className="text-xs text-text-muted mb-2">Szene {si + 1}</p>
                 {scene.lines?.map((line: any, li: number) => (
                   <div key={li} className="mb-1">
-                    <span className="text-brand font-medium text-sm"><TwemojiIcon emoji={charEmoji(line.speaker, script.characters?.find((c: any) => c.name === line.speaker)?.gender || '')} size={14} /> {line.speaker}:</span>{' '}
+                    <span className="text-brand font-medium text-sm"><TwemojiIcon emoji={script.characters?.find((c: any) => c.name === line.speaker)?.emoji || '✨'} size={14} /> {line.speaker}:</span>{' '}
                     <span className="text-sm">{line.text}</span>
                   </div>
                 ))}
@@ -331,6 +387,36 @@ function DraftPreview({ story, onDone }: { story: any; onDone: () => void }) {
   const [review, setReview] = useState<ReviewResult | null>(null);
   const [accepted, setAccepted] = useState<Set<number>>(new Set());
   const { script, voiceMap } = (story as any).scriptData || {};
+  const [allVoices, setAllVoices] = useState<any[]>([]);
+  const [pickerChar, setPickerChar] = useState<string | null>(null);
+  const [showRegenModal, setShowRegenModal] = useState(false);
+  const [regenPrompt, setRegenPrompt] = useState(story.interests || story.prompt || '');
+
+  useEffect(() => {
+    if (!voiceMap) return;
+    fetchVoices().then(setAllVoices).catch(() => {});
+  }, [voiceMap]);
+
+  const getVoiceName = (charName: string) => {
+    const voiceId = voiceMap?.[charName];
+    if (!voiceId) return null;
+    return allVoices.find((v: any) => v.voice_id === voiceId)?.name || null;
+  };
+
+  const handleVoiceChange = async (charName: string, voiceId: string) => {
+    const newMap = { ...voiceMap, [charName]: voiceId };
+    // Update in DB
+    try {
+      await fetch(`/api/stories/${story.id}/voice-map`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voiceMap: newMap }),
+      });
+      // Update local scriptData
+      (story as any).scriptData.voiceMap = newMap;
+    } catch {}
+    setPickerChar(null);
+  };
 
   const pollStatus = async (jobId: string) => {
     for (;;) {
@@ -526,14 +612,32 @@ function DraftPreview({ story, onDone }: { story: any; onDone: () => void }) {
       </div>
 
       <div>
-        <h4 className="text-sm font-medium mb-2">Charaktere</h4>
+        <h4 className="text-sm font-medium mb-2">Charaktere & Stimmen <span className="text-text-muted">(klicken zum Ändern)</span></h4>
         <div className="flex gap-2 flex-wrap">
-          {script.characters?.filter((c: any) => c.name !== 'Erzähler').map((c: any) => (
-            <span key={c.name} className="px-3 py-1 bg-gray-800 border border-border rounded-full text-xs">
-              <TwemojiIcon emoji={charEmoji(c.name, c.gender)} size={16} /> {c.name}
-            </span>
+          {script.characters?.map((c: any) => (
+            <button
+              key={c.name}
+              onClick={() => setPickerChar(c.name)}
+              className="px-3 py-1.5 bg-gray-800 border border-border rounded-full text-xs flex items-center gap-1.5 transition-colors hover:border-brand/50 cursor-pointer"
+            >
+              <TwemojiIcon emoji={c.emoji || '✨'} size={16} />
+              <span>{c.name}</span>
+              {getVoiceName(c.name) && <span className="text-text-muted">({getVoiceName(c.name)})</span>}
+              <Volume2 size={12} className="text-text-muted" />
+            </button>
           ))}
         </div>
+
+        {pickerChar && voiceMap && (
+          <VoicePicker
+            characterName={pickerChar}
+            currentVoiceId={voiceMap[pickerChar] || ''}
+            category={script.characters?.find((c: any) => c.name === pickerChar)?.gender || 'adult_m'}
+            voices={allVoices}
+            onSelect={(voiceId) => handleVoiceChange(pickerChar, voiceId)}
+            onClose={() => setPickerChar(null)}
+          />
+        )}
       </div>
 
       <div className="flex gap-4 text-xs text-text-muted">
@@ -548,7 +652,7 @@ function DraftPreview({ story, onDone }: { story: any; onDone: () => void }) {
             <p className="text-xs text-text-muted mb-2">Szene {si + 1}</p>
             {scene.lines?.map((line: any, li: number) => (
               <div key={li} className="mb-1">
-                <span className="text-brand font-medium text-sm"><TwemojiIcon emoji={charEmoji(line.speaker, script.characters?.find((c: any) => c.name === line.speaker)?.gender || '')} size={14} /> {line.speaker}:</span>{' '}
+                <span className="text-brand font-medium text-sm"><TwemojiIcon emoji={script.characters?.find((c: any) => c.name === line.speaker)?.emoji || '✨'} size={14} /> {line.speaker}:</span>{' '}
                 <span className="text-sm">{line.text}</span>
               </div>
             ))}
@@ -556,12 +660,64 @@ function DraftPreview({ story, onDone }: { story: any; onDone: () => void }) {
         ))}
       </div>
 
+      {showRegenModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowRegenModal(false)}>
+          <div className="bg-surface border border-border rounded-xl p-6 w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-3">🔄 Neu generieren</h3>
+            <label className="text-sm text-text-muted mb-1 block">Interessen / Prompt</label>
+            <textarea
+              value={regenPrompt}
+              onChange={e => setRegenPrompt(e.target.value)}
+              rows={3}
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-brand"
+              placeholder="z.B. Minecraft, Zeitreisen, Technik"
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowRegenModal(false)}
+                className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-surface-hover transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={async () => {
+                  setShowRegenModal(false);
+                  setPhase('producing');
+                  setProgress('Skript wird neu generiert...');
+                  try {
+                    const res = await fetch(`/api/generate/${story.id}/regenerate`, {
+                      method: 'POST',
+                      headers: { Authorization: getAuth(), 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ prompt: regenPrompt || undefined }),
+                    });
+                    if (!res.ok) throw new Error('Neu-Generierung fehlgeschlagen');
+                    for (;;) {
+                      await new Promise(r => setTimeout(r, 2000));
+                      const s = await fetch(`/api/generate/status/${story.id}`, { headers: { Authorization: getAuth() } });
+                      const data = await s.json();
+                      if (data.progress) setProgress(data.progress);
+                      if (data.status === 'preview') { onDone(); setPhase('preview'); break; }
+                      if (data.status === 'error') throw new Error(data.error || 'Fehler bei der Generierung');
+                    }
+                  } catch (err: any) {
+                    setError(err.message);
+                    setPhase('error');
+                  }
+                }}
+                className="px-4 py-2 text-sm rounded-lg bg-brand hover:bg-green-700 text-white font-medium transition-colors"
+              >
+                Generieren
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex gap-3 pt-2">
         <button
-          onClick={handleReview}
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+          onClick={() => { setRegenPrompt(story.interests || story.prompt || ''); setShowRegenModal(true); }}
+          className="flex items-center gap-2 px-5 py-2.5 bg-surface border border-border hover:bg-surface-hover rounded-lg text-sm font-medium transition-colors"
         >
-          🔍 Überprüfen
+          🔄 Neu generieren
         </button>
         <button
           onClick={handleConfirm}
@@ -592,6 +748,17 @@ function ScriptLine({ line, story, voiceSettings, onUpdated }: { line: any; stor
   const [similarity, setSimilarity] = useState(vs.similarity_boost);
   const [style, setStyle] = useState(vs.style);
   const [boost, setBoost] = useState(vs.use_speaker_boost);
+
+  // Sync voice settings when voices finish loading (initial useState may use fallback)
+  useEffect(() => {
+    if (voiceSettings[voiceId]) {
+      const v = voiceSettings[voiceId];
+      setStability(v.stability);
+      setSimilarity(v.similarity_boost);
+      setStyle(v.style);
+      setBoost(v.use_speaker_boost);
+    }
+  }, [voiceId, voiceSettings[voiceId]?.use_speaker_boost]);
   const gender = matchChar?.gender || '';
 
   const stopGlobal = () => {
@@ -662,7 +829,7 @@ function ScriptLine({ line, story, voiceSettings, onUpdated }: { line: any; stor
     <div className="group relative flex items-start gap-2 hover:bg-gray-900/30 rounded px-2 py-1 -mx-2">
       <div className="flex-1">
         <span className="text-brand font-medium text-sm">
-          <TwemojiIcon emoji={charEmoji(line.speaker || '', gender)} size={14} /> {line.speaker}:
+          <TwemojiIcon emoji={story.characters?.find((c: any) => c.name === line.speaker)?.emoji || '✨'} size={14} /> {line.speaker}:
         </span>{' '}
         <span className="text-sm">{line.text}</span>
       </div>
@@ -755,6 +922,7 @@ export function StoryDetail() {
   const { play } = useAudio();
   const { data: story, isLoading } = useQuery({ queryKey: ['story', id], queryFn: () => fetchStory(id!) });
   const { data: allVoices = [] } = useQuery({ queryKey: ['voices'], queryFn: () => fetch('/api/voices').then(r => r.json()) });
+  const { data: costsData } = useQuery({ queryKey: ['costs', id], queryFn: () => fetch(`/api/stories/${id}/costs`).then(r => r.json()), enabled: !!id });
   const voiceSettings: Record<string, any> = {};
   (allVoices as any[]).forEach((v: any) => {
     voiceSettings[v.voice_id] = { stability: v.stability, similarity_boost: v.similarity_boost, style: v.style, use_speaker_boost: v.use_speaker_boost };
@@ -794,18 +962,34 @@ export function StoryDetail() {
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold">{story.title}</h2>
-            {(story as any).testGroup && (
-              <span title={
-                (story as any).testGroup === 'A' ? 'Kind als Held + Bezugspersonen' :
-                (story as any).testGroup === 'B' ? 'Kind als Held, keine Bezugspersonen' :
-                'Fiktiver Held, nur Interessen'
-              } className={`px-2 py-0.5 rounded text-xs font-bold cursor-help ${
-                (story as any).testGroup === 'A' ? 'bg-green-900 text-green-300' :
-                (story as any).testGroup === 'B' ? 'bg-blue-900 text-blue-300' :
-                'bg-orange-900 text-orange-300'
-              }`}>
-                Gruppe {(story as any).testGroup}
-              </span>
+            {costsData?.costs?.length > 0 && (
+              <details className="ml-auto shrink-0">
+                <summary className="text-sm font-medium text-text-muted cursor-pointer hover:text-text bg-surface border border-border rounded-lg px-3 py-1.5">
+                  💰 {(costsData.totals.total * 0.92).toFixed(2)} €
+                </summary>
+                <div className="absolute right-6 mt-1 bg-surface border border-border rounded-lg p-3 shadow-lg z-10 space-y-1 min-w-[200px]">
+                  {(() => {
+                    const cl = costsData.costs.filter((c: any) => c.service === 'claude');
+                    const el = costsData.costs.filter((c: any) => c.service === 'elevenlabs');
+                    const rp = costsData.costs.filter((c: any) => c.service === 'replicate');
+                    const sumInput = cl.reduce((s: number, c: any) => s + (c.inputTokens || 0), 0);
+                    const sumOutput = cl.reduce((s: number, c: any) => s + (c.outputTokens || 0), 0);
+                    const elChars = el.reduce((s: number, c: any) => s + (c.characters || 0), 0);
+                    const elCost = el.reduce((s: number, c: any) => s + Number(c.costUsd), 0);
+                    const rpCount = rp.length;
+                    const rpCost = rp.reduce((s: number, c: any) => s + Number(c.costUsd), 0);
+                    const inputCost = cl.reduce((s: number, c: any) => s + (c.inputTokens || 0) * 15 / 1_000_000, 0);
+                    const outputCost = cl.reduce((s: number, c: any) => s + (c.outputTokens || 0) * 75 / 1_000_000, 0);
+                    return (<>
+                      {sumInput > 0 && <div className="flex justify-between text-xs gap-4"><span>🧠 Claude Input ({sumInput.toLocaleString('de')} tok)</span><span>{(inputCost * 0.92).toFixed(4)} €</span></div>}
+                      {sumOutput > 0 && <div className="flex justify-between text-xs gap-4"><span>🧠 Claude Output ({sumOutput.toLocaleString('de')} tok)</span><span>{(outputCost * 0.92).toFixed(4)} €</span></div>}
+                      {elChars > 0 && <div className="flex justify-between text-xs gap-4"><span>🔊 ElevenLabs ({elChars.toLocaleString('de')} Zeichen)</span><span>{(elCost * 0.92).toFixed(4)} €</span></div>}
+                      {rpCount > 0 && <div className="flex justify-between text-xs gap-4"><span>🎨 Replicate ({rpCount} Bilder)</span><span>{(rpCost * 0.92).toFixed(4)} €</span></div>}
+                    </>);
+                  })()}
+                  <div className="flex justify-between text-xs font-bold border-t border-border pt-1 mt-1"><span>Gesamt</span><span>{(costsData.totals.total * 0.92).toFixed(2)} €</span></div>
+                </div>
+              </details>
             )}
           </div>
           <p className="text-text-muted text-sm">
@@ -888,7 +1072,7 @@ export function StoryDetail() {
           <div className="flex gap-2 flex-wrap">
             {story.characters.map((c) => (
               <span key={c.id} className="px-3 py-1 bg-surface border border-border rounded-full text-sm">
-                <TwemojiIcon emoji={charEmoji(c.name, c.gender)} size={16} /> {c.name}
+                <TwemojiIcon emoji={c.emoji || '✨'} size={16} /> {c.name}
               </span>
             ))}
           </div>

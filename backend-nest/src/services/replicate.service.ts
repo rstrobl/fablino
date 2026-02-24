@@ -27,7 +27,7 @@ export class ReplicateService {
       const charDesc = characters
         .filter(c => c.name !== 'Erzähler')
         .slice(0, 4)
-        .map(c => c.name)
+        .map(c => c.description ? `${c.name} (${c.description})` : c.name)
         .join(', ');
       
       const prompt = `Watercolor children's storybook illustration. ${title}. Characters: ${charDesc}. ${summary}. Warm magical lighting, soft colors, whimsical fairy tale style, no text, no words, no letters.`;

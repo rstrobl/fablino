@@ -8,6 +8,8 @@ import { VoicesService } from '../voices/voices.service';
 import { GenerateStoryDto, PreviewLineDto } from '../../dto/generation.dto';
 import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { charEmoji } from '../../utils/char-emoji';
+import { CostTrackingService } from '../../services/cost-tracking.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -26,11 +28,18 @@ export interface Job {
   story?: any;
 }
 
+interface GenerationState {
+  status: 'waiting_for_script' | 'preview' | 'generating_audio' | 'done' | 'error';
+  progress?: string;
+  error?: string;
+  startedAt?: number;
+  completedAt?: number;
+}
+
 @Injectable()
 export class GenerationService {
   private readonly AUDIO_DIR = path.resolve('../audio');
   private readonly COVERS_DIR = path.resolve('./covers');
-  private readonly jobs: { [id: string]: Job } = {};
 
   constructor(
     private prisma: PrismaService,
@@ -39,16 +48,24 @@ export class GenerationService {
     private audioService: AudioService,
     private replicateService: ReplicateService,
     private voicesService: VoicesService,
-  ) {
-    // Periodic cleanup of old jobs
-    setInterval(() => {
-      const now = Date.now();
-      for (const [id, job] of Object.entries(this.jobs)) {
-        if (job.completedAt && now - job.completedAt > 30 * 60 * 1000) {
-          delete this.jobs[id];
-        }
-      }
-    }, 5 * 60 * 1000);
+    private costTracking: CostTrackingService,
+  ) {}
+
+  private async updateGenerationState(id: string, state: Partial<GenerationState>) {
+    const story = await this.prisma.story.findUnique({ where: { id } });
+    const scriptData = (story?.scriptData as any) || {};
+    const existing = scriptData.generationState || {};
+    scriptData.generationState = { ...existing, ...state };
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
+      JSON.stringify(scriptData),
+      id,
+    );
+  }
+
+  private async getScriptData(id: string): Promise<any> {
+    const story = await this.prisma.story.findUnique({ where: { id } });
+    return story?.scriptData as any;
   }
 
   async generateStory(dto: GenerateStoryDto) {
@@ -59,11 +76,32 @@ export class GenerationService {
     }
 
     const id = storyId || uuidv4();
-    this.jobs[id] = {
-      status: 'waiting_for_script',
-      progress: 'Skript wird geschrieben...',
-      startedAt: Date.now(),
-    };
+
+    // Ensure story row exists
+    const existing = await this.prisma.story.findUnique({ where: { id } });
+    if (existing) {
+      await this.prisma.story.update({
+        where: { id },
+        data: {
+          status: 'requested',
+          scriptData: {
+            generationState: { status: 'waiting_for_script', progress: 'Skript wird geschrieben...', startedAt: Date.now() },
+          } as any,
+        },
+      });
+    } else {
+      await this.prisma.story.create({
+        data: {
+          id,
+          status: 'requested',
+          prompt,
+          age: age || null,
+          scriptData: {
+            generationState: { status: 'waiting_for_script', progress: 'Skript wird geschrieben...', startedAt: Date.now() },
+          } as any,
+        },
+      });
+    }
 
     // Start generation async
     this.generateScriptAsync(id, prompt, age, characters, systemPromptOverride);
@@ -73,14 +111,19 @@ export class GenerationService {
 
   private async generateScriptAsync(id: string, prompt: string, age: number, characters: any, systemPromptOverride?: string) {
     try {
-      this.jobs[id].progress = 'Skript wird geschrieben...';
-      
-      const { script, systemPrompt } = await this.claudeService.generateScript(
-        prompt, 
-        age, 
+      await this.updateGenerationState(id, { progress: 'Skript wird geschrieben...' });
+
+      const { script, systemPrompt, usage } = await this.claudeService.generateScript(
+        prompt,
+        age,
         characters,
         systemPromptOverride,
       );
+
+      // Track Claude cost
+      if (usage) {
+        await this.costTracking.trackClaude(id, 'generate', usage, usage.thinking_tokens).catch(() => {});
+      }
 
       // Post-processing: remove onomatopoeia from non-narrator lines
       const onomatopoeiaPattern = /\b(H[aie]h[aie]h?[aie]?|Buhuhu|Hihihi|Ächz|Seufz|Grr+|Brumm+|Miau|Wuff|Schnurr|Piep|Prust|Uff|Autsch|Hmpf|Pah|Tss|Juhu|Juchhu|Hurra|Wiehern?)\b\.{0,3}\s*/gi;
@@ -109,84 +152,59 @@ export class GenerationService {
         });
       }
 
+      // Assign emojis to characters
+      for (const c of script.characters) {
+        if (!c.emoji) c.emoji = charEmoji(c.name, c.gender);
+      }
+
       // Preview mode: stop here and let user confirm
       const voiceMap = this.ttsService.assignVoices(script.characters);
 
-      // Persist draft to DB so it survives restarts
-      const existingStory = await this.prisma.story.findUnique({ where: { id } });
-      if (existingStory) {
-        await this.prisma.story.update({
-          where: { id },
-          data: {
-            status: 'draft',
-            title: script.title,
-            summary: script.summary || null,
-            scriptData: { script, voiceMap, systemPrompt } as any,
-          },
-        });
-      } else {
-        await this.prisma.story.create({
-          data: {
-            id,
-            status: 'draft',
-            title: script.title,
-            prompt,
-            summary: script.summary || null,
-            age: age || null,
-            scriptData: { script, voiceMap, systemPrompt } as any,
-          },
-        });
-      }
-
-      this.jobs[id] = {
-        status: 'preview',
-        script,
-        voiceMap,
-        prompt,
-        age,
-        systemPrompt,
-      };
+      // Persist draft to DB
+      await this.prisma.story.update({
+        where: { id },
+        data: {
+          status: 'draft',
+          title: script.title,
+          prompt,
+          summary: script.summary || null,
+          scriptData: {
+            script,
+            voiceMap,
+            systemPrompt,
+            generationState: { status: 'preview' },
+          } as any,
+        },
+      });
     } catch (err) {
       console.error('Script generation error:', err);
-      this.jobs[id] = {
+      await this.updateGenerationState(id, {
         status: 'error',
         error: err.message,
         completedAt: Date.now(),
-      };
+      });
     }
   }
 
   async confirmScript(id: string) {
-    let job = this.jobs[id];
-    
-    // Try restore from DB if not in memory
-    if (!job || job.status !== 'preview') {
-      const story = await this.prisma.story.findUnique({ where: { id } });
-      if (story?.scriptData && story.status === 'draft') {
-        const { script, voiceMap, systemPrompt } = story.scriptData as any;
-        job = {
-          status: 'preview',
-          script,
-          voiceMap,
-          prompt: story.prompt,
-          age: Number(story.age) || 6,
-          systemPrompt,
-        };
-        this.jobs[id] = job;
-      } else {
-        throw new NotFoundException('Kein Skript zur Bestätigung gefunden');
-      }
+    const story = await this.prisma.story.findUnique({ where: { id } });
+    if (!story?.scriptData || story.status !== 'draft') {
+      throw new NotFoundException('Kein Skript zur Bestätigung gefunden');
     }
 
-    const { script, voiceMap, prompt, age, systemPrompt } = job;
-    this.jobs[id] = {
-      status: 'generating_audio',
-      progress: 'Stimmen werden eingesprochen...',
-      title: script.title,
-    };
+    const scriptData = story.scriptData as any;
+    const { script, voiceMap, systemPrompt } = scriptData;
+
+    // Update state to generating_audio
+    scriptData.generationState = { status: 'generating_audio', progress: 'Stimmen werden eingesprochen...' };
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
+      JSON.stringify(scriptData),
+      id,
+    );
 
     // Start audio generation async
-    this.generateAudioAsync(id, script, voiceMap, prompt, age, systemPrompt);
+    this.generateAudioAsync(id, script, voiceMap, story.prompt, Number(story.age) || 6, systemPrompt);
 
     return { status: 'confirmed' };
   }
@@ -232,12 +250,12 @@ export class GenerationService {
         const line = allLines[i];
         const voice = voiceMap[line.speaker] || this.ttsService['EL_VOICES'].narrator;
         const ttsPath = path.join(linesDir, `line_${lineIdx}.mp3`);
-        
+
         const previous_text = i > 0 ?
           allLines.slice(Math.max(0, i - 2), i).map(l => l.text).join(' ') :
           undefined;
         const next_text = i < allLines.length - 1 ? allLines[i + 1].text : undefined;
-        
+
         await this.ttsService.generateTTS(
           line.text,
           voice,
@@ -245,13 +263,17 @@ export class GenerationService {
           voiceSettingsMap[voice] || this.ttsService.DEFAULT_VOICE_SETTINGS,
           { previous_text, next_text },
         );
-        
+
         segments.push(ttsPath);
         lineIdx++;
-        this.jobs[id].progress = `Stimmen: ${lineIdx}/${totalLines}`;
+        await this.updateGenerationState(id, { progress: `Stimmen: ${lineIdx}/${totalLines}` });
       }
 
-      this.jobs[id].progress = 'Audio wird zusammengemischt...';
+      // Track ElevenLabs TTS cost
+      const totalChars = allLines.reduce((sum, l) => sum + l.text.length, 0);
+      await this.costTracking.trackElevenLabs(id, 'tts_production', totalChars).catch(() => {});
+
+      await this.updateGenerationState(id, { progress: 'Audio wird zusammengemischt...' });
       const finalPath = path.join(this.AUDIO_DIR, `${id}.mp3`);
 
       // Load audio mix settings from DB
@@ -264,30 +286,28 @@ export class GenerationService {
 
       await this.audioService.combineAudio(segments, finalPath, this.AUDIO_DIR, sceneBreaks, mixSettings);
 
-      // Wait for cover to finish (may already be done)
+      // Wait for cover to finish
       const coverUrl = await coverPromise;
       console.log(`Cover for ${id}: ${coverUrl || 'none'}`);
+      if (coverUrl) {
+        await this.costTracking.trackReplicate(id, 'cover', 1).catch(() => {});
+      }
 
-      // Save to database
+      // Save to database (updates status to 'produced')
       const story = await this.insertStory(id, script, voiceMap, prompt, age, systemPrompt, coverUrl);
 
-      this.jobs[id] = {
+      // Update generationState to done (insertStory overwrites scriptData, so update after)
+      await this.updateGenerationState(id, {
         status: 'done',
         completedAt: Date.now(),
-        story: {
-          ...story,
-          characters: script.characters.map(c => ({ name: c.name, gender: c.gender })),
-          voiceMap,
-          audioUrl: `/api/audio/${id}`,
-        },
-      };
+      });
     } catch (err) {
       console.error('Audio generation error:', err);
-      this.jobs[id] = {
+      await this.updateGenerationState(id, {
         status: 'error',
         error: err.message,
         completedAt: Date.now(),
-      };
+      });
     }
   }
 
@@ -301,13 +321,10 @@ export class GenerationService {
     coverUrl?: string,
   ) {
     return this.prisma.$transaction(async (tx) => {
-      // Determine test group based on what was provided
-      // A = hero name + side characters (Bezugspersonen), B = hero name only, C = no hero name
       const hasHeroName = /^Name:/.test(prompt);
-      const hasSideChars = script.characters.length > 2; // narrator + hero + others = Bezugspersonen
+      const hasSideChars = script.characters.length > 2;
       const testGroup = hasHeroName ? (hasSideChars ? 'A' : 'B') : 'C';
 
-      // Upsert story (may already exist as draft)
       const storyData = {
         title: script.title,
         prompt: prompt,
@@ -318,7 +335,7 @@ export class GenerationService {
         coverUrl: coverUrl || null,
         testGroup,
         status: 'produced',
-        scriptData: null as any, // clear draft data
+        scriptData: { script, voiceMap, systemPrompt } as any,
       };
       const story = await tx.story.upsert({
         where: { id: storyId },
@@ -326,11 +343,9 @@ export class GenerationService {
         create: { id: storyId, ...storyData, createdAt: new Date() },
       });
 
-      // Delete old characters/lines if re-generating
       await tx.character.deleteMany({ where: { storyId } });
       await tx.line.deleteMany({ where: { storyId } });
 
-      // Insert characters
       for (const char of script.characters) {
         await tx.character.create({
           data: {
@@ -338,11 +353,12 @@ export class GenerationService {
             name: char.name,
             gender: char.gender,
             voiceId: voiceMap[char.name] || null,
+            emoji: char.emoji || charEmoji(char.name, char.gender),
+            description: char.description || null,
           },
         });
       }
 
-      // Insert lines
       let globalIdx = 0;
       for (let si = 0; si < script.scenes.length; si++) {
         for (let li = 0; li < script.scenes[si].lines.length; li++) {
@@ -404,7 +420,6 @@ export class GenerationService {
   async replaceLine(body: { storyId: string; lineId: number; voiceId: string; text: string; voiceSettings?: any }) {
     const { storyId, lineId, voiceId, text, voiceSettings } = body;
 
-    // Get the line and its context
     const line = await this.prisma.line.findUnique({ where: { id: lineId } });
     if (!line) throw new NotFoundException('Line not found');
 
@@ -419,26 +434,23 @@ export class GenerationService {
       : undefined;
     const next_text = lineIndex < allLines.length - 1 ? allLines[lineIndex + 1].text : undefined;
 
-    // Get voice settings: use provided, or load from DB, or defaults
     let settings = voiceSettings;
     if (!settings) {
       settings = await this.voicesService.getSettingsForVoice(voiceId) || this.ttsService.DEFAULT_VOICE_SETTINGS;
     }
 
-    // Find the line's audio file index
     const globalIdx = lineIndex;
     const linesDir = path.join(this.AUDIO_DIR, 'lines', storyId);
     const linePath = path.join(linesDir, `line_${globalIdx}.mp3`);
 
-    // Generate new TTS for this line
     await this.ttsService.generateTTS(text, voiceId, linePath, settings, { previous_text, next_text });
 
-    // Update line text in DB if changed
+    await this.costTracking.trackElevenLabs(storyId, 'tts_replace', text.length).catch(() => {});
+
     if (text !== line.text) {
       await this.prisma.line.update({ where: { id: lineId }, data: { text } });
     }
 
-    // Remix the full audio
     const segments: string[] = [];
     const sceneBreaks: number[] = [];
     let lastScene = -1;
@@ -450,7 +462,6 @@ export class GenerationService {
       segments.push(path.join(linesDir, `line_${i}.mp3`));
     }
 
-    // Load audio mix settings
     const { DEFAULT_AUDIO_SETTINGS } = require('../../services/audio.service');
     let mixSettings = { ...DEFAULT_AUDIO_SETTINGS };
     try {
@@ -470,25 +481,102 @@ export class GenerationService {
       return { status: 'not_found' as const };
     }
 
-    const job = this.jobs[id];
-    if (job) return job;
-
-    // Try to restore from DB
     const story = await this.prisma.story.findUnique({ where: { id } });
-    if (story?.scriptData && story.status === 'draft') {
-      const { script, voiceMap, systemPrompt } = story.scriptData as any;
-      this.jobs[id] = {
+    if (!story) return { status: 'not_found' as const };
+
+    const scriptData = story.scriptData as any;
+    const genState: GenerationState = scriptData?.generationState || {};
+
+    // If story is produced/sent and no active generation state, return done
+    if (['produced', 'sent', 'feedback'].includes(story.status) && (!genState.status || genState.status === 'done')) {
+      return {
+        status: 'done',
+        completedAt: genState.completedAt,
+        story: {
+          id: story.id,
+          title: story.title,
+          status: story.status,
+          audioUrl: `/api/audio/${id}`,
+          characters: scriptData?.script?.characters?.map((c: any) => ({ name: c.name, gender: c.gender })),
+          voiceMap: scriptData?.voiceMap,
+        },
+      };
+    }
+
+    // Draft with preview state
+    if (story.status === 'draft' && (!genState.status || genState.status === 'preview')) {
+      return {
         status: 'preview',
-        script,
-        voiceMap,
+        script: scriptData?.script,
+        voiceMap: scriptData?.voiceMap,
         prompt: story.prompt,
         age: Number(story.age) || 6,
-        systemPrompt,
+        systemPrompt: scriptData?.systemPrompt,
       };
-      return this.jobs[id];
+    }
+
+    // Active generation states
+    if (genState.status === 'waiting_for_script') {
+      return {
+        status: 'waiting_for_script',
+        progress: genState.progress || 'Skript wird geschrieben...',
+        startedAt: genState.startedAt,
+      };
+    }
+
+    if (genState.status === 'generating_audio') {
+      return {
+        status: 'generating_audio',
+        progress: genState.progress || 'Stimmen werden eingesprochen...',
+        title: scriptData?.script?.title,
+      };
+    }
+
+    if (genState.status === 'error') {
+      return {
+        status: 'error',
+        error: genState.error,
+        completedAt: genState.completedAt,
+      };
+    }
+
+    // Fallback for draft without generationState
+    if (story.status === 'draft' && scriptData?.script) {
+      return {
+        status: 'preview',
+        script: scriptData.script,
+        voiceMap: scriptData.voiceMap,
+        prompt: story.prompt,
+        age: Number(story.age) || 6,
+        systemPrompt: scriptData.systemPrompt,
+      };
     }
 
     return { status: 'not_found' as const };
+  }
+
+  async regenerateScript(storyId: string, customPrompt?: string) {
+    const story = await this.prisma.story.findUnique({ where: { id: storyId } });
+    if (!story) throw new NotFoundException('Story not found');
+    if (story.status !== 'draft') throw new HttpException('Nur Entwürfe können neu generiert werden', HttpStatus.BAD_REQUEST);
+
+    const prompt = customPrompt || story.prompt || (story as any).interests || '';
+    const age = Number(story.age) || 6;
+    const heroName = (story as any).heroName || null;
+
+    if (customPrompt) {
+      await this.prisma.story.update({
+        where: { id: storyId },
+        data: { interests: customPrompt },
+      });
+    }
+
+    return this.generateStory({
+      prompt,
+      age,
+      storyId,
+      characters: heroName ? { hero: { name: heroName, age: String(age) } } : undefined,
+    });
   }
 
   async reviewScript(storyId: string): Promise<ReviewResult> {
@@ -499,7 +587,11 @@ export class GenerationService {
     const { script } = story.scriptData as any;
     const age = Number(story.age) || 6;
 
-    return this.claudeService.reviewScript(script, age);
+    const result = await this.claudeService.reviewScript(script, age);
+    if ((result as any).usage) {
+      await this.costTracking.trackClaude(storyId, 'review', (result as any).usage).catch(() => {});
+    }
+    return result;
   }
 
   async applyReview(storyId: string, acceptedIndices: number[]): Promise<{ script: Script }> {
@@ -508,10 +600,8 @@ export class GenerationService {
     if (!story.scriptData) throw new HttpException('No script data', HttpStatus.BAD_REQUEST);
 
     const scriptData = story.scriptData as any;
-    const script: Script = JSON.parse(JSON.stringify(scriptData.script)); // deep clone
+    const script: Script = JSON.parse(JSON.stringify(scriptData.script));
 
-    // Get the review from cache (client sends suggestions back)
-    // We'll receive the suggestions directly from the client
     return { script };
   }
 
@@ -523,7 +613,6 @@ export class GenerationService {
     const scriptData = story.scriptData as any;
     const script: Script = JSON.parse(JSON.stringify(scriptData.script));
 
-    // Sort suggestions by scene desc, lineIndex desc to apply from bottom up (avoid index shifts)
     const sorted = [...suggestions].sort((a, b) => {
       if (a.scene !== b.scene) return b.scene - a.scene;
       return b.lineIndex - a.lineIndex;
@@ -544,18 +633,12 @@ export class GenerationService {
       }
     }
 
-    // Update script_data in DB
     scriptData.script = script;
     await this.prisma.$executeRawUnsafe(
       `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
       JSON.stringify(scriptData),
       storyId,
     );
-
-    // Also update job cache if exists
-    if (this.jobs[storyId]) {
-      this.jobs[storyId].script = script;
-    }
 
     return script;
   }
