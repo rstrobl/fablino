@@ -420,6 +420,54 @@ describe('ReplicateService', () => {
       consoleLogSpy.mockRestore();
     });
 
+    it('should generate 300x300 thumbnail alongside cover and OG image', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      await service.generateCover(
+        'Test',
+        'Summary',
+        mockCharacters,
+        'story123',
+        '/covers'
+      );
+
+      // Should create thumb directory
+      expect(fs.mkdirSync).toHaveBeenCalledWith('/covers/thumb', { recursive: true });
+
+      // Should generate 300x300 thumbnail
+      expect(execSync).toHaveBeenCalledWith(
+        'convert "/covers/story123.jpg" -resize 300x300 -quality 80 "/covers/thumb/story123.jpg"'
+      );
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Thumbnail generated:')
+      );
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should handle thumbnail generation errors gracefully', async () => {
+      // First call (OG) succeeds, second call (thumb) fails
+      (execSync as jest.Mock)
+        .mockImplementationOnce(() => {}) // OG ok
+        .mockImplementationOnce(() => { throw new Error('convert failed'); });
+
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      const result = await service.generateCover(
+        'Test', 'Summary', mockCharacters, 'story123', '/covers'
+      );
+
+      expect(result).toBe('/covers/story123.jpg');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Thumbnail generation error:',
+        'convert failed'
+      );
+
+      consoleErrorSpy.mockRestore();
+      consoleLogSpy.mockRestore();
+    });
+
     it('should handle OG thumbnail generation errors gracefully', async () => {
       (execSync as jest.Mock).mockImplementation(() => {
         throw new Error('ImageMagick not found');

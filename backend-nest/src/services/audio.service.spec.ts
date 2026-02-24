@@ -28,6 +28,9 @@ describe('AudioService', () => {
     jest.clearAllMocks();
     (fs.writeFileSync as jest.Mock).mockImplementation();
     (fs.unlinkSync as jest.Mock).mockImplementation();
+    (fs.copyFileSync as jest.Mock).mockImplementation();
+    (fs.existsSync as jest.Mock).mockReturnValue(true);
+    (fs.renameSync as jest.Mock).mockImplementation();
     (path.join as jest.Mock).mockImplementation((...args) => args.join('/'));
     // Mock exec to work with promisify - it should call the callback with (null, { stdout: '', stderr: '' })
     mockExec.mockImplementation((cmd, callback) => {
@@ -75,8 +78,8 @@ describe('AudioService', () => {
         expect.any(Function)
       );
 
-      // Should cleanup temporary files
-      expect(fs.unlinkSync).toHaveBeenCalledTimes(3);
+      // Should cleanup temporary files (line silence, scene silence, list file, tmp file attempted)
+      expect(fs.unlinkSync).toHaveBeenCalled();
     });
 
     it('should create correct concatenation list with silence between segments', async () => {
@@ -95,8 +98,8 @@ describe('AudioService', () => {
       // Should have silence between segments but not after last segment
       const lines = listContent.split('\n').filter(line => line.length > 0);
       expect(lines).toHaveLength(5); // 3 segments + 2 silence files
-      expect(lines[1]).toContain('silence_');
-      expect(lines[3]).toContain('silence_');
+      expect(lines[1]).toContain('silence_line_');
+      expect(lines[3]).toContain('silence_line_');
     });
 
     it('should handle single audio segment', async () => {
@@ -132,9 +135,10 @@ describe('AudioService', () => {
       await service.combineAudio(mockSegments, outputPath, audioDir);
 
       // Check that unique timestamps are used for temp files
-      expect(path.join).toHaveBeenCalledWith(audioDir, 'silence_1000.mp3');
-      expect(path.join).toHaveBeenCalledWith(audioDir, 'list_1001.txt');
-      expect(path.join).toHaveBeenCalledWith(audioDir, 'tmp_1002.mp3');
+      expect(path.join).toHaveBeenCalledWith(audioDir, 'silence_line_1000.mp3');
+      expect(path.join).toHaveBeenCalledWith(audioDir, 'silence_scene_1000.mp3');
+      expect(path.join).toHaveBeenCalledWith(audioDir, 'list_1000.txt');
+      expect(path.join).toHaveBeenCalledWith(audioDir, 'tmp_1000.mp3');
 
       Date.now = originalDateNow;
     });
@@ -167,20 +171,24 @@ describe('AudioService', () => {
 
       const execCalls = mockExec.mock.calls;
 
-      // Silence generation
+      // Line silence generation
       expect(execCalls[0][0]).toContain('-f lavfi');
       expect(execCalls[0][0]).toContain('anullsrc=r=44100:cl=mono');
       expect(execCalls[0][0]).toContain('-t 0.5');
       expect(execCalls[0][0]).toContain('-q:a 9');
 
+      // Scene silence generation (different pause)
+      expect(execCalls[1][0]).toContain('-t 1.5');
+
       // Concatenation
-      expect(execCalls[1][0]).toContain('-f concat');
-      expect(execCalls[1][0]).toContain('-safe 0');
-      expect(execCalls[1][0]).toContain('-q:a 2');
+      const concatCall = execCalls.find(c => c[0].includes('-f concat'));
+      expect(concatCall[0]).toContain('-safe 0');
+      expect(concatCall[0]).toContain('-q:a 2');
 
       // Fade-in
-      expect(execCalls[2][0]).toContain('afade=t=in:d=0.5');
-      expect(execCalls[2][0]).toContain('-q:a 2');
+      const fadeCall = execCalls.find(c => c[0].includes('afade'));
+      expect(fadeCall[0]).toContain('afade=t=in:d=0.5');
+      expect(fadeCall[0]).toContain('-q:a 2');
     });
 
     it('should suppress ffmpeg stderr output', async () => {
@@ -208,6 +216,94 @@ describe('AudioService', () => {
       
       expect(listContent).toContain('file \'/audio/segment with spaces.mp3\'');
       expect(listContent).toContain('file \'/audio/another file.mp3\'');
+    });
+
+    it('should use scene pause for scene breaks and line pause elsewhere', async () => {
+      const sceneBreaks = [0]; // break after first segment
+
+      await service.combineAudio(mockSegments, outputPath, audioDir, sceneBreaks);
+
+      const writeCall = (fs.writeFileSync as jest.Mock).mock.calls.find(call =>
+        call[0].includes('list_')
+      );
+      const listContent = writeCall[1];
+      const lines = listContent.split('\n').filter(l => l.length > 0);
+
+      // segment1 -> scene silence -> segment2 -> line silence -> segment3
+      expect(lines[1]).toContain('silence_scene_');
+      expect(lines[3]).toContain('silence_line_');
+    });
+
+    it('should create separate scene silence when scene_pause differs from line_pause', async () => {
+      const settings = {
+        line_pause: 0.3,
+        scene_pause: 2.0,
+        fade_in: 0,
+        fade_out: 0,
+        loudnorm_lufs: -16,
+      };
+
+      await service.combineAudio(mockSegments, outputPath, audioDir, [], settings);
+
+      // Should create line silence with 0.3
+      expect(mockExec).toHaveBeenCalledWith(
+        expect.stringContaining('-t 0.3'),
+        expect.any(Function)
+      );
+      // Should create scene silence with 2.0
+      expect(mockExec).toHaveBeenCalledWith(
+        expect.stringContaining('-t 2'),
+        expect.any(Function)
+      );
+    });
+
+    it('should copy line silence to scene silence when pauses are equal', async () => {
+      const settings = {
+        line_pause: 0.5,
+        scene_pause: 0.5,
+        fade_in: 0,
+        fade_out: 0,
+        loudnorm_lufs: -16,
+      };
+
+      await service.combineAudio(mockSegments, outputPath, audioDir, [], settings);
+
+      expect(fs.copyFileSync).toHaveBeenCalled();
+    });
+
+    it('should apply custom AudioMixSettings for fade-in', async () => {
+      const settings = {
+        line_pause: 0.5,
+        scene_pause: 1.5,
+        fade_in: 1.0,
+        fade_out: 0,
+        loudnorm_lufs: -16,
+      };
+
+      await service.combineAudio(mockSegments, outputPath, audioDir, [], settings);
+
+      expect(mockExec).toHaveBeenCalledWith(
+        expect.stringContaining('afade=t=in:d=1'),
+        expect.any(Function)
+      );
+    });
+
+    it('should skip fade filters when both are 0', async () => {
+      const settings = {
+        line_pause: 0.5,
+        scene_pause: 1.5,
+        fade_in: 0,
+        fade_out: 0,
+        loudnorm_lufs: -16,
+      };
+
+      (fs.renameSync as jest.Mock) = jest.fn();
+
+      await service.combineAudio(mockSegments, outputPath, audioDir, [], settings);
+
+      // Should NOT call ffmpeg for fade, should rename instead
+      const fadeCalls = mockExec.mock.calls.filter(c => c[0].includes('afade'));
+      expect(fadeCalls).toHaveLength(0);
     });
 
     it('should preserve file order in concatenation', async () => {

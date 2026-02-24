@@ -51,7 +51,27 @@ describe('BasicAuthGuard', () => {
 
   it('should throw UnauthorizedException when no authorization header is present', () => {
     expect(() => guard.canActivate(mockExecutionContext)).toThrow(UnauthorizedException);
-    expect(mockResponse.setHeader).toHaveBeenCalledWith('WWW-Authenticate', 'Basic realm="Admin"');
+  });
+
+  it('should NOT set WWW-Authenticate header on 401 (removed)', () => {
+    try {
+      guard.canActivate(mockExecutionContext);
+    } catch (e) {
+      // expected
+    }
+    expect(mockResponse.setHeader).not.toHaveBeenCalled();
+  });
+
+  it('should NOT set WWW-Authenticate header on invalid credentials', () => {
+    const credentials = Buffer.from('admin:wrongpassword').toString('base64');
+    mockRequest.headers.authorization = `Basic ${credentials}`;
+
+    try {
+      guard.canActivate(mockExecutionContext);
+    } catch (e) {
+      // expected
+    }
+    expect(mockResponse.setHeader).not.toHaveBeenCalled();
   });
 
   it('should return true with valid credentials', () => {
@@ -67,7 +87,6 @@ describe('BasicAuthGuard', () => {
     mockRequest.headers.authorization = `Basic ${credentials}`;
 
     expect(() => guard.canActivate(mockExecutionContext)).toThrow(UnauthorizedException);
-    expect(mockResponse.setHeader).toHaveBeenCalledWith('WWW-Authenticate', 'Basic realm="Admin"');
   });
 
   it('should throw UnauthorizedException with invalid password', () => {
@@ -75,7 +94,6 @@ describe('BasicAuthGuard', () => {
     mockRequest.headers.authorization = `Basic ${credentials}`;
 
     expect(() => guard.canActivate(mockExecutionContext)).toThrow(UnauthorizedException);
-    expect(mockResponse.setHeader).toHaveBeenCalledWith('WWW-Authenticate', 'Basic realm="Admin"');
   });
 
   it('should use custom admin password from config', () => {

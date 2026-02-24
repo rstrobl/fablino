@@ -1,28 +1,31 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { VoicesService } from './voices.service';
-import { TtsService } from '../../services/tts.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('VoicesService', () => {
   let service: VoicesService;
-  let ttsService: TtsService;
 
-  const mockTtsService = {
-    getVoiceDirectory: jest.fn(),
+  const mockPrismaService = {
+    $queryRaw: jest.fn(),
+    $executeRaw: jest.fn(),
+  };
+
+  const mockConfigService = {
+    get: jest.fn(),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VoicesService,
-        {
-          provide: TtsService,
-          useValue: mockTtsService,
-        },
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
     service = module.get<VoicesService>(VoicesService);
-    ttsService = module.get<TtsService>(TtsService);
   });
 
   beforeEach(() => {
@@ -33,86 +36,117 @@ describe('VoicesService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('getVoices', () => {
-    it('should return voice directory from TTS service', () => {
-      const expectedVoices = {
-        'GoXyzBapJk3AoCJoMQl9': { name: 'Daniel', desc: 'neutral, professionell', category: 'narrator' },
-        'Ewvy14akxdhONg4fmNry': { name: 'Finnegan', desc: 'neugierig, aufgeweckt, mutig', category: 'child_m' },
-        '9sjP3TfMlzEjAa6uXh3A': { name: 'Kelly', desc: 'fröhlich, lebhaft', category: 'child_f' },
-      };
-      mockTtsService.getVoiceDirectory.mockReturnValue(expectedVoices);
+  describe('getSettingsForVoice', () => {
+    it('should return voice settings when voice exists', async () => {
+      mockPrismaService.$queryRaw.mockResolvedValue([{
+        stability: '0.35',
+        similarity_boost: '0.75',
+        style: '0.6',
+        use_speaker_boost: false,
+      }]);
 
-      const result = service.getVoices();
+      const result = await service.getSettingsForVoice('voice123');
 
-      expect(result).toEqual(expectedVoices);
-      expect(ttsService.getVoiceDirectory).toHaveBeenCalled();
-    });
-
-    it('should return empty object when TTS service returns empty', () => {
-      mockTtsService.getVoiceDirectory.mockReturnValue({});
-
-      const result = service.getVoices();
-
-      expect(result).toEqual({});
-      expect(ttsService.getVoiceDirectory).toHaveBeenCalled();
-    });
-
-    it('should propagate TTS service errors', () => {
-      mockTtsService.getVoiceDirectory.mockImplementation(() => {
-        throw new Error('TTS service error');
+      expect(result).toEqual({
+        stability: 0.35,
+        similarity_boost: 0.75,
+        style: 0.6,
+        use_speaker_boost: false,
       });
-
-      expect(() => service.getVoices()).toThrow('TTS service error');
     });
 
-    it('should call TTS service exactly once', () => {
-      mockTtsService.getVoiceDirectory.mockReturnValue({});
+    it('should convert numeric strings to numbers', async () => {
+      mockPrismaService.$queryRaw.mockResolvedValue([{
+        stability: '0.5',
+        similarity_boost: '0.9',
+        style: '1.0',
+        use_speaker_boost: true,
+      }]);
 
-      service.getVoices();
+      const result = await service.getSettingsForVoice('voice123');
 
-      expect(ttsService.getVoiceDirectory).toHaveBeenCalledTimes(1);
-      expect(ttsService.getVoiceDirectory).toHaveBeenCalledWith();
+      expect(typeof result.stability).toBe('number');
+      expect(typeof result.similarity_boost).toBe('number');
+      expect(typeof result.style).toBe('number');
+      expect(result.stability).toBe(0.5);
+      expect(result.similarity_boost).toBe(0.9);
+      expect(result.style).toBe(1.0);
+      expect(result.use_speaker_boost).toBe(true);
     });
 
-    it('should return all voice categories', () => {
-      const comprehensiveVoices = {
-        'narrator_id': { name: 'Daniel', desc: 'neutral, professionell', category: 'narrator' },
-        'child_m_id': { name: 'Finnegan', desc: 'mutig, neugierig', category: 'child_m' },
-        'child_f_id': { name: 'Kelly', desc: 'fröhlich, lebhaft', category: 'child_f' },
-        'adult_m_id': { name: 'Ben', desc: 'warmherzig', category: 'adult_m' },
-        'adult_f_id': { name: 'Raya', desc: 'warm, mütterlich', category: 'adult_f' },
-        'elder_f_id': { name: 'Hilde', desc: 'liebevolle Oma', category: 'elder_f' },
-      };
-      mockTtsService.getVoiceDirectory.mockReturnValue(comprehensiveVoices);
+    it('should return null when voice not found', async () => {
+      mockPrismaService.$queryRaw.mockResolvedValue([]);
 
-      const result = service.getVoices();
-
-      expect(result).toEqual(comprehensiveVoices);
-      
-      const categories = Object.values(result).map(voice => voice.category);
-      expect(categories).toContain('narrator');
-      expect(categories).toContain('child_m');
-      expect(categories).toContain('child_f');
-      expect(categories).toContain('adult_m');
-      expect(categories).toContain('adult_f');
-      expect(categories).toContain('elder_f');
-    });
-
-    it('should handle null/undefined return from TTS service', () => {
-      mockTtsService.getVoiceDirectory.mockReturnValue(null);
-
-      const result = service.getVoices();
+      const result = await service.getSettingsForVoice('nonexistent');
 
       expect(result).toBeNull();
     });
+  });
 
-    it('should return exact same object reference from TTS service', () => {
-      const voiceObject = { 'voice1': { name: 'Test', desc: 'test', category: 'test' } };
-      mockTtsService.getVoiceDirectory.mockReturnValue(voiceObject);
+  describe('getAll', () => {
+    it('should return all voices with numeric conversions', async () => {
+      mockPrismaService.$queryRaw.mockResolvedValue([
+        {
+          voice_id: 'v1', name: 'Daniel', category: 'narrator',
+          description: 'neutral', stability: '0.35', similarity_boost: '0.75',
+          style: '0.6', use_speaker_boost: false, traits: ['warm'], active: true,
+        },
+        {
+          voice_id: 'v2', name: 'Max', category: 'child_m',
+          description: 'eager', stability: '0.5', similarity_boost: '0.8',
+          style: '0.9', use_speaker_boost: true, traits: ['mutig'], active: true,
+        },
+      ]);
 
-      const result = service.getVoices();
+      const result = await service.getAll();
 
-      expect(result).toBe(voiceObject); // Same reference, not a copy
+      expect(result).toHaveLength(2);
+      expect(result[0].stability).toBe(0.35);
+      expect(result[0].similarity_boost).toBe(0.75);
+      expect(result[0].style).toBe(0.6);
+      expect(result[1].stability).toBe(0.5);
+    });
+
+    it('should return empty array when no voices', async () => {
+      mockPrismaService.$queryRaw.mockResolvedValue([]);
+
+      const result = await service.getAll();
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getOne', () => {
+    it('should return a single voice', async () => {
+      mockPrismaService.$queryRaw.mockResolvedValue([{
+        voice_id: 'v1', name: 'Daniel', stability: '0.35',
+        similarity_boost: '0.75', style: '0.6',
+      }]);
+
+      const result = await service.getOne('v1');
+
+      expect(result.voice_id).toBe('v1');
+      expect(result.stability).toBe(0.35);
+    });
+
+    it('should throw NotFoundException when voice not found', async () => {
+      mockPrismaService.$queryRaw.mockResolvedValue([]);
+
+      await expect(service.getOne('nonexistent')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getCategories', () => {
+    it('should return distinct categories', async () => {
+      mockPrismaService.$queryRaw.mockResolvedValue([
+        { category: 'adult_f' },
+        { category: 'child_m' },
+        { category: 'narrator' },
+      ]);
+
+      const result = await service.getCategories();
+
+      expect(result).toEqual(['adult_f', 'child_m', 'narrator']);
     });
   });
 });

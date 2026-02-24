@@ -3,10 +3,11 @@ import { Response } from 'express';
 import { HttpException, NotFoundException } from '@nestjs/common';
 import { GenerationService, Job } from './generation.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ClaudeService, Script } from '../../services/claude.service';
+import { ClaudeService, Script, ReviewResult, ReviewSuggestion } from '../../services/claude.service';
 import { TtsService } from '../../services/tts.service';
 import { AudioService } from '../../services/audio.service';
 import { ReplicateService } from '../../services/replicate.service';
+import { VoicesService } from '../voices/voices.service';
 import { GenerateStoryDto, PreviewLineDto } from '../../dto/generation.dto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,8 +27,13 @@ describe('GenerationService', () => {
 
   const mockPrismaService = {
     $transaction: jest.fn(),
+    $executeRawUnsafe: jest.fn().mockResolvedValue(undefined),
+    $queryRaw: jest.fn().mockResolvedValue([]),
     story: {
       create: jest.fn(),
+      findUnique: jest.fn().mockResolvedValue(null),
+      update: jest.fn(),
+      upsert: jest.fn(),
     },
     character: {
       create: jest.fn(),
@@ -37,8 +43,13 @@ describe('GenerationService', () => {
     },
   };
 
+  const mockVoicesService = {
+    getSettingsForVoice: jest.fn().mockResolvedValue(null),
+  };
+
   const mockClaudeService = {
     generateScript: jest.fn(),
+    reviewScript: jest.fn(),
   };
 
   const mockTtsService = {
@@ -89,6 +100,7 @@ describe('GenerationService', () => {
         { provide: TtsService, useValue: mockTtsService },
         { provide: AudioService, useValue: mockAudioService },
         { provide: ReplicateService, useValue: mockReplicateService },
+        { provide: VoicesService, useValue: mockVoicesService },
       ],
     }).compile();
 
@@ -153,7 +165,7 @@ describe('GenerationService', () => {
       await service.generateStory(dto);
 
       // Should still accept the generation
-      const jobStatus = service.getJobStatus('test-uuid-123');
+      const jobStatus = await service.getJobStatus('test-uuid-123');
       // Job might have already progressed to preview due to fast async execution
       expect(['waiting_for_script', 'preview'].includes(jobStatus.status)).toBe(true);
     });
@@ -170,7 +182,7 @@ describe('GenerationService', () => {
       await service.generateStory(dto);
 
       // Job should be created and started
-      const jobStatus = service.getJobStatus('test-uuid-123') as Job;
+      const jobStatus = await service.getJobStatus('test-uuid-123') as Job;
       // Due to fast async execution, job might already be in preview state
       expect(['waiting_for_script', 'preview'].includes(jobStatus.status)).toBe(true);
       if (jobStatus.status === 'waiting_for_script') {
@@ -202,7 +214,7 @@ describe('GenerationService', () => {
       // Wait for async operation
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const jobStatus = service.getJobStatus('test-uuid-123') as Job;
+      const jobStatus = await service.getJobStatus('test-uuid-123') as Job;
       expect(jobStatus.status).toBe('preview');
       expect(jobStatus.script).toEqual(mockScript);
       expect(jobStatus.voiceMap).toEqual({
@@ -233,7 +245,7 @@ describe('GenerationService', () => {
       await service.generateStory({ prompt: 'Test story' });
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const jobStatus = service.getJobStatus('test-uuid-123') as Job;
+      const jobStatus = await service.getJobStatus('test-uuid-123') as Job;
       expect(jobStatus.script?.scenes[0].lines[1].text).toBe(', das ist lustig!');
       expect(jobStatus.script?.scenes[0].lines[2].text).toBe('! Das tut weh.');
     });
@@ -252,7 +264,7 @@ describe('GenerationService', () => {
       await service.generateStory({ prompt: 'Test story' });
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const jobStatus = service.getJobStatus('test-uuid-123') as Job;
+      const jobStatus = await service.getJobStatus('test-uuid-123') as Job;
       expect(jobStatus.script?.characters[0].name).toBe('Erzähler');
     });
 
@@ -262,7 +274,7 @@ describe('GenerationService', () => {
       await service.generateStory({ prompt: 'Test story' });
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const jobStatus = service.getJobStatus('test-uuid-123') as Job;
+      const jobStatus = await service.getJobStatus('test-uuid-123') as Job;
       expect(jobStatus.status).toBe('error');
       expect(jobStatus.error).toBe('Claude API error');
     });
@@ -285,7 +297,7 @@ describe('GenerationService', () => {
 
       expect(result).toEqual({ status: 'confirmed' });
 
-      const jobStatus = service.getJobStatus('test-uuid-123') as Job;
+      const jobStatus = await service.getJobStatus('test-uuid-123') as Job;
       expect(jobStatus.status).toBe('generating_audio');
       // Progress might change quickly due to mocked async operations
       expect(jobStatus.progress).toBeDefined();
@@ -344,7 +356,7 @@ describe('GenerationService', () => {
       expect(mockAudioService.combineAudio).toHaveBeenCalled();
       expect(mockReplicateService.generateCover).toHaveBeenCalled();
 
-      const jobStatus = service.getJobStatus('test-uuid-123') as Job;
+      const jobStatus = await service.getJobStatus('test-uuid-123') as Job;
       expect(jobStatus.status).toBe('done');
       expect(jobStatus.story).toBeDefined();
     });
@@ -354,7 +366,7 @@ describe('GenerationService', () => {
       
       // Check initial progress - might be done quickly with mocks
       await new Promise(resolve => setTimeout(resolve, 50));
-      let jobStatus = service.getJobStatus('test-uuid-123') as Job;
+      let jobStatus = await service.getJobStatus('test-uuid-123') as Job;
       // Progress might be undefined if generation completed quickly
       if (jobStatus.progress) {
         expect(['Stimmen werden eingesprochen...', 'Audio wird zusammengemischt...']).toContain(jobStatus.progress.split(':')[0]);
@@ -370,7 +382,7 @@ describe('GenerationService', () => {
       await service.confirmScript('test-uuid-123');
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const jobStatus = service.getJobStatus('test-uuid-123') as Job;
+      const jobStatus = await service.getJobStatus('test-uuid-123') as Job;
       expect(jobStatus.status).toBe('error');
       expect(jobStatus.error).toBe('TTS failed');
     });
@@ -535,7 +547,7 @@ describe('GenerationService', () => {
     it('should return job status when job exists', async () => {
       await service.generateStory({ prompt: 'Test story' });
 
-      const jobStatus = service.getJobStatus('test-uuid-123') as Job;
+      const jobStatus = await service.getJobStatus('test-uuid-123') as Job;
 
       // Job might progress quickly to preview due to mocked async operations
       expect(['waiting_for_script', 'preview'].includes(jobStatus.status)).toBe(true);
@@ -546,7 +558,7 @@ describe('GenerationService', () => {
     });
 
     it('should return not_found for non-existent job', () => {
-      const jobStatus = service.getJobStatus('nonexistent');
+      const jobStatus = await service.getJobStatus('nonexistent');
 
       expect(jobStatus).toEqual({ status: 'not_found' });
     });
@@ -580,7 +592,7 @@ describe('GenerationService', () => {
       }
 
       // Job should be cleaned up
-      const jobStatus = service.getJobStatus(jobId);
+      const jobStatus = await service.getJobStatus(jobId);
       expect(jobStatus).toEqual({ status: 'not_found' });
     });
 
@@ -596,7 +608,7 @@ describe('GenerationService', () => {
       jest.advanceTimersByTime(5 * 60 * 1000 + 1);
 
       // Job should still exist
-      const jobStatus = service.getJobStatus(jobId);
+      const jobStatus = await service.getJobStatus(jobId);
       expect(jobStatus.status).toBe('done');
     });
 
@@ -606,8 +618,207 @@ describe('GenerationService', () => {
       jest.advanceTimersByTime(5 * 60 * 1000 + 1);
 
       // Active job should still exist
-      const jobStatus = service.getJobStatus('test-uuid-123');
+      const jobStatus = await service.getJobStatus('test-uuid-123');
       expect(['waiting_for_script', 'preview'].includes(jobStatus.status)).toBe(true);
+    });
+  });
+
+  describe('reviewScript', () => {
+    const mockReviewResult: ReviewResult = {
+      overallRating: 'gut',
+      summary: 'Script looks good',
+      suggestions: [
+        {
+          type: 'replace',
+          scene: 0,
+          lineIndex: 1,
+          reason: 'Too informal',
+          original: 'Heute will ich ein Abenteuer erleben!',
+          replacement: 'Heute möchte ich ein Abenteuer erleben!',
+        },
+      ],
+    };
+
+    it('should call claudeService.reviewScript with script and age', async () => {
+      mockPrismaService.story.findUnique.mockResolvedValue({
+        id: 'story-1',
+        age: 6,
+        scriptData: { script: mockScript },
+      });
+      mockClaudeService.reviewScript.mockResolvedValue(mockReviewResult);
+
+      const result = await service.reviewScript('story-1');
+
+      expect(mockClaudeService.reviewScript).toHaveBeenCalledWith(mockScript, 6);
+      expect(result).toEqual(mockReviewResult);
+    });
+
+    it('should throw NotFoundException when story not found', async () => {
+      mockPrismaService.story.findUnique.mockResolvedValue(null);
+
+      await expect(service.reviewScript('nonexistent')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw HttpException when no scriptData', async () => {
+      mockPrismaService.story.findUnique.mockResolvedValue({
+        id: 'story-1',
+        scriptData: null,
+      });
+
+      await expect(service.reviewScript('story-1')).rejects.toThrow(HttpException);
+    });
+
+    it('should default age to 6 when null', async () => {
+      mockPrismaService.story.findUnique.mockResolvedValue({
+        id: 'story-1',
+        age: null,
+        scriptData: { script: mockScript },
+      });
+      mockClaudeService.reviewScript.mockResolvedValue(mockReviewResult);
+
+      await service.reviewScript('story-1');
+
+      expect(mockClaudeService.reviewScript).toHaveBeenCalledWith(mockScript, 6);
+    });
+  });
+
+  describe('applyReviewSuggestions', () => {
+    const baseScriptData = {
+      script: {
+        title: 'Test',
+        summary: 'Summary',
+        characters: [
+          { name: 'Erzähler', gender: 'adult_m', traits: ['neutral'] },
+          { name: 'Max', gender: 'child_m', traits: ['mutig'] },
+        ],
+        scenes: [
+          {
+            lines: [
+              { speaker: 'Erzähler', text: 'Line one.' },
+              { speaker: 'Max', text: 'Line two.' },
+              { speaker: 'Erzähler', text: 'Line three.' },
+            ],
+          },
+        ],
+      },
+      voiceMap: {},
+    };
+
+    beforeEach(() => {
+      mockPrismaService.story.findUnique.mockResolvedValue({
+        id: 'story-1',
+        scriptData: JSON.parse(JSON.stringify(baseScriptData)),
+      });
+      mockPrismaService.$executeRawUnsafe.mockResolvedValue(undefined);
+    });
+
+    it('should apply replace suggestion', async () => {
+      const suggestions: ReviewSuggestion[] = [{
+        type: 'replace',
+        scene: 0,
+        lineIndex: 1,
+        reason: 'Better wording',
+        replacement: 'New line two.',
+      }];
+
+      const result = await service.applyReviewSuggestions('story-1', suggestions);
+
+      expect(result.scenes[0].lines[1].text).toBe('New line two.');
+      expect(result.scenes[0].lines).toHaveLength(3);
+    });
+
+    it('should apply delete suggestion', async () => {
+      const suggestions: ReviewSuggestion[] = [{
+        type: 'delete',
+        scene: 0,
+        lineIndex: 1,
+        reason: 'Unnecessary',
+      }];
+
+      const result = await service.applyReviewSuggestions('story-1', suggestions);
+
+      expect(result.scenes[0].lines).toHaveLength(2);
+      expect(result.scenes[0].lines[1].text).toBe('Line three.');
+    });
+
+    it('should apply insert suggestion', async () => {
+      const suggestions: ReviewSuggestion[] = [{
+        type: 'insert',
+        scene: 0,
+        lineIndex: 1,
+        reason: 'Add dialogue',
+        replacement: 'Inserted line.',
+        speaker: 'Max',
+      }];
+
+      const result = await service.applyReviewSuggestions('story-1', suggestions);
+
+      expect(result.scenes[0].lines).toHaveLength(4);
+      expect(result.scenes[0].lines[1].text).toBe('Inserted line.');
+      expect(result.scenes[0].lines[1].speaker).toBe('Max');
+    });
+
+    it('should apply multiple suggestions sorted bottom-up', async () => {
+      const suggestions: ReviewSuggestion[] = [
+        { type: 'delete', scene: 0, lineIndex: 0, reason: 'Remove first' },
+        { type: 'replace', scene: 0, lineIndex: 2, reason: 'Fix last', replacement: 'Fixed.' },
+      ];
+
+      const result = await service.applyReviewSuggestions('story-1', suggestions);
+
+      // lineIndex 2 replaced first (bottom-up), then lineIndex 0 deleted
+      expect(result.scenes[0].lines).toHaveLength(2);
+      expect(result.scenes[0].lines[1].text).toBe('Fixed.');
+    });
+
+    it('should persist updated script to DB', async () => {
+      const suggestions: ReviewSuggestion[] = [{
+        type: 'replace', scene: 0, lineIndex: 0, reason: 'Fix', replacement: 'Fixed.',
+      }];
+
+      await service.applyReviewSuggestions('story-1', suggestions);
+
+      expect(mockPrismaService.$executeRawUnsafe).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE stories SET script_data'),
+        expect.any(String),
+        'story-1',
+      );
+    });
+
+    it('should throw NotFoundException when story not found', async () => {
+      mockPrismaService.story.findUnique.mockResolvedValue(null);
+
+      await expect(service.applyReviewSuggestions('nonexistent', [])).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw HttpException when no scriptData', async () => {
+      mockPrismaService.story.findUnique.mockResolvedValue({ id: 'story-1', scriptData: null });
+
+      await expect(service.applyReviewSuggestions('story-1', [])).rejects.toThrow(HttpException);
+    });
+
+    it('should skip suggestions for nonexistent scenes', async () => {
+      const suggestions: ReviewSuggestion[] = [{
+        type: 'replace', scene: 99, lineIndex: 0, reason: 'Bad scene', replacement: 'x',
+      }];
+
+      const result = await service.applyReviewSuggestions('story-1', suggestions);
+
+      // Original script unchanged
+      expect(result.scenes[0].lines).toHaveLength(3);
+    });
+
+    it('should update job cache if exists', async () => {
+      // Put a job in cache
+      (service as any).jobs['story-1'] = { status: 'preview', script: null };
+
+      const suggestions: ReviewSuggestion[] = [{
+        type: 'replace', scene: 0, lineIndex: 0, reason: 'Fix', replacement: 'Fixed.',
+      }];
+
+      const result = await service.applyReviewSuggestions('story-1', suggestions);
+
+      expect((service as any).jobs['story-1'].script).toEqual(result);
     });
   });
 });
