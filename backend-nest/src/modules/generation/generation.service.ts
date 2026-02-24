@@ -1,8 +1,9 @@
 import { Injectable, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ClaudeService, Script, Character, ReviewResult, ReviewSuggestion } from '../../services/claude.service';
+import { ClaudeService, Script } from '../../services/claude.service';
 import { TtsService } from '../../services/tts.service';
-import { AudioService } from '../../services/audio.service';
+import { AudioMixService } from '../../services/audio.service';
+import { AudioPipelineService, AUDIO_DIR } from '../../services/audio-pipeline.service';
 import { ReplicateService } from '../../services/replicate.service';
 import { VoicesService } from '../voices/voices.service';
 import { GenerateStoryDto, PreviewLineDto } from '../../dto/generation.dto';
@@ -10,6 +11,7 @@ import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { charEmoji } from '../../utils/char-emoji';
 import { CostTrackingService } from '../../services/cost-tracking.service';
+import { ScriptData, GenerationState } from '../../types/script-data';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -28,24 +30,16 @@ export interface Job {
   story?: any;
 }
 
-interface GenerationState {
-  status: 'waiting_for_script' | 'preview' | 'generating_audio' | 'done' | 'error';
-  progress?: string;
-  error?: string;
-  startedAt?: number;
-  completedAt?: number;
-}
-
 @Injectable()
 export class GenerationService {
-  private readonly AUDIO_DIR = path.resolve('../audio');
   private readonly COVERS_DIR = path.resolve('./covers');
 
   constructor(
     private prisma: PrismaService,
     private claudeService: ClaudeService,
     private ttsService: TtsService,
-    private audioService: AudioService,
+    private audioService: AudioMixService,
+    private audioPipeline: AudioPipelineService,
     private replicateService: ReplicateService,
     private voicesService: VoicesService,
     private costTracking: CostTrackingService,
@@ -53,7 +47,7 @@ export class GenerationService {
 
   private async updateGenerationState(id: string, state: Partial<GenerationState>) {
     const story = await this.prisma.story.findUnique({ where: { id } });
-    const scriptData = (story?.scriptData as any) || {};
+    const scriptData = (story?.scriptData as unknown as ScriptData) || {} as any;
     const existing = scriptData.generationState || {};
     scriptData.generationState = { ...existing, ...state };
     await this.prisma.$executeRawUnsafe(
@@ -61,11 +55,6 @@ export class GenerationService {
       JSON.stringify(scriptData),
       id,
     );
-  }
-
-  private async getScriptData(id: string): Promise<any> {
-    const story = await this.prisma.story.findUnique({ where: { id } });
-    return story?.scriptData as any;
   }
 
   async generateStory(dto: GenerateStoryDto) {
@@ -192,11 +181,11 @@ export class GenerationService {
       throw new NotFoundException('Kein Skript zur Bestätigung gefunden');
     }
 
-    const scriptData = story.scriptData as any;
+    const scriptData = story.scriptData as unknown as ScriptData;
     const { script, voiceMap, systemPrompt } = scriptData;
 
     // Update state to generating_audio
-    scriptData.generationState = { status: 'generating_audio', progress: 'Stimmen werden eingesprochen...' };
+    (scriptData as any).generationState = { status: 'generating_audio', progress: 'Stimmen werden eingesprochen...' };
     await this.prisma.$executeRawUnsafe(
       `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
       JSON.stringify(scriptData),
@@ -217,7 +206,7 @@ export class GenerationService {
     age: number,
     systemPrompt: string,
   ) {
-    const linesDir = path.join(this.AUDIO_DIR, 'lines', id);
+    const linesDir = path.join(AUDIO_DIR, 'lines', id);
     fs.mkdirSync(linesDir, { recursive: true });
 
     // Start cover generation in parallel
@@ -231,14 +220,13 @@ export class GenerationService {
 
     try {
       const segments = [];
-      const sceneBreaks: number[] = [];
-      let lineIdx = 0;
       const allLines: { speaker: string; text: string }[] = [];
       for (const scene of script.scenes) {
-        if (allLines.length > 0) sceneBreaks.push(allLines.length - 1);
         allLines.push(...scene.lines);
       }
+      const sceneBreaks = this.audioPipeline.calculateSceneBreaksFromScenes(script.scenes);
       const totalLines = allLines.length;
+      let lineIdx = 0;
 
       // Load per-voice settings from DB
       const voiceSettingsMap: { [voiceId: string]: any } = {};
@@ -274,17 +262,8 @@ export class GenerationService {
       await this.costTracking.trackElevenLabs(id, 'tts_production', totalChars).catch(() => {});
 
       await this.updateGenerationState(id, { progress: 'Audio wird zusammengemischt...' });
-      const finalPath = path.join(this.AUDIO_DIR, `${id}.mp3`);
 
-      // Load audio mix settings from DB
-      const { DEFAULT_AUDIO_SETTINGS } = require('../../services/audio.service');
-      let mixSettings = { ...DEFAULT_AUDIO_SETTINGS };
-      try {
-        const rows = await this.prisma.$queryRaw`SELECT key, value FROM audio_settings` as any[];
-        rows.forEach((r: any) => { mixSettings[r.key] = Number(r.value); });
-      } catch {}
-
-      await this.audioService.combineAudio(segments, finalPath, this.AUDIO_DIR, sceneBreaks, mixSettings);
+      await this.audioPipeline.recombineStoryAudio(id, segments, sceneBreaks);
 
       // Wait for cover to finish
       const coverUrl = await coverPromise;
@@ -398,7 +377,7 @@ export class GenerationService {
         use_speaker_boost: voiceSettings?.use_speaker_boost ?? false,
       };
 
-      const tmpPath = path.join(this.AUDIO_DIR, `preview_${Date.now()}.mp3`);
+      const tmpPath = path.join(AUDIO_DIR, `preview_${Date.now()}.mp3`);
       await this.ttsService.generateTTS(text, voiceId, tmpPath, settings, {
         previous_text,
         next_text,
@@ -440,7 +419,7 @@ export class GenerationService {
     }
 
     const globalIdx = lineIndex;
-    const linesDir = path.join(this.AUDIO_DIR, 'lines', storyId);
+    const linesDir = path.join(AUDIO_DIR, 'lines', storyId);
     const linePath = path.join(linesDir, `line_${globalIdx}.mp3`);
 
     await this.ttsService.generateTTS(text, voiceId, linePath, settings, { previous_text, next_text });
@@ -452,25 +431,12 @@ export class GenerationService {
     }
 
     const segments: string[] = [];
-    const sceneBreaks: number[] = [];
-    let lastScene = -1;
+    const sceneBreaks = this.audioPipeline.calculateSceneBreaks(allLines);
     for (let i = 0; i < allLines.length; i++) {
-      if (lastScene >= 0 && allLines[i].sceneIdx !== lastScene) {
-        sceneBreaks.push(i - 1);
-      }
-      lastScene = allLines[i].sceneIdx;
       segments.push(path.join(linesDir, `line_${i}.mp3`));
     }
 
-    const { DEFAULT_AUDIO_SETTINGS } = require('../../services/audio.service');
-    let mixSettings = { ...DEFAULT_AUDIO_SETTINGS };
-    try {
-      const rows = await this.prisma.$queryRaw`SELECT key, value FROM audio_settings` as any[];
-      rows.forEach((r: any) => { mixSettings[r.key] = Number(r.value); });
-    } catch {}
-
-    const finalPath = path.join(this.AUDIO_DIR, `${storyId}.mp3`);
-    await this.audioService.combineAudio(segments, finalPath, this.AUDIO_DIR, sceneBreaks, mixSettings);
+    await this.audioPipeline.recombineStoryAudio(storyId, segments, sceneBreaks);
 
     return { ok: true, lineIndex: globalIdx, audioPath: `audio/lines/${storyId}/line_${globalIdx}.mp3` };
   }
@@ -484,8 +450,8 @@ export class GenerationService {
     const story = await this.prisma.story.findUnique({ where: { id } });
     if (!story) return { status: 'not_found' as const };
 
-    const scriptData = story.scriptData as any;
-    const genState: GenerationState = scriptData?.generationState || {};
+    const scriptData = story.scriptData as unknown as unknown as ScriptData | null;
+    const genState: Partial<GenerationState> = scriptData?.generationState || {};
 
     // If story is produced/sent and no active generation state, return done
     if (['produced', 'sent', 'feedback'].includes(story.status) && (!genState.status || genState.status === 'done')) {
@@ -577,69 +543,5 @@ export class GenerationService {
       storyId,
       characters: heroName ? { hero: { name: heroName, age: String(age) } } : undefined,
     });
-  }
-
-  async reviewScript(storyId: string): Promise<ReviewResult> {
-    const story = await this.prisma.story.findUnique({ where: { id: storyId } });
-    if (!story) throw new NotFoundException('Story not found');
-    if (!story.scriptData) throw new HttpException('No script data', HttpStatus.BAD_REQUEST);
-
-    const { script } = story.scriptData as any;
-    const age = Number(story.age) || 6;
-
-    const result = await this.claudeService.reviewScript(script, age);
-    if ((result as any).usage) {
-      await this.costTracking.trackClaude(storyId, 'review', (result as any).usage).catch(() => {});
-    }
-    return result;
-  }
-
-  async applyReview(storyId: string, acceptedIndices: number[]): Promise<{ script: Script }> {
-    const story = await this.prisma.story.findUnique({ where: { id: storyId } });
-    if (!story) throw new NotFoundException('Story not found');
-    if (!story.scriptData) throw new HttpException('No script data', HttpStatus.BAD_REQUEST);
-
-    const scriptData = story.scriptData as any;
-    const script: Script = JSON.parse(JSON.stringify(scriptData.script));
-
-    return { script };
-  }
-
-  async applyReviewSuggestions(storyId: string, suggestions: ReviewSuggestion[]): Promise<Script> {
-    const story = await this.prisma.story.findUnique({ where: { id: storyId } });
-    if (!story) throw new NotFoundException('Story not found');
-    if (!story.scriptData) throw new HttpException('No script data', HttpStatus.BAD_REQUEST);
-
-    const scriptData = story.scriptData as any;
-    const script: Script = JSON.parse(JSON.stringify(scriptData.script));
-
-    const sorted = [...suggestions].sort((a, b) => {
-      if (a.scene !== b.scene) return b.scene - a.scene;
-      return b.lineIndex - a.lineIndex;
-    });
-
-    for (const s of sorted) {
-      const scene = script.scenes[s.scene];
-      if (!scene) continue;
-
-      if (s.type === 'delete') {
-        scene.lines.splice(s.lineIndex, 1);
-      } else if (s.type === 'replace' && s.replacement) {
-        if (scene.lines[s.lineIndex]) {
-          scene.lines[s.lineIndex].text = s.replacement;
-        }
-      } else if (s.type === 'insert' && s.replacement && s.speaker) {
-        scene.lines.splice(s.lineIndex, 0, { speaker: s.speaker, text: s.replacement });
-      }
-    }
-
-    scriptData.script = script;
-    await this.prisma.$executeRawUnsafe(
-      `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
-      JSON.stringify(scriptData),
-      storyId,
-    );
-
-    return script;
   }
 }

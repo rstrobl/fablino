@@ -1,20 +1,21 @@
 import { Injectable, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TtsService } from '../../services/tts.service';
-import { AudioService } from '../../services/audio.service';
+import { AudioMixService } from '../../services/audio.service';
+import { AudioPipelineService, AUDIO_DIR } from '../../services/audio-pipeline.service';
 import { VoicesService } from '../voices/voices.service';
 import { CostTrackingService } from '../../services/cost-tracking.service';
+import { ScriptData } from '../../types/script-data';
 import * as fs from 'fs';
 import * as path from 'path';
 
 @Injectable()
 export class StoriesService {
-  private readonly AUDIO_DIR = path.resolve('../audio');
-
   constructor(
     private prisma: PrismaService,
     private ttsService: TtsService,
-    private audioService: AudioService,
+    private audioService: AudioMixService,
+    private audioPipeline: AudioPipelineService,
     private voicesService: VoicesService,
     private costTracking: CostTrackingService,
   ) {}
@@ -219,7 +220,7 @@ export class StoriesService {
       }
 
       const voiceSettings = await this.voicesService.getSettingsForVoice(voiceId) || this.ttsService.DEFAULT_VOICE_SETTINGS;
-      const linesDir = path.join(this.AUDIO_DIR, 'lines', storyId);
+      const linesDir = path.join(AUDIO_DIR, 'lines', storyId);
       fs.mkdirSync(linesDir, { recursive: true });
 
       // Regenerate only lines for the specified character (with context)
@@ -250,7 +251,7 @@ export class StoriesService {
         globalIdx++;
       }
 
-      // Recombine all lines
+      // Recombine all lines with proper scene breaks and mix settings
       const segments = [];
       for (let i = 0; i < allLines.length; i++) {
         const p = path.join(linesDir, `line_${i}.mp3`);
@@ -260,8 +261,8 @@ export class StoriesService {
       }
 
       if (segments.length > 0) {
-        const finalPath = path.join(this.AUDIO_DIR, `${storyId}.mp3`);
-        await this.audioService.combineAudio(segments, finalPath, this.AUDIO_DIR);
+        const sceneBreaks = this.audioPipeline.calculateSceneBreaks(allLines);
+        await this.audioPipeline.recombineStoryAudio(storyId, segments, sceneBreaks);
       }
 
       const linesRegenerated = allLines.filter(l => l.speaker === character).length;

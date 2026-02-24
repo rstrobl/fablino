@@ -2,7 +2,6 @@ import { Controller, Post, Get, Param, Body, Query, Res, HttpException, HttpStat
 import { GenerationService, Job } from './generation.service';
 import { GenerateStoryDto, PreviewLineDto } from '../../dto/generation.dto';
 import { BasicAuthGuard } from '../../guards/basic-auth.guard';
-import { ReviewSuggestion } from '../../services/claude.service';
 import { Response } from 'express';
 
 @Controller('api/generate')
@@ -38,17 +37,5 @@ export class GenerationController {
   @UseGuards(BasicAuthGuard)
   async regenerateScript(@Param('id') id: string, @Body() body?: { prompt?: string }) {
     return this.generationService.regenerateScript(id, body?.prompt);
-  }
-
-  @Post(':id/review')
-  @UseGuards(BasicAuthGuard)
-  async reviewScript(@Param('id') id: string) {
-    return this.generationService.reviewScript(id);
-  }
-
-  @Post(':id/apply-review')
-  @UseGuards(BasicAuthGuard)
-  async applyReview(@Param('id') id: string, @Body() body: { suggestions: ReviewSuggestion[] }) {
-    return this.generationService.applyReviewSuggestions(id, body.suggestions);
   }
 }

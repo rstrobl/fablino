@@ -21,7 +21,7 @@ export const DEFAULT_AUDIO_SETTINGS: AudioMixSettings = {
 };
 
 @Injectable()
-export class AudioService {
+export class AudioMixService {
   async combineAudio(
     segments: string[],
     outputPath: string,
