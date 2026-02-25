@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStories, deleteStory, toggleFeatured, updateStoryStatus, fetchPlayStats } from '../api';
-import { Star, Trash2, Search, Play, User, FileText, Clock, Headphones, Copy } from 'lucide-react';
+import { Star, Trash2, Search, Play, User, FileText, Clock, Headphones, Copy, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { getAuth } from '../utils/auth';
 
 function timeAgo(date: string) {
   const now = Date.now();
@@ -76,6 +77,31 @@ export function Stories() {
 
   const playMap = new Map(playStats.map(p => [p.storyId, p.plays]));
 
+  const [showCreate, setShowCreate] = useState(false);
+  const [newHeroName, setNewHeroName] = useState('');
+  const [newHeroAge, setNewHeroAge] = useState('');
+  const [newPrompt, setNewPrompt] = useState('');
+
+  const createMut = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${btoa(getAuth())}` },
+        body: JSON.stringify({ heroName: newHeroName || undefined, heroAge: newHeroAge || undefined, prompt: newPrompt || undefined }),
+      });
+      if (!res.ok) throw new Error('Fehler beim Erstellen');
+      return res.json();
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['stories'] });
+      toast.success('Story erstellt');
+      setShowCreate(false);
+      setNewHeroName(''); setNewHeroAge(''); setNewPrompt('');
+      setStatusFilter('requested');
+      if (data?.storyId) nav(`/stories/${data.storyId}`);
+    },
+  });
+
   const delMut = useMutation({
     mutationFn: deleteStory,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['stories'] }); toast.success('Story gelöscht'); },
@@ -139,7 +165,61 @@ export function Stories() {
             className="w-full pl-9 pr-3 py-2 bg-surface border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
           />
         </div>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors text-sm font-medium whitespace-nowrap"
+        >
+          <Plus size={16} /> Neue Story
+        </button>
       </div>
+
+      {/* Create Story Modal */}
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowCreate(false)}>
+          <div className="bg-surface border border-border rounded-xl p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold">Neue Story erstellen</h3>
+              <button onClick={() => setShowCreate(false)} className="text-text-muted hover:text-text"><X size={20} /></button>
+            </div>
+            <div>
+              <label className="block text-sm text-text-muted mb-1">Name des Kindes</label>
+              <input
+                value={newHeroName}
+                onChange={e => setNewHeroName(e.target.value)}
+                placeholder="z.B. Laura"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-text-muted mb-1">Alter</label>
+              <input
+                value={newHeroAge}
+                onChange={e => setNewHeroAge(e.target.value)}
+                placeholder="z.B. 5"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-text-muted mb-1">Interessen / Wünsche</label>
+              <textarea
+                value={newPrompt}
+                onChange={e => setNewPrompt(e.target.value)}
+                placeholder="z.B. Dinosaurier, Feuerwehr, Prinzessinnen…"
+                rows={3}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand resize-none"
+              />
+            </div>
+            <button
+              onClick={() => createMut.mutate()}
+              disabled={createMut.isPending || !newHeroName.trim()}
+              className="w-full py-2.5 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors font-medium disabled:opacity-50"
+            >
+              {createMut.isPending ? 'Erstellen…' : 'Story erstellen'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <p className="text-text-muted">Laden…</p>

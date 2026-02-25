@@ -1,12 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Wand2, Mic, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Mic, Settings, LogOut } from 'lucide-react';
 import { GlobalPlayer } from './GlobalPlayer';
 import { useAuth } from '../auth';
 
 const links = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/stories', icon: BookOpen, label: 'Stories' },
-  { to: '/generate', icon: Wand2, label: 'Generator' },
   { to: '/voices', icon: Mic, label: 'Voices' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];

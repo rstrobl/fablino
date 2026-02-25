@@ -87,31 +87,6 @@ export async function fetchVoiceCategories(): Promise<string[]> {
   return res.json();
 }
 
-export async function generateScript(data: {
-  heroName: string;
-  heroAge: string;
-  prompt: string;
-  sideCharacters?: string[];
-}): Promise<any> {
-  const res = await fetch(`${API}/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Failed to generate script');
-  return res.json();
-}
-
-export async function generateAudio(data: any): Promise<any> {
-  const res = await fetch(`${API}/generate/audio`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Failed to generate audio');
-  return res.json();
-}
-
 export async function fetchPlayStats(): Promise<{ storyId: string; plays: number }[]> {
   const res = await fetch(`${API}/plays/stats`, { headers: authHeaders() });
   if (!res.ok) return []; // graceful fallback if not authed

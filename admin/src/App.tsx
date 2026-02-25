@@ -8,7 +8,6 @@ import { Dashboard } from './pages/Dashboard';
 import { Stories } from './pages/Stories';
 import { StoryDetail } from './pages/StoryDetail';
 import { Waitlist } from './pages/Waitlist';
-import { Generator } from './pages/Generator';
 import { Voices } from './pages/Voices';
 import { SettingsPage } from './pages/SettingsPage';
 import Login from './pages/Login';
@@ -31,7 +30,6 @@ function AppRoutes() {
           <Route path="/stories" element={<Stories />} />
           <Route path="/stories/:id" element={<StoryDetail />} />
           <Route path="/waitlist" element={<Waitlist />} />
-          <Route path="/generate" element={<Generator />} />
           <Route path="/voices" element={<Voices />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
