@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSystemPrompt, updateSystemPrompt } from '../api';
-import { Save, Loader2, RotateCcw, FileText, Volume2, Brain } from 'lucide-react';
+import { Save, Loader2, RotateCcw, FileText, Volume2, Brain, PenTool, Search, Mic } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface AudioSettings {
@@ -18,19 +18,75 @@ const AUDIO_LABELS: Record<string, { label: string; desc: string; min: number; m
 };
 
 const TABS = [
-  { id: 'claude', label: 'Claude', icon: Brain },
-  { id: 'prompt', label: 'System Prompt', icon: FileText },
+  { id: 'claude', label: 'Pipeline', icon: Brain },
+  { id: 'author', label: 'Autor', icon: PenTool },
+  { id: 'reviewer', label: 'Lektor', icon: Search },
+  { id: 'tts', label: 'TTS', icon: Mic },
   { id: 'audio', label: 'Audio', icon: Volume2 },
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
 
-export function SettingsPage() {
-  const [tab, setTab] = useState<TabId>('claude');
+const AUTH = () => sessionStorage.getItem('fablino_auth') || '';
+
+function AgentPromptTab({ name, label, desc }: { name: string; label: string; desc: string }) {
   const [prompt, setPrompt] = useState('');
-  const [originalPrompt, setOriginalPrompt] = useState('');
+  const [original, setOriginal] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/settings/agent/${name}`, { headers: { Authorization: AUTH() } })
+      .then(r => r.json())
+      .then(d => { setPrompt(d.prompt || ''); setOriginal(d.prompt || ''); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [name]);
+
+  const hasChanges = prompt !== original;
+
+  return (
+    <div className="bg-surface border border-border rounded-xl p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">{label}</h3>
+        <button onClick={async () => {
+          setSaving(true);
+          try {
+            await fetch(`/api/settings/agent/${name}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', Authorization: AUTH() },
+              body: JSON.stringify({ prompt }),
+            });
+            setOriginal(prompt);
+            toast.success(`${label} gespeichert`);
+          } catch { toast.error('Fehler'); }
+          finally { setSaving(false); }
+        }}
+          disabled={!hasChanges || saving}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            hasChanges ? 'bg-brand hover:bg-green-700 text-white' : 'bg-surface-alt text-text-muted cursor-not-allowed'
+          }`}>
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          Speichern
+        </button>
+      </div>
+      <p className="text-xs text-text-muted">{desc}</p>
+      {loading ? <p className="text-text-muted text-sm">Laden…</p> : (
+        <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={24}
+          className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm font-mono focus:outline-none focus:border-brand leading-relaxed" />
+      )}
+      {hasChanges && (
+        <button onClick={() => setPrompt(original)}
+          className="text-xs text-text-muted hover:text-text transition-colors">
+          Änderungen verwerfen
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function SettingsPage() {
+  const [tab, setTab] = useState<TabId>('claude');
+  const [loading, setLoading] = useState(true);
   const [audio, setAudio] = useState<AudioSettings | null>(null);
   const [originalAudio, setOriginalAudio] = useState<AudioSettings | null>(null);
   const [savingAudio, setSavingAudio] = useState(false);
@@ -41,39 +97,14 @@ export function SettingsPage() {
   const [originalSfxPrompt, setOriginalSfxPrompt] = useState('');
 
   useEffect(() => {
-    getSystemPrompt().then((p) => {
-      setPrompt(p);
-      setOriginalPrompt(p);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-    fetch('/api/settings/audio', { headers: { Authorization: sessionStorage.getItem('fablino_auth') || '' } })
-      .then(r => r.json())
-      .then(d => { setAudio(d); setOriginalAudio({ ...d }); })
-      .catch(() => {});
-    fetch('/api/settings/claude', { headers: { Authorization: sessionStorage.getItem('fablino_auth') || '' } })
-      .then(r => r.json())
-      .then(d => { setClaude(d); setOriginalClaude({ ...d }); })
-      .catch(() => {});
-    fetch('/api/settings/sfx-prompt', { headers: { Authorization: sessionStorage.getItem('fablino_auth') || '' } })
-      .then(r => r.json())
-      .then(d => { setSfxPrompt(d.prompt || ''); setOriginalSfxPrompt(d.prompt || ''); })
-      .catch(() => {});
+    setLoading(true);
+    Promise.all([
+      fetch('/api/settings/audio', { headers: { Authorization: AUTH() } }).then(r => r.json()).then(d => { setAudio(d); setOriginalAudio({ ...d }); }).catch(() => {}),
+      fetch('/api/settings/claude', { headers: { Authorization: AUTH() } }).then(r => r.json()).then(d => { setClaude(d); setOriginalClaude({ ...d }); }).catch(() => {}),
+      fetch('/api/settings/sfx-prompt', { headers: { Authorization: AUTH() } }).then(r => r.json()).then(d => { setSfxPrompt(d.prompt || ''); setOriginalSfxPrompt(d.prompt || ''); }).catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, []);
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await updateSystemPrompt(prompt);
-      setOriginalPrompt(prompt);
-      toast.success('System Prompt gespeichert');
-    } catch {
-      toast.error('Fehler beim Speichern');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const hasChanges = prompt !== originalPrompt;
   const audioChanged = audio && originalAudio && JSON.stringify(audio) !== JSON.stringify(originalAudio);
   const claudeChanged = (claude && originalClaude && JSON.stringify(claude) !== JSON.stringify(originalClaude)) || sfxPrompt !== originalSfxPrompt;
 
@@ -98,44 +129,15 @@ export function SettingsPage() {
         })}
       </div>
 
-      {/* System Prompt Tab */}
-      {tab === 'prompt' && (
-        <div className="bg-surface border border-border rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">System Prompt</h3>
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || saving}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                hasChanges ? 'bg-brand hover:bg-green-700 text-white' : 'bg-surface-alt text-text-muted cursor-not-allowed'
-              }`}
-            >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              Speichern
-            </button>
-          </div>
-          <p className="text-xs text-text-muted">
-            Der Basis-Prompt für die Skript-Generierung. Altersregeln, Personalisierung und JSON-Format werden automatisch angehängt.
-          </p>
-          {loading ? (
-            <p className="text-text-muted text-sm">Laden…</p>
-          ) : (
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={20}
-              className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm font-mono focus:outline-none focus:border-brand leading-relaxed"
-            />
-          )}
-          {hasChanges && (
-            <button
-              onClick={() => setPrompt(originalPrompt)}
-              className="text-xs text-text-muted hover:text-text transition-colors"
-            >
-              Änderungen verwerfen
-            </button>
-          )}
-        </div>
+      {/* Agent Prompt Tabs */}
+      {tab === 'author' && (
+        <AgentPromptTab name="author" label="Autor-Agent" desc="Schreibt die Story. Fokus auf Kreativität, Plot und Dialoge. Wird mit Opus ausgeführt." />
+      )}
+      {tab === 'reviewer' && (
+        <AgentPromptTab name="reviewer" label="Lektor-Agent" desc="Prüft die Story auf Plotlöcher, falsche Fakten, Widersprüche und KI-Klischees. Gibt strukturiertes Feedback. Wird mit Sonnet ausgeführt." />
+      )}
+      {tab === 'tts' && (
+        <AgentPromptTab name="tts" label="TTS-Agent" desc="Optimiert Audio-Tags, Emotions und Zahlen für die Sprachausgabe. Verändert keine Handlung. Wird mit Sonnet ausgeführt." />
       )}
 
       {/* Audio Tab */}
@@ -155,7 +157,7 @@ export function SettingsPage() {
                   try {
                     await fetch('/api/settings/audio', {
                       method: 'PUT',
-                      headers: { 'Content-Type': 'application/json', Authorization: sessionStorage.getItem('fablino_auth') || '' },
+                      headers: { 'Content-Type': 'application/json', Authorization: AUTH() },
                       body: JSON.stringify(audio),
                     });
                     setOriginalAudio({ ...audio });
@@ -172,9 +174,6 @@ export function SettingsPage() {
               </button>
             </div>
           </div>
-          <p className="text-xs text-text-muted">
-            Gilt für alle neuen Audio-Generierungen. Bestehende Hörspiele sind nicht betroffen.
-          </p>
           <div className="space-y-4">
             {Object.entries(AUDIO_LABELS).map(([key, cfg]) => (
               <div key={key} className="space-y-1">
@@ -195,14 +194,14 @@ export function SettingsPage() {
         </div>
       )}
 
-      {/* Claude Tab */}
+      {/* Claude Pipeline Tab */}
       {tab === 'claude' && claude && (
         <div className="bg-surface border border-border rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Claude API</h3>
+            <h3 className="text-lg font-semibold">Multi-Agent Pipeline</h3>
             <div className="flex items-center gap-2">
               {claudeChanged && (
-                <button onClick={() => setClaude({ ...originalClaude! })}
+                <button onClick={() => { setClaude({ ...originalClaude! }); setSfxPrompt(originalSfxPrompt); }}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-text-muted hover:text-orange-400 transition-colors">
                   <RotateCcw size={14} /> Reset
                 </button>
@@ -212,19 +211,19 @@ export function SettingsPage() {
                   try {
                     await fetch('/api/settings/claude', {
                       method: 'PUT',
-                      headers: { 'Content-Type': 'application/json', Authorization: sessionStorage.getItem('fablino_auth') || '' },
+                      headers: { 'Content-Type': 'application/json', Authorization: AUTH() },
                       body: JSON.stringify(claude),
                     });
                     setOriginalClaude({ ...claude });
                     if (sfxPrompt !== originalSfxPrompt) {
                       await fetch('/api/settings/sfx-prompt', {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', Authorization: sessionStorage.getItem('fablino_auth') || '' },
+                        headers: { 'Content-Type': 'application/json', Authorization: AUTH() },
                         body: JSON.stringify({ prompt: sfxPrompt }),
                       });
                       setOriginalSfxPrompt(sfxPrompt);
                     }
-                    toast.success('Claude Settings gespeichert');
+                    toast.success('Pipeline Settings gespeichert');
                   } catch { toast.error('Fehler'); }
                   finally { setSavingClaude(false); }
                 }}
@@ -237,58 +236,89 @@ export function SettingsPage() {
               </button>
             </div>
           </div>
-          <p className="text-xs text-text-muted">
-            Parameter für die Skript-Generierung via Claude API.
-          </p>
+
+          {/* Pipeline Overview */}
+          <div className="flex items-center gap-2 text-xs text-text-muted bg-gray-900 rounded-lg p-3">
+            <span className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded">1. Autor</span>
+            <span>→</span>
+            <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded">2. Lektor</span>
+            <span>→</span>
+            <span className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded">3. Revision</span>
+            <span>→</span>
+            <span className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded">4. TTS</span>
+          </div>
+
           <div className="space-y-4">
+            {/* Author Model */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-sm font-medium">Modell</span>
-                  <span className="text-xs text-text-muted ml-2">— Claude-Modell für Skript-Generierung</span>
-                </div>
-              </div>
+              <span className="text-sm font-medium">Autor-Modell</span>
+              <span className="text-xs text-text-muted ml-2">— Schreibt und überarbeitet die Story</span>
               <select value={claude.model} onChange={e => setClaude({ ...claude, model: e.target.value })}
                 className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand">
                 <option value="claude-opus-4-20250514">Claude Opus 4 (beste Qualität)</option>
-                <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (schneller, günstiger)</option>
+                <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (schneller)</option>
               </select>
             </div>
+
+            {/* Reviewer Model */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-sm font-medium">Temperature</span>
-                  <span className="text-xs text-text-muted ml-2">— Kreativität (0.5 = konsistent, 1.5 = wild)</span>
-                </div>
-                <span className="text-sm font-mono text-brand">{claude.temperature}</span>
-              </div>
-              <input type="range" min={0} max={2} step={0.1} value={claude.temperature}
-                onChange={e => setClaude({ ...claude, temperature: +e.target.value })}
-                className="w-full h-1.5 accent-brand" />
+              <span className="text-sm font-medium">Lektor-Modell</span>
+              <span className="text-xs text-text-muted ml-2">— Prüft auf Fehler und Logik</span>
+              <select value={claude.reviewerModel || claude.model} onChange={e => setClaude({ ...claude, reviewerModel: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand">
+                <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (empfohlen)</option>
+                <option value="claude-opus-4-20250514">Claude Opus 4</option>
+              </select>
             </div>
+
+            {/* TTS Model */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-sm font-medium">Max Tokens</span>
-                  <span className="text-xs text-text-muted ml-2">— Maximale Antwortlänge</span>
-                </div>
-                <span className="text-sm font-mono text-brand">{claude.max_tokens.toLocaleString()}</span>
-              </div>
-              <input type="range" min={4000} max={32000} step={1000} value={claude.max_tokens}
-                onChange={e => setClaude({ ...claude, max_tokens: +e.target.value })}
-                className="w-full h-1.5 accent-brand" />
+              <span className="text-sm font-medium">TTS-Modell</span>
+              <span className="text-xs text-text-muted ml-2">— Optimiert Audio-Tags</span>
+              <select value={claude.ttsModel || claude.model} onChange={e => setClaude({ ...claude, ttsModel: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand">
+                <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (empfohlen)</option>
+                <option value="claude-opus-4-20250514">Claude Opus 4</option>
+              </select>
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-sm font-medium">Thinking Budget</span>
-                  <span className="text-xs text-text-muted ml-2">— Tokens für internes Nachdenken</span>
+
+            <div className="border-t border-border pt-4 space-y-4">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-medium">Temperature</span>
+                    <span className="text-xs text-text-muted ml-2">— Kreativität des Autors</span>
+                  </div>
+                  <span className="text-sm font-mono text-brand">{claude.temperature}</span>
                 </div>
-                <span className="text-sm font-mono text-brand">{claude.thinking_budget.toLocaleString()}</span>
+                <input type="range" min={0} max={2} step={0.1} value={claude.temperature}
+                  onChange={e => setClaude({ ...claude, temperature: +e.target.value })}
+                  className="w-full h-1.5 accent-brand" />
               </div>
-              <input type="range" min={1000} max={30000} step={1000} value={claude.thinking_budget}
-                onChange={e => setClaude({ ...claude, thinking_budget: +e.target.value })}
-                className="w-full h-1.5 accent-brand" />
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-medium">Max Tokens</span>
+                    <span className="text-xs text-text-muted ml-2">— Maximale Antwortlänge</span>
+                  </div>
+                  <span className="text-sm font-mono text-brand">{claude.max_tokens?.toLocaleString()}</span>
+                </div>
+                <input type="range" min={4000} max={32000} step={1000} value={claude.max_tokens}
+                  onChange={e => setClaude({ ...claude, max_tokens: +e.target.value })}
+                  className="w-full h-1.5 accent-brand" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-medium">Thinking Budget</span>
+                    <span className="text-xs text-text-muted ml-2">— Tokens für internes Nachdenken</span>
+                  </div>
+                  <span className="text-sm font-mono text-brand">{claude.thinking_budget?.toLocaleString()}</span>
+                </div>
+                <input type="range" min={1000} max={30000} step={1000} value={claude.thinking_budget}
+                  onChange={e => setClaude({ ...claude, thinking_budget: +e.target.value })}
+                  className="w-full h-1.5 accent-brand" />
+              </div>
             </div>
 
             {/* SFX Toggle */}
@@ -296,7 +326,7 @@ export function SettingsPage() {
               <label className="flex items-center justify-between cursor-pointer">
                 <div>
                   <span className="text-sm font-medium">Soundeffekte (SFX)</span>
-                  <p className="text-xs text-text-muted mt-0.5">Wenn aktiv, bekommt Claude die SFX-Library und baut Geräusche ins Skript ein</p>
+                  <p className="text-xs text-text-muted mt-0.5">SFX-Library wird dem Autor-Prompt angehängt</p>
                 </div>
                 <div className={`relative w-11 h-6 rounded-full transition-colors ${claude.sfxEnabled ? 'bg-brand' : 'bg-zinc-600'}`}
                   onClick={() => setClaude({ ...claude, sfxEnabled: !claude.sfxEnabled })}>
@@ -305,13 +335,9 @@ export function SettingsPage() {
               </label>
               {claude.sfxEnabled && (
                 <div className="mt-3">
-                  <p className="text-xs text-text-muted mb-1">SFX-Anweisungen für Claude (wird dem System Prompt angehängt):</p>
-                  <textarea
-                    value={sfxPrompt}
-                    onChange={e => setSfxPrompt(e.target.value)}
-                    rows={6}
-                    className="w-full bg-background border border-border rounded-lg p-3 text-sm font-mono text-text focus:outline-none focus:border-brand resize-y"
-                  />
+                  <p className="text-xs text-text-muted mb-1">SFX-Anweisungen:</p>
+                  <textarea value={sfxPrompt} onChange={e => setSfxPrompt(e.target.value)} rows={6}
+                    className="w-full bg-background border border-border rounded-lg p-3 text-sm font-mono text-text focus:outline-none focus:border-brand resize-y" />
                 </div>
               )}
             </div>

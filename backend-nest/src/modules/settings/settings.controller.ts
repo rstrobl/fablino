@@ -1,15 +1,24 @@
-import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Body, Param, UseGuards } from '@nestjs/common';
 import { BasicAuthGuard } from '../../guards/basic-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const PROMPT_PATH = path.join(__dirname, '../../../data/system-prompt.txt');
-const SFX_PROMPT_PATH = path.join(__dirname, '../../../data/sfx-prompt.txt');
-const CLAUDE_SETTINGS_PATH = path.join(__dirname, '../../../data/claude-settings.json');
+const DATA_DIR = path.join(__dirname, '../../../data');
+const PROMPT_PATH = path.join(DATA_DIR, 'system-prompt.txt');
+const SFX_PROMPT_PATH = path.join(DATA_DIR, 'sfx-prompt.txt');
+const CLAUDE_SETTINGS_PATH = path.join(DATA_DIR, 'claude-settings.json');
+
+const AGENT_FILES: Record<string, string> = {
+  author: path.join(DATA_DIR, 'agent-author.txt'),
+  reviewer: path.join(DATA_DIR, 'agent-reviewer.txt'),
+  tts: path.join(DATA_DIR, 'agent-tts.txt'),
+};
 
 const DEFAULT_CLAUDE_SETTINGS = {
   model: 'claude-opus-4-20250514',
+  reviewerModel: 'claude-sonnet-4-20250514',
+  ttsModel: 'claude-sonnet-4-20250514',
   max_tokens: 16000,
   temperature: 1.0,
   thinking_budget: 10000,
@@ -76,6 +85,24 @@ export class SettingsController {
     fs.mkdirSync(path.dirname(CLAUDE_SETTINGS_PATH), { recursive: true });
     fs.writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(updated, null, 2));
     return { ok: true, settings: updated };
+  }
+
+  @Get('agent/:name')
+  @UseGuards(BasicAuthGuard)
+  getAgentPrompt(@Param('name') name: string) {
+    const filePath = AGENT_FILES[name];
+    if (!filePath) return { error: 'Unknown agent' };
+    try { return { prompt: fs.readFileSync(filePath, 'utf-8') }; }
+    catch { return { prompt: '' }; }
+  }
+
+  @Put('agent/:name')
+  @UseGuards(BasicAuthGuard)
+  updateAgentPrompt(@Body() body: { prompt: string }, @Param('name') name: string) {
+    const filePath = AGENT_FILES[name];
+    if (!filePath) return { error: 'Unknown agent' };
+    fs.writeFileSync(filePath, body.prompt, 'utf-8');
+    return { ok: true };
   }
 
   @Put('audio')

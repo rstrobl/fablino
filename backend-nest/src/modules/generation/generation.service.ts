@@ -105,19 +105,11 @@ export class GenerationService {
     try {
       await this.updateGenerationState(id, { progress: 'Skript wird geschrieben...' });
 
-      // Inject available SFX IDs into system prompt (only if SFX enabled in settings)
-      let sfxEnabled = false;
-      try { sfxEnabled = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../data/claude-settings.json'), 'utf-8')).sfxEnabled ?? false; } catch {}
-      const sfxPromptSection = sfxEnabled ? this.sfxService.getSfxListForPrompt() : '';
-      const fullSystemPromptOverride = systemPromptOverride
-        ? `${systemPromptOverride}${sfxPromptSection}`
-        : sfxPromptSection || undefined;
-
-      const { script, systemPrompt, usage } = await this.claudeService.generateScript(
+      const { script, systemPrompt, pipeline, usage } = await this.claudeService.generateScript(
         prompt,
         age,
         characters,
-        fullSystemPromptOverride,
+        systemPromptOverride,
       );
 
       // Track Claude cost
