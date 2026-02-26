@@ -113,9 +113,18 @@ export class GenerationService {
         (step) => this.updateGenerationState(id, { progress: step }).catch(() => {}),
       );
 
-      // Track Claude cost
-      if (usage) {
-        await this.costTracking.trackClaude(id, 'generate', usage, usage.thinking_tokens).catch(() => {});
+      // Track Claude cost for each pipeline step
+      if (pipeline?.steps) {
+        for (const step of pipeline.steps) {
+          await this.costTracking.trackClaude(
+            id,
+            `generate_${step.agent}`,
+            { input_tokens: step.tokens.input, output_tokens: step.tokens.output },
+            0,
+          ).catch(() => {});
+        }
+        const total = pipeline.totalTokens;
+        console.log(`💰 Pipeline total: ${total.input} in + ${total.output} out = ${total.input + total.output} tokens`);
       }
 
       // Post-processing: remove onomatopoeia from non-narrator lines
