@@ -7,12 +7,12 @@ import toast from 'react-hot-toast';
 interface VoiceData {
   voice_id: string;
   name: string;
-  category: string;
   gender: string;
   age_min: number;
   age_max: number;
   types: string[];
   voice_character: string;
+  is_narrator: boolean;
   active: boolean;
   preview_url?: string;
 }
@@ -30,7 +30,7 @@ const GROUP_LABELS: Record<string, string> = {
 const GROUP_ORDER = ['narrator', 'male', 'female'];
 
 function voiceGroup(v: VoiceData): string {
-  if (v.category === 'narrator') return 'narrator';
+  if (v.is_narrator) return 'narrator';
   return v.gender || 'male';
 }
 
@@ -221,8 +221,8 @@ function VoiceCard({ voice, onSaved }: { voice: VoiceData; onSaved: () => void }
 function AddVoiceForm({ onAdded }: { onAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    voice_id: '', name: '', category: 'child_f', gender: 'female' as string,
-    age_min: 5, age_max: 12, types: ['human'] as string[], voice_character: 'kind',
+    voice_id: '', name: '', gender: 'female' as string,
+    age_min: 5, age_max: 12, types: ['human'] as string[], voice_character: 'kind', is_narrator: false,
   });
 
   const addMut = useMutation({
@@ -237,7 +237,7 @@ function AddVoiceForm({ onAdded }: { onAdded: () => void }) {
     onSuccess: () => {
       toast.success('Voice hinzugefügt');
       setOpen(false);
-      setForm({ voice_id: '', name: '', category: 'child_f', gender: 'female', age_min: 5, age_max: 12, types: ['human'], voice_character: 'kind' });
+      setForm({ voice_id: '', name: '', gender: 'female', age_min: 5, age_max: 12, types: ['human'], voice_character: 'kind', is_narrator: false });
       onAdded();
     },
     onError: () => toast.error('Fehler'),

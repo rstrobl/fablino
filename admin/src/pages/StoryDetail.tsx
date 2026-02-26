@@ -62,7 +62,7 @@ export function StoryDetail() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-4xl">
-      <button onClick={() => nav('/stories')} className="flex items-center gap-1 text-text-muted hover:text-text text-sm">
+      <button onClick={() => { const s = (story as any).status; const tab = (s === 'draft' || s === 'produced') ? 'draft' : (s === 'published' || s === 'feedback') ? 'published' : 'requested'; nav(`/stories?status=${tab}`); }} className="flex items-center gap-1 text-text-muted hover:text-text text-sm">
         <ArrowLeft size={16} /> Zurück
       </button>
 

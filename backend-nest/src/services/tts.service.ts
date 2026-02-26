@@ -7,16 +7,14 @@ import * as fs from 'fs';
 interface DbVoice {
   voice_id: string;
   name: string;
-  category: string;
   gender: string;
   age_min: number;
   age_max: number;
   types: string[];       // ['human'] or ['human', 'creature'] or ['creature']
   voice_character: string; // 'kind' | 'funny' | 'evil' | 'wise'
+  is_narrator: boolean;
   active: boolean;
 }
-
-const NARRATOR_CATEGORY = 'narrator';
 
 @Injectable()
 export class TtsService {
@@ -30,8 +28,8 @@ export class TtsService {
    */
   private async loadVoices(): Promise<DbVoice[]> {
     return this.prisma.$queryRaw<DbVoice[]>`
-      SELECT voice_id, name, category, gender, age_min, age_max, types, voice_character, active
-      FROM voices WHERE active = true ORDER BY category, name
+      SELECT voice_id, name, gender, age_min, age_max, types, voice_character, is_narrator, active
+      FROM voices WHERE active = true ORDER BY name
     `;
   }
 
@@ -65,8 +63,8 @@ export class TtsService {
     const charType = char.type || 'human';
     if (voice.types?.includes(charType)) {
       score += 5;
-    } else {
-      return -50; // Wrong type = strong penalty
+    } else if (voice.types?.length) {
+      score -= 5; // Soft penalty — wrong type but still usable
     }
 
     // Voice character match (kind/funny/evil/wise)
@@ -89,7 +87,7 @@ export class TtsService {
     for (const char of characters) {
       // Narrator is fixed
       if (char.name === 'Erzähler') {
-        const narrator = voices.find(v => v.category === NARRATOR_CATEGORY);
+        const narrator = voices.find(v => v.is_narrator);
         if (narrator) {
           voiceMap[char.name] = narrator.voice_id;
           usedVoices.add(narrator.voice_id);
@@ -99,7 +97,7 @@ export class TtsService {
 
       // Score all unused voices
       const candidates = voices
-        .filter(v => !usedVoices.has(v.voice_id) && v.category !== NARRATOR_CATEGORY)
+        .filter(v => !usedVoices.has(v.voice_id) && !v.is_narrator)
         .map(v => ({ voice: v, score: this.scoreVoice(v, char) }))
         .filter(c => c.score > 0)
         .sort((a, b) => b.score - a.score);
@@ -108,7 +106,7 @@ export class TtsService {
       const pool = candidates.length > 0
         ? candidates
         : voices
-            .filter(v => v.category !== NARRATOR_CATEGORY)
+            .filter(v => !v.is_narrator)
             .map(v => ({ voice: v, score: this.scoreVoice(v, char) }))
             .filter(c => c.score > 0)
             .sort((a, b) => b.score - a.score);

@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const PROMPT_PATH = path.join(__dirname, '../../../data/system-prompt.txt');
+const SFX_PROMPT_PATH = path.join(__dirname, '../../../data/sfx-prompt.txt');
 const CLAUDE_SETTINGS_PATH = path.join(__dirname, '../../../data/claude-settings.json');
 
 const DEFAULT_CLAUDE_SETTINGS = {
@@ -12,6 +13,7 @@ const DEFAULT_CLAUDE_SETTINGS = {
   max_tokens: 16000,
   temperature: 1.0,
   thinking_budget: 10000,
+  sfxEnabled: false,
 };
 
 @Controller('api/settings')
@@ -29,6 +31,20 @@ export class SettingsController {
   @UseGuards(BasicAuthGuard)
   updateSystemPrompt(@Body() body: { prompt: string }) {
     fs.writeFileSync(PROMPT_PATH, body.prompt, 'utf-8');
+    return { ok: true };
+  }
+
+  @Get('sfx-prompt')
+  @UseGuards(BasicAuthGuard)
+  getSfxPrompt() {
+    try { return { prompt: fs.readFileSync(SFX_PROMPT_PATH, 'utf-8') }; }
+    catch { return { prompt: '' }; }
+  }
+
+  @Put('sfx-prompt')
+  @UseGuards(BasicAuthGuard)
+  updateSfxPrompt(@Body() body: { prompt: string }) {
+    fs.writeFileSync(SFX_PROMPT_PATH, body.prompt, 'utf-8');
     return { ok: true };
   }
 

@@ -4,167 +4,375 @@
     "name": "Schritte (Gras)",
     "category": "movement",
     "file": "footsteps_grass.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Footsteps walking on grass and leaves, soft crunching sounds"
   },
   {
     "id": "footsteps_indoor",
     "name": "Schritte (Innen)",
     "category": "movement",
     "file": "footsteps_indoor.mp3",
-    "active": false
+    "active": true,
+    "prompt": "Footsteps walking on a wooden floor indoors, clear steps",
+    "duration": 5
   },
   {
     "id": "running",
     "name": "Rennen",
     "category": "movement",
     "file": "running.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Person running fast on a dirt path, quick footsteps"
   },
   {
     "id": "galloping",
     "name": "Galoppieren",
     "category": "movement",
     "file": "galloping.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Horse galloping on dirt road, clear rhythmic hoofbeats",
+    "duration": 5
   },
   {
     "id": "door_open",
     "name": "Tür öffnen",
     "category": "environment",
     "file": "door_open.mp3",
-    "active": true
-  },
-  {
-    "id": "door_creak",
-    "name": "Tür knarren",
-    "category": "environment",
-    "file": "door_creak.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Toor creak",
+    "duration": 5
   },
   {
     "id": "knocking",
     "name": "Klopfen",
     "category": "environment",
     "file": "knocking.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Three firm knocks on a heavy wooden door"
   },
   {
     "id": "wind",
     "name": "Wind",
     "category": "nature",
     "file": "wind.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Gentle wind blowing through trees, rustling leaves"
   },
   {
     "id": "rain",
     "name": "Regen",
     "category": "nature",
     "file": "rain.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Steady rain falling, raindrops on leaves and ground",
+    "duration": 5
   },
   {
     "id": "stream",
     "name": "Bach",
     "category": "nature",
     "file": "stream.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Small forest stream flowing over rocks, gentle water sounds",
+    "duration": 5
   },
   {
     "id": "thunder",
     "name": "Donner",
     "category": "nature",
     "file": "thunder.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Thunderstorm with Rain",
+    "duration": 8
   },
   {
     "id": "magic_sparkle",
     "name": "Zauber/Sparkle",
     "category": "magic",
     "file": "magic_sparkle.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Magical sparkle and shimmer, fairy dust tinkling sound"
   },
   {
     "id": "magic_portal",
     "name": "Portal",
     "category": "magic",
     "file": "magic_portal.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Swirling magical portal opening with a deep whoosh",
+    "duration": 3
   },
   {
     "id": "magic_transform",
     "name": "Verwandlung",
     "category": "magic",
     "file": "magic_transform.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Magical transformation with rising shimmer and a bright flash sound"
   },
   {
     "id": "suspense",
     "name": "Spannung",
     "category": "atmosphere",
     "file": "suspense.mp3",
-    "active": true
+    "active": false,
+    "prompt": "Tense suspenseful atmosphere, low rumble building anticipation",
+    "duration": 3
   },
   {
     "id": "mysterious",
     "name": "Geheimnisvoll",
     "category": "atmosphere",
     "file": "mysterious.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Mysterious ambient tone, eerie and curious"
   },
   {
     "id": "happy_jingle",
     "name": "Fröhlich",
     "category": "atmosphere",
     "file": "happy_jingle.mp3",
-    "active": true
+    "active": false,
+    "prompt": "Short happy cheerful jingle, bright and uplifting",
+    "duration": 3
   },
   {
     "id": "night_crickets",
     "name": "Nacht/Grillen",
     "category": "atmosphere",
     "file": "night_crickets.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Nighttime crickets chirping, calm evening atmosphere",
+    "duration": 5
   },
   {
-    "id": "birds",
-    "name": "Vögel",
+    "id": "birds_chirping",
+    "name": "Vögel zwitschern",
     "category": "animals",
-    "file": "birds.mp3",
-    "active": true
+    "file": "birds_chirping.mp3",
+    "active": true,
+    "prompt": "Birds singing and chirping in a forest, morning atmosphere"
   },
   {
     "id": "wolf_howl",
     "name": "Wolf heulen",
     "category": "animals",
     "file": "wolf_howl.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Wolf howling in the distance at night"
   },
   {
     "id": "horse_neigh",
     "name": "Pferd wiehern",
     "category": "animals",
     "file": "horse_neigh.mp3",
-    "active": true
+    "active": true,
+    "prompt": "Horse neighing loudly, single clear neigh"
   },
   {
     "id": "treasure_chest",
     "name": "Schatztruhe",
     "category": "other",
     "file": "treasure_chest.mp3",
-    "active": true
+    "active": false,
+    "prompt": "Old treasure chest opening with a heavy creak and metallic clink",
+    "duration": 3
   },
   {
     "id": "object_fall",
     "name": "Gegenstand fällt",
     "category": "other",
     "file": "object_fall.mp3",
-    "active": true
+    "active": false,
+    "prompt": "Object falling and hitting the ground with a thud",
+    "duration": 3
   },
   {
     "id": "splash",
     "name": "Splash",
     "category": "other",
     "file": "splash.mp3",
+    "active": false,
+    "prompt": "Splash of water, something falling into a pond",
+    "duration": 3
+  },
+  {
+    "id": "dog_bark",
+    "name": "Hund bellt",
+    "category": "animals",
+    "file": "dog_bark.mp3",
+    "active": true,
+    "prompt": "Dog barking",
+    "duration": 3
+  },
+  {
+    "id": "cat_meow",
+    "name": "Katze miaut",
+    "category": "animals",
+    "file": "cat_meow.mp3",
+    "active": true,
+    "duration": 3
+  },
+  {
+    "id": "frog_ribbit",
+    "name": "Frosch quakt",
+    "category": "animals",
+    "file": "frog_ribbit.mp3",
+    "active": true,
+    "prompt": "Frog ribbiting near a pond, clear croaking sounds",
+    "duration": 3
+  },
+  {
+    "id": "sword_clash",
+    "name": "Schwertkampf",
+    "category": "other",
+    "file": "sword_clash.mp3",
+    "active": true,
+    "prompt": "Metal swords clashing in a duel, sharp ringing blade sounds",
+    "duration": 8
+  },
+  {
+    "id": "owl_hoot",
+    "name": "Eule",
+    "category": "animals",
+    "prompt": "Owl hooting in a dark forest at night, clear hoot sounds",
+    "duration": 3,
+    "file": "owl_hoot.mp3",
     "active": true
+  },
+  {
+    "id": "dragon_roar",
+    "name": "Drache",
+    "category": "animals",
+    "prompt": "Dragon roaring fiercely, deep powerful roar with slight echo",
+    "duration": 4,
+    "file": "dragon_roar.mp3",
+    "active": true
+  },
+  {
+    "id": "bee_buzzing",
+    "name": "Bienen",
+    "category": "animals",
+    "prompt": "Bees buzzing softly around flowers, gentle humming",
+    "duration": 3,
+    "file": "bee_buzzing.mp3",
+    "active": true
+  },
+  {
+    "id": "sword_draw",
+    "name": "Schwert ziehen",
+    "category": "movement",
+    "prompt": "Sword being drawn from a metal sheath, sharp sliding metallic sound",
+    "duration": 2,
+    "file": "sword_draw.mp3",
+    "active": true
+  },
+  {
+    "id": "ship_creaking",
+    "name": "Piratenschiff",
+    "category": "environment",
+    "prompt": "Wooden sailing ship creaking on ocean waves, ropes and timber",
+    "duration": 4,
+    "file": "ship_creaking.mp3",
+    "active": false
+  },
+  {
+    "id": "waves",
+    "name": "Meereswellen",
+    "category": "nature",
+    "prompt": "Ocean waves gently crashing on a sandy beach",
+    "duration": 4,
+    "file": "waves.mp3",
+    "active": true
+  },
+  {
+    "id": "campfire",
+    "name": "Lagerfeuer",
+    "category": "atmosphere",
+    "prompt": "Campfire crackling and popping softly, warm cozy fire sounds",
+    "duration": 4,
+    "file": "campfire.mp3",
+    "active": false
+  },
+  {
+    "id": "chest_lock",
+    "name": "Schloss aufschließen",
+    "category": "movement",
+    "prompt": "Old rusty lock being opened with a key, metallic click and clank",
+    "duration": 2,
+    "file": "chest_lock.mp3",
+    "active": true
+  },
+  {
+    "id": "fairy_dust",
+    "name": "Feenstaub",
+    "category": "magic",
+    "prompt": "Gentle fairy dust shimmer, light magical tinkling sparkles floating down",
+    "duration": 3,
+    "file": "fairy_dust.mp3",
+    "active": false
+  },
+  {
+    "id": "potion_bubble",
+    "name": "Zaubertrank",
+    "category": "magic",
+    "prompt": "Witch cauldron bubbling with thick liquid, magical potion brewing",
+    "duration": 3,
+    "file": "potion_bubble.mp3",
+    "active": true
+  },
+  {
+    "id": "teleport",
+    "name": "Teleportation",
+    "category": "magic",
+    "prompt": "Sci-fi teleportation whoosh with rising energy and bright flash sound",
+    "duration": 2,
+    "file": "teleport.mp3",
+    "active": true
+  },
+  {
+    "id": "clock_ticking",
+    "name": "Uhr ticken",
+    "category": "atmosphere",
+    "prompt": "clockticking",
+    "duration": 8,
+    "file": "clock_ticking.mp3",
+    "active": false
+  },
+  {
+    "id": "crowd_cheering",
+    "name": "Jubel",
+    "category": "atmosphere",
+    "prompt": "Small crowd of children cheering and clapping happily",
+    "duration": 3,
+    "file": "crowd_cheering.mp3",
+    "active": false
+  },
+  {
+    "id": "glass_break",
+    "name": "Glas zerbricht",
+    "category": "movement",
+    "prompt": "Glass shattering on a hard floor, single clear break",
+    "duration": 2,
+    "file": "glass_break.mp3",
+    "active": true
+  },
+  {
+    "id": "bell",
+    "name": "Glocke",
+    "category": "environment",
+    "prompt": "Single clear bell ringing, school bell or church bell chime",
+    "duration": 2,
+    "file": "bell.mp3",
+    "active": true
+  },
+  {
+    "id": "wing_flap",
+    "name": "Flügelschlagen",
+    "category": "animals",
+    "file": "wing_flap.mp3",
+    "active": true,
+    "prompt": "Large bird flapping its wings, whooshing feathers taking flight",
+    "duration": 5
   }
 ]

@@ -5,12 +5,14 @@ import toast from 'react-hot-toast';
 
 interface AudioSettings {
   scene_pause: number;
+  sfx_pause: number;
   fade_in: number;
   fade_out: number;
 }
 
 const AUDIO_LABELS: Record<string, { label: string; desc: string; min: number; max: number; step: number; unit: string }> = {
   scene_pause:   { label: 'Pause zwischen Szenen', desc: 'Stille bei Szenenwechsel', min: 0, max: 5, step: 0.1, unit: 's' },
+  sfx_pause:     { label: 'Pause um SFX', desc: 'Stille vor und nach Soundeffekten', min: 0, max: 3, step: 0.1, unit: 's' },
   fade_in:       { label: 'Fade-In', desc: 'Einblendung am Anfang', min: 0, max: 3, step: 0.1, unit: 's' },
   fade_out:      { label: 'Fade-Out', desc: 'Ausblendung am Ende', min: 0, max: 3, step: 0.1, unit: 's' },
 };
@@ -35,6 +37,8 @@ export function SettingsPage() {
   const [claude, setClaude] = useState<any>(null);
   const [originalClaude, setOriginalClaude] = useState<any>(null);
   const [savingClaude, setSavingClaude] = useState(false);
+  const [sfxPrompt, setSfxPrompt] = useState('');
+  const [originalSfxPrompt, setOriginalSfxPrompt] = useState('');
 
   useEffect(() => {
     getSystemPrompt().then((p) => {
@@ -49,6 +53,10 @@ export function SettingsPage() {
     fetch('/api/settings/claude', { headers: { Authorization: sessionStorage.getItem('fablino_auth') || '' } })
       .then(r => r.json())
       .then(d => { setClaude(d); setOriginalClaude({ ...d }); })
+      .catch(() => {});
+    fetch('/api/settings/sfx-prompt', { headers: { Authorization: sessionStorage.getItem('fablino_auth') || '' } })
+      .then(r => r.json())
+      .then(d => { setSfxPrompt(d.prompt || ''); setOriginalSfxPrompt(d.prompt || ''); })
       .catch(() => {});
   }, []);
 
@@ -67,7 +75,7 @@ export function SettingsPage() {
 
   const hasChanges = prompt !== originalPrompt;
   const audioChanged = audio && originalAudio && JSON.stringify(audio) !== JSON.stringify(originalAudio);
-  const claudeChanged = claude && originalClaude && JSON.stringify(claude) !== JSON.stringify(originalClaude);
+  const claudeChanged = (claude && originalClaude && JSON.stringify(claude) !== JSON.stringify(originalClaude)) || sfxPrompt !== originalSfxPrompt;
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-3xl">
@@ -208,6 +216,14 @@ export function SettingsPage() {
                       body: JSON.stringify(claude),
                     });
                     setOriginalClaude({ ...claude });
+                    if (sfxPrompt !== originalSfxPrompt) {
+                      await fetch('/api/settings/sfx-prompt', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', Authorization: sessionStorage.getItem('fablino_auth') || '' },
+                        body: JSON.stringify({ prompt: sfxPrompt }),
+                      });
+                      setOriginalSfxPrompt(sfxPrompt);
+                    }
                     toast.success('Claude Settings gespeichert');
                   } catch { toast.error('Fehler'); }
                   finally { setSavingClaude(false); }
@@ -273,6 +289,31 @@ export function SettingsPage() {
               <input type="range" min={1000} max={30000} step={1000} value={claude.thinking_budget}
                 onChange={e => setClaude({ ...claude, thinking_budget: +e.target.value })}
                 className="w-full h-1.5 accent-brand" />
+            </div>
+
+            {/* SFX Toggle */}
+            <div className="pt-4 border-t border-border">
+              <label className="flex items-center justify-between cursor-pointer">
+                <div>
+                  <span className="text-sm font-medium">Soundeffekte (SFX)</span>
+                  <p className="text-xs text-text-muted mt-0.5">Wenn aktiv, bekommt Claude die SFX-Library und baut Geräusche ins Skript ein</p>
+                </div>
+                <div className={`relative w-11 h-6 rounded-full transition-colors ${claude.sfxEnabled ? 'bg-brand' : 'bg-zinc-600'}`}
+                  onClick={() => setClaude({ ...claude, sfxEnabled: !claude.sfxEnabled })}>
+                  <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${claude.sfxEnabled ? 'translate-x-5' : ''}`} />
+                </div>
+              </label>
+              {claude.sfxEnabled && (
+                <div className="mt-3">
+                  <p className="text-xs text-text-muted mb-1">SFX-Anweisungen für Claude (wird dem System Prompt angehängt):</p>
+                  <textarea
+                    value={sfxPrompt}
+                    onChange={e => setSfxPrompt(e.target.value)}
+                    rows={6}
+                    className="w-full bg-background border border-border rounded-lg p-3 text-sm font-mono text-text focus:outline-none focus:border-brand resize-y"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

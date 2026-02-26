@@ -105,8 +105,10 @@ export class GenerationService {
     try {
       await this.updateGenerationState(id, { progress: 'Skript wird geschrieben...' });
 
-      // Inject available SFX IDs into system prompt
-      const sfxPromptSection = this.sfxService.getSfxListForPrompt();
+      // Inject available SFX IDs into system prompt (only if SFX enabled in settings)
+      let sfxEnabled = false;
+      try { sfxEnabled = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../data/claude-settings.json'), 'utf-8')).sfxEnabled ?? false; } catch {}
+      const sfxPromptSection = sfxEnabled ? this.sfxService.getSfxListForPrompt() : '';
       const fullSystemPromptOverride = systemPromptOverride
         ? `${systemPromptOverride}${sfxPromptSection}`
         : sfxPromptSection || undefined;
@@ -179,6 +181,21 @@ export class GenerationService {
           } as any,
         },
       });
+
+      // Sync characters table for draft preview
+      await this.prisma.character.deleteMany({ where: { storyId: id } });
+      for (const char of script.characters) {
+        await this.prisma.character.create({
+          data: {
+            storyId: id,
+            name: char.name,
+            gender: char.gender,
+            voiceId: voiceMap[char.name] || null,
+            emoji: char.emoji || charEmoji(char.name, char.gender, Array.isArray(char.species) ? char.species : char.species ? [char.species] : undefined, char.age),
+            description: char.description || null,
+          },
+        });
+      }
     } catch (err) {
       console.error('Script generation error:', err);
       await this.updateGenerationState(id, {
@@ -199,7 +216,7 @@ export class GenerationService {
     const { script, voiceMap, systemPrompt } = scriptData;
 
     // Update state to generating_audio
-    (scriptData as any).generationState = { status: 'generating_audio', progress: 'Stimmen werden eingesprochen...' };
+    (scriptData as any).generationState = { status: 'generating_audio', progress: 'Wird vertont...' };
     await this.prisma.$executeRawUnsafe(
       `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
       JSON.stringify(scriptData),
@@ -252,10 +269,11 @@ export class GenerationService {
         chunks.push({ type: 'dialogue', lines: currentDialogue });
       }
 
-      await this.updateGenerationState(id, { progress: 'Stimmen werden eingesprochen...' });
+      await this.updateGenerationState(id, { progress: 'Wird vertont...' });
 
       // Generate each chunk
       const segments: string[] = [];
+      const segmentTypes: ('dialogue' | 'sfx')[] = [];
       let totalChars = 0;
 
       for (let c = 0; c < chunks.length; c++) {
@@ -327,24 +345,17 @@ export class GenerationService {
 
         if (fs.existsSync(chunkPath)) {
           segments.push(chunkPath);
+          segmentTypes.push(chunk.type === 'sfx' ? 'sfx' : 'dialogue');
         }
       }
 
       // Track ElevenLabs TTS cost
       await this.costTracking.trackElevenLabs(id, 'tts_production', totalChars).catch(() => {});
 
-      await this.updateGenerationState(id, { progress: 'Audio wird zusammengemischt...' });
+      await this.updateGenerationState(id, { progress: 'Wird vertont...' });
 
-      // Concat all segments (dialogue + SFX interleaved)
-      const combinedPath = path.join(linesDir, 'combined.mp3');
-      if (segments.length === 1) {
-        fs.renameSync(segments[0], combinedPath);
-      } else if (segments.length > 1) {
-        await this.audioPipeline.concatSegments(segments, combinedPath);
-      }
-
-      // Final processing (loudnorm, fade in/out)
-      await this.audioPipeline.recombineStoryAudio(id, [combinedPath]);
+      // Final processing (combine with SFX pauses + loudnorm, fade in/out)
+      await this.audioPipeline.recombineStoryAudio(id, segments, segmentTypes);
 
       // Calculate audio duration
       let durationSeconds: number | null = null;
@@ -497,7 +508,7 @@ export class GenerationService {
     if (genState.status === 'generating_audio') {
       return {
         status: 'generating_audio',
-        progress: genState.progress || 'Stimmen werden eingesprochen...',
+        progress: genState.progress || 'Wird vertont...',
         title: scriptData?.script?.title,
       };
     }

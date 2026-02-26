@@ -145,30 +145,27 @@ Antworte NUR mit validem JSON (kein Markdown, kein \`\`\`):
 {
   "title": "Kreativer Titel",
   "summary": "Ein kurzer Teaser-Satz, der neugierig macht und mit einer offenen Frage endet (z.B. 'Wird sie es schaffen?', 'Ob das gut geht?'). Maximal EIN Satz. Nicht spoilern!",
-  "characters": [{ "name": "Name", "gender": "male|female", "age": 8, "type": "human|creature", "species": "human|unicorn|owl|dragon|...", "voice_character": "kind|funny|evil|wise", "description": "kurze visuelle Beschreibung mit Rolle" }],
-  "scenes": [{ "lines": [{ "speaker": "Name", "text": "Dialog", "emotion": "neutral" }, { "sfx": "english sound description", "duration": 2 }] }]
+  "characters": [{ "name": "Name", "gender": "male|female", "age": 8, "type": "human|creature", "species": "human|unicorn|owl|dragon|...", "voice_character": "kind|funny|evil|wise", "emoji": "🦊", "description": "kurze visuelle Beschreibung mit Rolle" }],
+  "scenes": [{ "lines": [{ "speaker": "Name", "text": "Dialog", "emotion": "neutral" }] }]
 }
-
-WICHTIG zu SFX-Zeilen in scenes:
-- SFX-Zeilen haben KEIN "speaker" und KEIN "text" — nur "sfx" (englische Beschreibung) und "duration" (Sekunden, 1-5)
-- SFX stehen ZWISCHEN normalen Sprechzeilen
-- 1-3 SFX pro Szene, sparsam und wirkungsvoll einsetzen
-- Die sfx-Beschreibung ist IMMER auf Englisch (z.B. "door creaking open", "thunder rumbling", "leaves rustling")
 
 WICHTIG zu emotion:
 - Jede Sprechzeile MUSS ein "emotion"-Feld haben (englisch)
 - Erlaubte Werte: neutral, happy, excited, sad, angry, scared, nervous, surprised, proud, shy, mysterious, whispering, shouting, laughing, crying
-- Die Emotion beschreibt die GRUNDSTIMMUNG der Zeile — zusätzliche Audio-Tags im Text sind weiterhin erlaubt
+- Die Emotion beschreibt die GRUNDSTIMMUNG der Zeile und wird automatisch als Audio-Tag vorangestellt
+- KEINE Emotions-Tags im Text wiederholen! Das emotion-Feld wird automatisch zu [excited], [sad] etc. — wenn du das nochmal in den Text schreibst, wird es doppelt vorgelesen
+- Im Text NUR Performance-Tags verwenden: [chuckles], [laughs], [sighs], [gasps], [whispering], [shouting], [sobbing] etc. — NICHT [sad], [excited], [angry] etc. im Text!
 - Emotionen dürfen sich über mehrere Zeilen halten (trauriges Einhorn bleibt "sad" bis sich etwas ändert)
 - JEDE Figur (außer Erzähler) MUSS eine passende Emotion haben — "neutral" ist fast nie richtig! Auch "Hallo, hast du meine Mama gesehen?" ist mindestens "nervous" oder "hopeful"
 - Der Erzähler darf neutral sein, aber andere Figuren nicht
-- SFX-Zeilen haben KEIN emotion-Feld
+- Wenn SFX aktiviert sind, haben SFX-Zeilen KEIN emotion-Feld
 
 WICHTIG zu Charakteren:
 - gender: "male" oder "female" — auch für Tiere und Fabelwesen
 - age: geschätztes Alter als Zahl. Bei Tieren/Kreaturen: wie alt KLINGT die Figur? (kleiner Troll = 8, weise Eule = 80, junges Einhorn = 4)
 - type: "human" für Menschen, "creature" für alles andere (Tiere, Fabelwesen, Monster, Roboter etc.)
-- species: die KONKRETE Spezies auf Englisch (für Icons). Beispiele: "human", "unicorn", "owl", "dragon", "fox", "troll", "fairy", "robot", "cat", "bear". Bei Menschen immer "human"
+- species: die KONKRETE Spezies auf Englisch. Beispiele: "human", "unicorn", "owl", "dragon", "fox", "troll", "fairy", "robot", "cat", "bear", "badger". Bei Menschen immer "human"
+- emoji: ein EINZELNES Unicode-Emoji das zur Species passt. NUR einfache Emojis (KEINE ZWJ-Sequenzen wie 🐦‍⬛ oder 🐻‍❄️). Beispiele: Fuchs=🦊, Eule=🦉, Drache=🐉, Einhorn=🦄, Mensch(Kind)=👦/👧, Mensch(Erwachsen)=👨/👩, Erzähler=📖, Rabe=🐦, Dachs=🦡, Wolf=🐺, Bär=🐻, Hase=🐰, Frosch=🐸, Katze=🐱, Maus=🐭. NICHT 🐾 als Fallback!
 - voice_character: beschreibt den STIMMCHARAKTER — "kind" (warm, freundlich), "funny" (verspielt, albern), "evil" (bedrohlich, dunkel), "wise" (ruhig, weise)
 - Der Erzähler hat IMMER gender "male", age 35, type "human", species "human", voice_character "kind" (wird automatisch zugewiesen)`;
 

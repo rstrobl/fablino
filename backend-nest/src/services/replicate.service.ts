@@ -24,24 +24,20 @@ export class ReplicateService {
     }
 
     try {
-      const charDesc = characters
-        .filter(c => c.name !== 'Erzähler')
-        .slice(0, 4)
-        .map(c => c.description ? `${c.name} (${c.description})` : c.name)
+      // Separate humans and creatures for clearer image generation
+      const nonNarrator = characters.filter(c => c.name !== 'Erzähler').slice(0, 4);
+      const humans = nonNarrator
+        .filter(c => !c.species || c.species === 'human')
+        .map(c => `a ${c.age || 8} year old ${c.gender === 'female' ? 'girl' : 'boy'} with ${c.description || 'adventurous look'}`)
+        .join(', ');
+      const creatures = nonNarrator
+        .filter(c => c.species && c.species !== 'human')
+        .map(c => `a ${c.species}`)
         .join(', ');
       
-      // Translate key German terms for better Flux results
-      const translateHints = (text: string) => text
-        .replace(/Einhorn/gi, 'unicorn')
-        .replace(/Drache/gi, 'dragon')
-        .replace(/Prinzessin/gi, 'princess')
-        .replace(/Zauber/gi, 'magic')
-        .replace(/Fee\b/gi, 'fairy')
-        .replace(/Wald/gi, 'forest')
-        .replace(/Garten/gi, 'garden')
-        .replace(/Regenbogen/gi, 'rainbow');
+      const charPart = [humans, creatures].filter(Boolean).join('. Accompanied by: ');
       
-      const prompt = `Watercolor children's storybook illustration for a German audiobook. Scene: ${translateHints(summary || title)}. Characters: ${translateHints(charDesc)}. Style: warm magical lighting, soft pastel colors, whimsical fairy tale watercolor, cute rounded character designs, no text, no words, no letters, no writing.`;
+      const prompt = `Watercolor children's storybook illustration. Main character: ${charPart || 'a child on an adventure'}. Scene: ${summary || title}. Style: warm magical lighting, soft pastel colors, whimsical fairy tale watercolor, cute rounded character designs, no text, no words, no letters, no writing. The human child must look fully human with no animal features.`;
       
       // Create prediction
       const createRes = await fetch('https://api.replicate.com/v1/predictions', {

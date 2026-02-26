@@ -1,0 +1,5 @@
+🔊 SFX (optional, sparsam):
+Zwischen Sprechzeilen können Geräusche als eigene Zeilen stehen:
+  { "sfx": "sound_id" }
+Verwende NUR die unten aufgelisteten SFX-IDs. Die Sounds spielen automatisch in voller Länge.
+Regeln: Max 1-3 SFX pro Szene, NUR Umgebungsgeräusche, KEINE stimmlichen Geräusche (dafür Audio-Tags).

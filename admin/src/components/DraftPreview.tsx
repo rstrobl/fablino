@@ -75,7 +75,7 @@ export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; on
       const data = await res.json();
       if (data.progress) setProgress(data.progress);
       if (data.status === 'done') return data;
-      if (data.status === 'error') throw new Error(data.error || 'Fehler bei der Audio-Generierung');
+      if (data.status === 'error') throw new Error(data.error || 'Fehler beim Vertonen');
     }
   };
 
@@ -118,7 +118,7 @@ export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; on
 
   const handleConfirm = async () => {
     setPhase('producing');
-    setProgress('Audio wird generiert...');
+    setProgress('Wird vertont...');
     try {
       const res = await fetch(`/api/generate/${story.id}/confirm`, { method: 'POST', headers: { Authorization: getAuth() } });
       if (!res.ok) throw new Error('Bestätigung fehlgeschlagen');
@@ -235,7 +235,7 @@ export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; on
     return (
       <div className="bg-surface border border-green-500/30 rounded-xl p-8 text-center space-y-3">
         <Check size={32} className="text-green-500 mx-auto" />
-        <p className="font-medium">Hörbuch erfolgreich generiert!</p>
+        <p className="font-medium">Hörbuch erfolgreich vertont!</p>
       </div>
     );
   }
@@ -326,9 +326,8 @@ export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; on
             {scene.lines?.map((line: any, li: number) => (
               line.sfx ? (
                 <div key={li} className="mb-1 flex items-center gap-1.5 text-xs text-yellow-400/80 italic">
-                  <span>🔊</span>
+                  <TwemojiIcon emoji="🔊" size={14} />
                   <span>{line.sfx}</span>
-                  <span className="text-text-muted">({line.duration}s)</span>
                 </div>
               ) : (
                 <div key={li} className="mb-1">
@@ -336,7 +335,11 @@ export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; on
                   {line.emotion && line.emotion !== 'neutral' && (
                     <span className="text-[10px] bg-purple-500/20 text-purple-300 rounded px-1 py-0.5 mr-1">{line.emotion}</span>
                   )}
-                  <span className="text-sm">{line.text}</span>
+                  <span className="text-sm">{line.text.split(/(\[[^\]]+\])/).map((part: string, i: number) =>
+                    /^\[.+\]$/.test(part)
+                      ? <span key={i} className="text-[10px] bg-blue-500/20 text-blue-300 rounded px-1 py-0.5 mx-0.5">{part.slice(1, -1)}</span>
+                      : part
+                  )}</span>
                 </div>
               )
             ))}
@@ -444,7 +447,7 @@ export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; on
             onClick={handleConfirm}
             className="flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
-            <Check size={16} /> Skript bestätigen & Audio generieren
+            <Check size={16} /> Skript bestätigen & vertonen
           </button>
         </div>
       )}

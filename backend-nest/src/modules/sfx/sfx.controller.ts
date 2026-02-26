@@ -23,8 +23,8 @@ export class SfxController {
   }
 
   @Post(':id/replace')
-  async replace(@Param('id') id: string) {
-    return this.sfxService.replaceWithGenerated(id);
+  async replace(@Param('id') id: string, @Body() body: { prompt?: string; duration?: number } = {}) {
+    return this.sfxService.replaceWithGenerated(id, body.prompt, body.duration);
   }
 
   @Post(':id/upload')
@@ -38,12 +38,12 @@ export class SfxController {
   }
 
   @Post()
-  async create(@Body() body: { id: string; name: string; category: string }) {
-    return this.sfxService.create(body.id, body.name, body.category);
+  async create(@Body() body: { id: string; name: string; category: string; prompt?: string; duration?: number }) {
+    return this.sfxService.create(body.id, body.name, body.category, body.prompt, body.duration);
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: Partial<{ name: string; category: string; active: boolean }>) {
+  async update(@Param('id') id: string, @Body() body: Partial<{ name: string; category: string; active: boolean; prompt: string }>) {
     return this.sfxService.update(id, body);
   }
 

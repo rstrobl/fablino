@@ -6,12 +6,14 @@ const exec = promisify(require('child_process').exec);
 
 export interface AudioMixSettings {
   scene_pause: number;   // seconds between scenes (default 1.5)
+  sfx_pause: number;     // seconds before and after SFX (default 0.4)
   fade_in: number;       // fade-in duration (default 0.5)
   fade_out: number;      // fade-out duration (default 0.3)
 }
 
 export const DEFAULT_AUDIO_SETTINGS: AudioMixSettings = {
   scene_pause: 1.5,
+  sfx_pause: 0.4,
   fade_in: 0.5,
   fade_out: 0.3,
 };
@@ -23,21 +25,29 @@ export class AudioMixService {
     outputPath: string,
     audioDir: string,
     settings: AudioMixSettings = DEFAULT_AUDIO_SETTINGS,
+    segmentTypes?: ('dialogue' | 'sfx')[],
   ): Promise<void> {
     const ts = Date.now();
     const silencePath = path.join(audioDir, `silence_${ts}.mp3`);
+    const sfxSilencePath = path.join(audioDir, `sfx_silence_${ts}.mp3`);
     
-    // Create silence file for pauses between scenes
+    // Create silence files
     await exec(`ffmpeg -y -f lavfi -i "anullsrc=r=44100:cl=mono" -t ${settings.scene_pause} -q:a 9 "${silencePath}" 2>/dev/null`);
+    const sfxPause = settings.sfx_pause || 0.4;
+    await exec(`ffmpeg -y -f lavfi -i "anullsrc=r=44100:cl=mono" -t ${sfxPause} -q:a 9 "${sfxSilencePath}" 2>/dev/null`);
     
     const listPath = path.join(audioDir, `list_${ts}.txt`);
     let listContent = '';
     
-    // Create concatenation list with silence between segments
+    // Create concatenation list with appropriate pauses
     for (let i = 0; i < segments.length; i++) {
       listContent += `file '${segments[i]}'\n`;
       if (i < segments.length - 1) {
-        listContent += `file '${silencePath}'\n`;
+        // Use SFX pause if current or next segment is SFX
+        const curIsSfx = segmentTypes?.[i] === 'sfx';
+        const nextIsSfx = segmentTypes?.[i + 1] === 'sfx';
+        const pause = (curIsSfx || nextIsSfx) ? sfxSilencePath : silencePath;
+        listContent += `file '${pause}'\n`;
       }
     }
     
@@ -77,6 +87,7 @@ export class AudioMixService {
     try {
       if (fs.existsSync(tmpConcat)) fs.unlinkSync(tmpConcat);
       fs.unlinkSync(silencePath);
+      try { fs.unlinkSync(sfxSilencePath); } catch {}
       fs.unlinkSync(listPath);
     } catch {}
   }

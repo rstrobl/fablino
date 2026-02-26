@@ -1,3 +1,5 @@
+import React from 'react';
+
 /**
  * Emoji mapping — mirrors backend char-emoji.ts logic.
  * Characters should already have emoji from the backend,
@@ -92,12 +94,17 @@ function emojiToTwemoji(emoji: string): string {
 }
 
 export function TwemojiIcon({ emoji, size = 20 }: { emoji: string; size?: number }) {
+  const [failed, setFailed] = React.useState(false);
+  if (failed) {
+    return <span style={{ fontSize: size, lineHeight: 1, verticalAlign: 'middle' }}>{emoji}</span>;
+  }
   return (
     <img
       src={emojiToTwemoji(emoji)}
       alt={emoji}
       style={{ width: size, height: size, verticalAlign: 'middle', display: 'inline-block' }}
       draggable={false}
+      onError={() => setFailed(true)}
     />
   );
 }

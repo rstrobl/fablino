@@ -38,10 +38,11 @@ export class AudioPipelineService {
   async recombineStoryAudio(
     storyId: string,
     segments: string[],
+    segmentTypes?: ('dialogue' | 'sfx')[],
   ): Promise<void> {
     const mixSettings = await this.loadMixSettings();
     const finalPath = path.join(AUDIO_DIR, `${storyId}.mp3`);
-    await this.audioMixService.combineAudio(segments, finalPath, AUDIO_DIR, mixSettings);
+    await this.audioMixService.combineAudio(segments, finalPath, AUDIO_DIR, mixSettings, segmentTypes);
   }
 
   /**

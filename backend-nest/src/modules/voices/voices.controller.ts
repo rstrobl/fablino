@@ -11,11 +11,6 @@ export class VoicesController {
     return this.voicesService.getAll();
   }
 
-  @Get('categories')
-  async getCategories() {
-    return this.voicesService.getCategories();
-  }
-
   @Get(':voiceId')
   async getOne(@Param('voiceId') voiceId: string) {
     return this.voicesService.getOne(voiceId);
