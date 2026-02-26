@@ -178,6 +178,7 @@ export class GenerationService {
             script,
             voiceMap,
             systemPrompt,
+            pipeline: pipeline || null,
             userCharacters: characters || null,
             generationState: { status: 'preview' },
           } as any,

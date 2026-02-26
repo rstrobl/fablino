@@ -83,7 +83,7 @@ export interface PipelineLog {
 }
 
 export interface PipelineStep {
-  agent: 'author' | 'reviewer' | 'revision' | 'tts';
+  agent: 'author' | 'reviewer' | 'revision' | 'reviewer2' | 'tts';
   model: string;
   durationMs: number;
   tokens: { input: number; output: number };
@@ -138,11 +138,9 @@ export class ClaudeService {
 
   private buildAgeRules(age: number): string {
     if (age <= 5) return `REGELN FÜR JÜNGERE KINDER (${age} Jahre):
-- Kurze Sätze. Wiederholungen ("Klopf, klopf, klopf!"). Klangwörter nur im Erzählertext.
-- KEINE Zahlen, Maßeinheiten, Zeitangaben, abstrakte Konzepte
-- Emotionen benennen: "Da wurde der Igel ganz traurig"
+- Kurze Sätze. Wiederholungen. Klangwörter nur im Erzählertext.
+- KEINE Zahlen, Maßeinheiten, abstrakte Konzepte
 - Max 6 Charaktere (inkl. Erzähler)
-- Klare Gut/Böse-Struktur, aber Böse wird nie bestraft — sondern versteht es am Ende
 - Happy End ist Pflicht
 - LÄNGE: MINDESTENS 40 Zeilen, besser 50–60. MINDESTENS 6 Minuten.
 - Erzähler führt stark
@@ -151,9 +149,7 @@ export class ClaudeService {
     if (age <= 8) return `REGELN FÜR MITTLERE KINDER (${age} Jahre):
 - Komplexere Plots: Wendungen, Geheimnisse
 - Humor: Wortspiele, absurde Situationen, Slapstick
-- Einfache Zahlen/Fakten OK
 - Bis 6 Charaktere, Nebenfiguren möglich
-- Moral darf subtil sein
 - LÄNGE: MINDESTENS 60 Zeilen, besser 70–80. MINDESTENS 10 Minuten.
 - Dialog trägt die Handlung
 - Leichte Grusel-Elemente OK`;
@@ -162,7 +158,6 @@ export class ClaudeService {
 - Anspruchsvolle Plots: Mehrere Handlungsstränge, echte Spannung
 - Humor: Ironie, Wortspiele, situationsbedingte Komik
 - Bis 8 Charaktere, komplexere Beziehungen
-- Cliffhanger erlaubt
 - LÄNGE: MINDESTENS 70 Zeilen, besser 80–100. MINDESTENS 12 Minuten.
 - Dialog und Handlung tragen die Story
 - Echte Spannung und leichter Grusel OK`;
@@ -189,9 +184,9 @@ WICHTIG zu emotion:
 - JEDE Figur (außer Erzähler) MUSS eine passende Emotion haben — "neutral" ist fast nie richtig
 
 WICHTIG zu Charakteren:
-- type: "human" oder "creature" (Tiere, Fabelwesen, Monster, Roboter)
+- type: "human" oder "creature"
 - species: konkrete Spezies auf Englisch (human, unicorn, owl, dragon, fox, badger...)
-- emoji: EINZELNES Unicode-Emoji, KEINE ZWJ-Sequenzen (🐦‍⬛, 🐻‍❄️). Erzähler=📖
+- emoji: EINZELNES Unicode-Emoji, KEINE ZWJ-Sequenzen. Erzähler=📖
 - voice_character: "kind"|"funny"|"evil"|"wise"
 - Der Erzähler: gender "male", age 35, type "human", species "human", voice_character "kind"`;
 
@@ -252,7 +247,6 @@ WICHTIG zu Charakteren:
       try {
         return JSON.parse(fixed);
       } catch {
-        // Try to extract JSON from text
         const match = jsonStr.match(/\{[\s\S]*\}/);
         if (match) return JSON.parse(match[0]);
         throw e;
@@ -260,8 +254,50 @@ WICHTIG zu Charakteren:
     }
   }
 
+  private addStep(pipeline: PipelineLog, step: PipelineStep) {
+    pipeline.steps.push(step);
+    pipeline.totalTokens.input += step.tokens.input;
+    pipeline.totalTokens.output += step.tokens.output;
+  }
+
+  private async runReview(script: Script, age: number, cs: any): Promise<{ review: ReviewResult; step: PipelineStep }> {
+    const reviewerPrompt = loadPromptFile('agent-reviewer.txt');
+    const start = Date.now();
+
+    const result = await this.callClaude({
+      model: cs.reviewerModel || cs.model,
+      systemPrompt: reviewerPrompt,
+      userMessage: `Prüfe dieses Kinderhörspiel (Zielalter: ${age} Jahre):\n\n${JSON.stringify(script, null, 2)}`,
+      maxTokens: 4096,
+      temperature: 0.3,
+    });
+
+    let review: ReviewResult;
+    try {
+      review = this.parseJson(result.text) as ReviewResult;
+    } catch {
+      console.warn('⚠️ Could not parse review result');
+      review = { approved: true, issues: [], summary: 'Review parse error' };
+    }
+
+    const criticalCount = review.issues.filter(i => i.severity === 'critical').length;
+    const majorCount = review.issues.filter(i => i.severity === 'major').length;
+    console.log(`  Review: ${review.approved ? 'APPROVED' : 'REJECTED'} (${criticalCount}C ${majorCount}M ${review.issues.length} total, ${Date.now() - start}ms)`);
+
+    return {
+      review,
+      step: {
+        agent: 'reviewer',
+        model: cs.reviewerModel || cs.model,
+        durationMs: Date.now() - start,
+        tokens: { input: result.usage.input_tokens, output: result.usage.output_tokens },
+        reviewResult: review,
+      },
+    };
+  }
+
   /**
-   * Multi-agent pipeline: Author → Reviewer → Revision → TTS
+   * Multi-agent pipeline: Author → Reviewer → Revision → Reviewer2 → TTS
    */
   async generateScript(
     prompt: string,
@@ -274,7 +310,7 @@ WICHTIG zu Charakteren:
     const pipeline: PipelineLog = { steps: [], totalTokens: { input: 0, output: 0 } };
 
     // === STEP 1: Author writes the story ===
-    console.log('🖊️ Agent 1/4: Author writing story...');
+    console.log('🖊️ Step 1: Author...');
     onProgress?.('Autor schreibt Story...');
     const authorStart = Date.now();
 
@@ -299,57 +335,26 @@ WICHTIG zu Charakteren:
     });
 
     let script = this.parseJson(authorResult.text) as Script;
-    pipeline.steps.push({
+    this.addStep(pipeline, {
       agent: 'author',
       model: cs.model,
       durationMs: Date.now() - authorStart,
       tokens: { input: authorResult.usage.input_tokens, output: authorResult.usage.output_tokens },
     });
-    pipeline.totalTokens.input += authorResult.usage.input_tokens;
-    pipeline.totalTokens.output += authorResult.usage.output_tokens;
+    console.log(`✅ Author: "${script.title}" (${script.scenes?.length} scenes, ${Date.now() - authorStart}ms)`);
 
-    console.log(`✅ Author done: "${script.title}" (${script.scenes?.length} scenes, ${authorResult.usage.output_tokens} tokens, ${Date.now() - authorStart}ms)`);
-
-    // === STEP 2: Reviewer checks the story ===
-    console.log('🔍 Agent 2/4: Reviewer checking...');
-      onProgress?.('Lektor prüft Story...');
-    const reviewerStart = Date.now();
-
+    // === STEP 2: Review ===
     const reviewerPrompt = loadPromptFile('agent-reviewer.txt');
     if (reviewerPrompt) {
-      const reviewResult = await this.callClaude({
-        model: cs.reviewerModel || cs.model,
-        systemPrompt: reviewerPrompt,
-        userMessage: `Prüfe dieses Kinderhörspiel (Zielalter: ${age} Jahre):\n\n${JSON.stringify(script, null, 2)}`,
-        maxTokens: 4096,
-        temperature: 0.3,
-      });
+      console.log('🔍 Step 2: Review...');
+      onProgress?.('Lektor prüft Story...');
 
-      let review: ReviewResult;
-      try {
-        review = this.parseJson(reviewResult.text) as ReviewResult;
-      } catch {
-        console.warn('⚠️ Could not parse review result, skipping revision');
-        review = { approved: true, issues: [], summary: 'Review parse error' };
-      }
+      const { review, step } = await this.runReview(script, age, cs);
+      this.addStep(pipeline, step);
 
-      pipeline.steps.push({
-        agent: 'reviewer',
-        model: cs.reviewerModel || cs.model,
-        durationMs: Date.now() - reviewerStart,
-        tokens: { input: reviewResult.usage.input_tokens, output: reviewResult.usage.output_tokens },
-        reviewResult: review,
-      });
-      pipeline.totalTokens.input += reviewResult.usage.input_tokens;
-      pipeline.totalTokens.output += reviewResult.usage.output_tokens;
-
-      const criticalCount = review.issues.filter(i => i.severity === 'critical').length;
-      const majorCount = review.issues.filter(i => i.severity === 'major').length;
-      console.log(`✅ Review done: ${review.approved ? 'APPROVED' : 'NEEDS REVISION'} (${criticalCount} critical, ${majorCount} major, ${review.issues.length} total, ${Date.now() - reviewerStart}ms)`);
-
-      // === STEP 3: Author revises if needed ===
+      // === STEP 3: Revision if needed ===
       if (!review.approved && review.issues.length > 0) {
-        console.log('✏️ Agent 3/4: Author revising...');
+        console.log('✏️ Step 3: Revision...');
         onProgress?.('Autor überarbeitet Story...');
         const revisionStart = Date.now();
 
@@ -360,71 +365,77 @@ WICHTIG zu Charakteren:
 
         const revisionResult = await this.callClaude({
           model: cs.model,
-          systemPrompt: fullAuthorPrompt,
-          userMessage: `Hier ist dein Hörspiel-Skript:\n\n${JSON.stringify(script, null, 2)}\n\nEin Lektor hat folgende Probleme gefunden:\n\n${issueList}\n\nLektor-Zusammenfassung: ${review.summary}\n\nÜberarbeite das Skript und behebe ALLE genannten Probleme. Gib das KOMPLETTE überarbeitete Skript als JSON zurück.`,
+          systemPrompt: 'Du bist Autor eines Kinderhörspiels. Ein Lektor hat Probleme in deinem Skript gefunden. Behebe ALLE genannten Probleme und gib das KOMPLETTE überarbeitete Skript als JSON zurück. Verändere nur was nötig ist, behalte den Rest bei.',
+          userMessage: `Dein Skript:\n\n${JSON.stringify(script, null, 2)}\n\nLektor-Feedback:\n\n${issueList}\n\nZusammenfassung: ${review.summary}\n\nGib das korrigierte Skript als JSON zurück.`,
           maxTokens: cs.max_tokens,
-          temperature: cs.temperature,
+          temperature: 0.7,
           thinking: { budget: cs.thinking_budget },
         });
 
         try {
-          script = this.parseJson(revisionResult.text) as Script;
+          const revised = this.parseJson(revisionResult.text) as Script;
+          script = revised;
           console.log(`✅ Revision done (${Date.now() - revisionStart}ms)`);
         } catch (e) {
-          console.warn('⚠️ Could not parse revision, keeping original script');
+          console.warn('⚠️ Revision parse failed, keeping reviewed version');
         }
 
-        pipeline.steps.push({
+        this.addStep(pipeline, {
           agent: 'revision',
           model: cs.model,
           durationMs: Date.now() - revisionStart,
           tokens: { input: revisionResult.usage.input_tokens, output: revisionResult.usage.output_tokens },
         });
-        pipeline.totalTokens.input += revisionResult.usage.input_tokens;
-        pipeline.totalTokens.output += revisionResult.usage.output_tokens;
+
+        // === STEP 4: Second review ===
+        console.log('🔍 Step 4: Second review...');
+        onProgress?.('Lektor prüft Überarbeitung...');
+
+        const { review: review2, step: step2 } = await this.runReview(script, age, cs);
+        step2.agent = 'reviewer2';
+        this.addStep(pipeline, step2);
+
+        if (!review2.approved) {
+          console.log(`⚠️ Second review still has issues (${review2.issues.filter(i => i.severity !== 'minor').length} non-minor) — proceeding anyway`);
+        }
       } else {
-        console.log('⏭️ Skipping revision — reviewer approved');
+        console.log('⏭️ Reviewer approved — skipping revision');
       }
-    } else {
-      console.log('⏭️ Skipping review — no agent-reviewer.txt');
     }
 
-    // === STEP 4: TTS optimization ===
-    console.log('🎙️ Agent 4/4: TTS optimizing...');
-    onProgress?.('TTS-Optimierung...');
-    const ttsStart = Date.now();
-
+    // === STEP 5: TTS optimization ===
     const ttsPrompt = loadPromptFile('agent-tts.txt');
     if (ttsPrompt) {
+      console.log('🎙️ Step 5: TTS...');
+      onProgress?.('TTS-Optimierung...');
+      const ttsStart = Date.now();
+
       const ttsResult = await this.callClaude({
         model: cs.ttsModel || cs.model,
         systemPrompt: ttsPrompt,
-        userMessage: `Optimiere dieses Hörspiel-Skript für TTS:\n\n${JSON.stringify(script, null, 2)}`,
+        userMessage: `Optimiere dieses Hörspiel-Skript für TTS. Gib das KOMPLETTE Skript als JSON zurück:\n\n${JSON.stringify(script, null, 2)}`,
         maxTokens: cs.max_tokens,
-        temperature: 0.5,
+        temperature: 0.3,
       });
 
       try {
-        script = this.parseJson(ttsResult.text) as Script;
-        console.log(`✅ TTS optimization done (${Date.now() - ttsStart}ms)`);
+        const optimized = this.parseJson(ttsResult.text) as Script;
+        script = optimized;
+        console.log(`✅ TTS done (${Date.now() - ttsStart}ms)`);
       } catch (e) {
-        console.warn('⚠️ Could not parse TTS result, keeping previous script');
+        console.warn('⚠️ TTS parse failed, keeping previous version');
       }
 
-      pipeline.steps.push({
+      this.addStep(pipeline, {
         agent: 'tts',
         model: cs.ttsModel || cs.model,
         durationMs: Date.now() - ttsStart,
         tokens: { input: ttsResult.usage.input_tokens, output: ttsResult.usage.output_tokens },
       });
-      pipeline.totalTokens.input += ttsResult.usage.input_tokens;
-      pipeline.totalTokens.output += ttsResult.usage.output_tokens;
-    } else {
-      console.log('⏭️ Skipping TTS — no agent-tts.txt');
     }
 
     const totalDuration = pipeline.steps.reduce((t, s) => t + s.durationMs, 0);
-    console.log(`🏁 Pipeline complete: ${pipeline.steps.length} steps, ${pipeline.totalTokens.input + pipeline.totalTokens.output} total tokens, ${Math.round(totalDuration / 1000)}s`);
+    console.log(`🏁 Pipeline: ${pipeline.steps.length} steps, ${pipeline.totalTokens.input + pipeline.totalTokens.output} tokens, ${Math.round(totalDuration / 1000)}s`);
 
     return {
       script,
