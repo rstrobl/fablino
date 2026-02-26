@@ -9,8 +9,11 @@ export interface ScriptScene {
 
 export interface ScriptCharacter {
   name: string;
-  gender: 'child_m' | 'child_f' | 'adult_m' | 'adult_f' | 'elder_m' | 'elder_f' | 'creature';
-  traits: string[];
+  gender: 'male' | 'female';
+  age: number;
+  type: string;
+  species: string;
+  voice_character: string;
   emoji?: string;
   description?: string;
 }

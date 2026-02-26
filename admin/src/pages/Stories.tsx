@@ -26,7 +26,7 @@ function timeAgo(date: string) {
 const STATUSES = [
   { value: 'requested', label: 'Anfragen', icon: 'FileText' },
   { value: 'draft', label: 'Entwürfe', icon: 'Clock' },
-  { value: 'produced', label: 'Hörbücher', icon: 'Headphones' },
+  { value: 'published', label: 'Hörbücher', icon: 'Headphones' },
 ];
 
 function StatusBadge({ status, storyId }: { status: string; storyId: string }) {
@@ -113,22 +113,31 @@ export function Stories() {
 
   const filtered = stories
     .filter((s: any) => !search || (s.title || '').toLowerCase().includes(search.toLowerCase()) || (s.interests || '').toLowerCase().includes(search.toLowerCase()) || (s.requesterName || '').toLowerCase().includes(search.toLowerCase()))
-    .filter((s: any) => !statusFilter || s.status === statusFilter)
+    .filter((s: any) => {
+      if (!statusFilter) return true;
+      if (statusFilter === 'draft') return ['draft', 'produced'].includes(s.status);
+      if (statusFilter === 'published') return ['published', 'feedback'].includes(s.status);
+      return s.status === statusFilter;
+    })
     .sort((a: any, b: any) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
 
   const pipelineCounts = STATUSES.map(s => ({
     ...s,
-    count: stories.filter((st: any) => st.status === s.value).length,
+    count: stories.filter((st: any) => {
+      if (s.value === 'draft') return ['draft', 'produced'].includes(st.status);
+      if (s.value === 'published') return ['published', 'feedback'].includes(st.status);
+      return st.status === s.value;
+    }).length,
   }));
 
   const isRequest = statusFilter === 'requested';
   const isDraftStage = statusFilter === 'draft';
   const isEarlyStage = isRequest || isDraftStage;
-  const isLateStage = statusFilter === 'produced' || statusFilter === 'sent' || statusFilter === 'feedback';
+  const isLateStage = statusFilter === 'published' || statusFilter === 'feedback';
 
   return (
-    <div className="p-6 space-y-4">
-      <h2 className="text-2xl font-bold">Stories</h2>
+    <div className="p-4 md:p-6 space-y-4">
+      <h2 className="text-xl md:text-2xl font-bold">Stories</h2>
 
       {/* Pipeline overview */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -155,11 +164,11 @@ export function Stories() {
         })}
       </div>
 
-      <div className="flex gap-3 items-center">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="relative flex-1 sm:max-w-sm">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
-            placeholder="Stories, Interessen oder Anfragende suchen…"
+            placeholder="Suchen…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 bg-surface border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
@@ -167,7 +176,7 @@ export function Stories() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors text-sm font-medium whitespace-nowrap"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors text-sm font-medium whitespace-nowrap"
         >
           <Plus size={16} /> Neue Story
         </button>
@@ -224,7 +233,52 @@ export function Stories() {
       {isLoading ? (
         <p className="text-text-muted">Laden…</p>
       ) : (
-        <div className="bg-surface border border-border rounded-xl overflow-hidden">
+        <>
+        {/* Mobile: Card layout */}
+        <div className="md:hidden space-y-3">
+          {filtered.map((s: any) => (
+            <div key={s.id} className="bg-surface border border-border rounded-xl p-3 cursor-pointer hover:border-brand/30 transition-colors" onClick={(e) => { if (!(e.target as HTMLElement).closest('button, select')) nav(`/stories/${s.id}`); }}>
+              <div className="flex gap-3">
+                {s.coverUrl ? (
+                  <img src={s.coverUrl.replace('/covers/', '/covers/thumb/').replace(/\.(png|webp)$/, '.jpg')} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                ) : (
+                  <div className="w-14 h-14 rounded-lg bg-surface-alt flex items-center justify-center text-text-muted text-lg shrink-0">📖</div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">
+                    {isRequest ? (s.heroName || s.title?.replace(/s Hörspiel$/, '') || s.title || '(Untitled)') : (s.title || '(Untitled)')}
+                  </p>
+                  <p className="text-xs text-text-muted mt-0.5">
+                    {s.age ? `${s.age} J.` : ''} · {timeAgo(s.updatedAt || s.createdAt)}
+                    {isLateStage && s.durationSeconds ? ` · ${Math.floor(s.durationSeconds / 60)}:${String(s.durationSeconds % 60).padStart(2, '0')}` : ''}
+                  </p>
+                  {isEarlyStage && s.interests && <p className="text-xs text-text-muted mt-1 line-clamp-1">{s.interests}</p>}
+                  {isEarlyStage && s.requesterName && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <User size={10} className="text-text-muted" />
+                      <span className="text-xs text-text-muted">{s.requesterName}</span>
+                      <SourceBadge source={s.requesterSource} />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  {isLateStage && (
+                    <span className="flex items-center gap-1 text-xs text-text-muted">
+                      <Play size={10} /> {playMap.get(s.id) || 0}
+                    </span>
+                  )}
+                  {isLateStage && s.featured && <Star size={14} className="text-yellow-400 fill-yellow-400" />}
+                  <button onClick={(e) => { e.stopPropagation(); if (confirm('Story wirklich löschen?')) delMut.mutate(s.id); }}
+                    className="text-red-400 p-1"><Trash2 size={14} /></button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && <p className="py-8 text-center text-text-muted">Keine Stories gefunden</p>}
+        </div>
+
+        {/* Desktop: Table layout */}
+        <div className="hidden md:block bg-surface border border-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-text-muted text-left">
@@ -246,87 +300,37 @@ export function Stories() {
                     {s.coverUrl ? (
                       <img src={s.coverUrl.replace('/covers/', '/covers/thumb/').replace(/\.(png|webp)$/, '.jpg')} alt="" className="w-12 h-12 rounded object-cover" />
                     ) : (
-                      <div className="w-12 h-12 rounded bg-surface-alt flex items-center justify-center text-text-muted text-lg">
-                        📖
-                      </div>
+                      <div className="w-12 h-12 rounded bg-surface-alt flex items-center justify-center text-text-muted text-lg">📖</div>
                     )}
                   </td>
                   <td className="p-3">
                     <Link to={`/stories/${s.id}`} className="hover:text-brand transition-colors font-medium">
-                      {isRequest
-                        ? (s.heroName || s.title?.replace(/s Hörspiel$/, '') || s.title || '(Untitled)')
-                        : (s.title || '(Untitled)')}
+                      {isRequest ? (s.heroName || s.title?.replace(/s Hörspiel$/, '') || s.title || '(Untitled)') : (s.title || '(Untitled)')}
                     </Link>
                     <span className="block text-xs text-text-muted mt-0.5">{timeAgo(s.updatedAt || s.createdAt)}</span>
                   </td>
                   {(isLateStage || isDraftStage) && (
-                    <td className="p-3 whitespace-nowrap">
-                      {s.heroName || s.characters?.find((c: any) => c.name !== 'Erzähler')?.name || '—'}
-                    </td>
+                    <td className="p-3 whitespace-nowrap">{s.heroName || s.characters?.find((c: any) => c.name !== 'Erzähler')?.name || '—'}</td>
                   )}
                   <td className="p-3 whitespace-nowrap">{s.age ? `${s.age} J.` : '—'}</td>
-                  {isEarlyStage && (
-                    <td className="p-3 max-w-xs">
-                      <p className="text-text-muted text-xs line-clamp-2">{s.interests || '—'}</p>
-                    </td>
-                  )}
+                  {isEarlyStage && <td className="p-3 max-w-xs"><p className="text-text-muted text-xs line-clamp-2">{s.interests || '—'}</p></td>}
                   {isEarlyStage && (
                     <td className="p-3">
                       {(s.requesterName || s.requesterContact) ? (
                         <div className="flex flex-col gap-0.5">
-                          {s.requesterName && (
-                            <span className="flex items-center gap-1 text-sm">
-                              <User size={12} className="text-text-muted" />
-                              {s.requesterName}
-                            </span>
-                          )}
+                          {s.requesterName && <span className="flex items-center gap-1 text-sm"><User size={12} className="text-text-muted" />{s.requesterName}</span>}
                           <SourceBadge source={s.requesterSource} />
-                          {s.requesterContact && (
-                            <span className="text-xs text-text-muted">{s.requesterContact}</span>
-                          )}
+                          {s.requesterContact && <span className="text-xs text-text-muted">{s.requesterContact}</span>}
                         </div>
-                      ) : (
-                        <span className="text-text-muted">—</span>
-                      )}
+                      ) : <span className="text-text-muted">—</span>}
                     </td>
                   )}
-                  {isLateStage && (
-                    <td className="p-3 text-text-muted whitespace-nowrap">
-                      {s.durationSeconds ? `${Math.floor(s.durationSeconds / 60)}:${String(s.durationSeconds % 60).padStart(2, '0')}` : '—'}
-                    </td>
-                  )}
-                  {isLateStage && (
-                    <td className="p-3">
-                      <span className="flex items-center gap-1 text-text-muted">
-                        <Play size={12} /> {playMap.get(s.id) || 0}
-                      </span>
-                    </td>
-                  )}
+                  {isLateStage && <td className="p-3 text-text-muted whitespace-nowrap">{s.durationSeconds ? `${Math.floor(s.durationSeconds / 60)}:${String(s.durationSeconds % 60).padStart(2, '0')}` : '—'}</td>}
+                  {isLateStage && <td className="p-3"><span className="flex items-center gap-1 text-text-muted"><Play size={12} /> {playMap.get(s.id) || 0}</span></td>}
                   <td className="p-3 flex items-center gap-1">
-                    {isLateStage && (
-                      <button
-                        onClick={() => featMut.mutate(s.id)}
-                        className="hover:scale-110 transition-transform p-2 rounded-lg hover:bg-yellow-900/20"
-                        title={s.featured ? 'Featured entfernen' : 'Als Featured markieren'}
-                      >
-                        <Star size={16} className={s.featured ? 'text-yellow-400 fill-yellow-400' : 'text-text-muted'} />
-                      </button>
-                    )}
-                    {isLateStage && (
-                      <button
-                        onClick={() => { navigator.clipboard.writeText(`https://fablino.de/story/${s.id}`); toast.success('Link kopiert'); }}
-                        className="text-text-muted hover:text-brand hover:bg-brand/10 transition-colors p-2 rounded-lg"
-                        title="Link kopieren"
-                      >
-                        <Copy size={16} />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => { if (confirm('Story wirklich löschen?')) delMut.mutate(s.id); }}
-                      className="text-red-400 hover:text-red-300 hover:bg-red-900/30 transition-colors p-2 rounded-lg"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {isLateStage && <button onClick={() => featMut.mutate(s.id)} className="hover:scale-110 transition-transform p-2 rounded-lg hover:bg-yellow-900/20" title={s.featured ? 'Featured entfernen' : 'Als Featured markieren'}><Star size={16} className={s.featured ? 'text-yellow-400 fill-yellow-400' : 'text-text-muted'} /></button>}
+                    {isLateStage && <button onClick={() => { navigator.clipboard.writeText(`https://fablino.de/story/${s.id}`); toast.success('Link kopiert'); }} className="text-text-muted hover:text-brand hover:bg-brand/10 transition-colors p-2 rounded-lg" title="Link kopieren"><Copy size={16} /></button>}
+                    <button onClick={() => { if (confirm('Story wirklich löschen?')) delMut.mutate(s.id); }} className="text-red-400 hover:text-red-300 hover:bg-red-900/30 transition-colors p-2 rounded-lg"><Trash2 size={16} /></button>
                   </td>
                 </tr>
               ))}
@@ -334,6 +338,7 @@ export function Stories() {
           </table>
           {filtered.length === 0 && <p className="p-6 text-center text-text-muted">Keine Stories gefunden</p>}
         </div>
+        </>
       )}
     </div>
   );

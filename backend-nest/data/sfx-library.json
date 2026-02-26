@@ -1,0 +1,170 @@
+[
+  {
+    "id": "footsteps_grass",
+    "name": "Schritte (Gras)",
+    "category": "movement",
+    "file": "footsteps_grass.mp3",
+    "active": true
+  },
+  {
+    "id": "footsteps_indoor",
+    "name": "Schritte (Innen)",
+    "category": "movement",
+    "file": "footsteps_indoor.mp3",
+    "active": false
+  },
+  {
+    "id": "running",
+    "name": "Rennen",
+    "category": "movement",
+    "file": "running.mp3",
+    "active": true
+  },
+  {
+    "id": "galloping",
+    "name": "Galoppieren",
+    "category": "movement",
+    "file": "galloping.mp3",
+    "active": true
+  },
+  {
+    "id": "door_open",
+    "name": "Tür öffnen",
+    "category": "environment",
+    "file": "door_open.mp3",
+    "active": true
+  },
+  {
+    "id": "door_creak",
+    "name": "Tür knarren",
+    "category": "environment",
+    "file": "door_creak.mp3",
+    "active": true
+  },
+  {
+    "id": "knocking",
+    "name": "Klopfen",
+    "category": "environment",
+    "file": "knocking.mp3",
+    "active": true
+  },
+  {
+    "id": "wind",
+    "name": "Wind",
+    "category": "nature",
+    "file": "wind.mp3",
+    "active": true
+  },
+  {
+    "id": "rain",
+    "name": "Regen",
+    "category": "nature",
+    "file": "rain.mp3",
+    "active": true
+  },
+  {
+    "id": "stream",
+    "name": "Bach",
+    "category": "nature",
+    "file": "stream.mp3",
+    "active": true
+  },
+  {
+    "id": "thunder",
+    "name": "Donner",
+    "category": "nature",
+    "file": "thunder.mp3",
+    "active": true
+  },
+  {
+    "id": "magic_sparkle",
+    "name": "Zauber/Sparkle",
+    "category": "magic",
+    "file": "magic_sparkle.mp3",
+    "active": true
+  },
+  {
+    "id": "magic_portal",
+    "name": "Portal",
+    "category": "magic",
+    "file": "magic_portal.mp3",
+    "active": true
+  },
+  {
+    "id": "magic_transform",
+    "name": "Verwandlung",
+    "category": "magic",
+    "file": "magic_transform.mp3",
+    "active": true
+  },
+  {
+    "id": "suspense",
+    "name": "Spannung",
+    "category": "atmosphere",
+    "file": "suspense.mp3",
+    "active": true
+  },
+  {
+    "id": "mysterious",
+    "name": "Geheimnisvoll",
+    "category": "atmosphere",
+    "file": "mysterious.mp3",
+    "active": true
+  },
+  {
+    "id": "happy_jingle",
+    "name": "Fröhlich",
+    "category": "atmosphere",
+    "file": "happy_jingle.mp3",
+    "active": true
+  },
+  {
+    "id": "night_crickets",
+    "name": "Nacht/Grillen",
+    "category": "atmosphere",
+    "file": "night_crickets.mp3",
+    "active": true
+  },
+  {
+    "id": "birds",
+    "name": "Vögel",
+    "category": "animals",
+    "file": "birds.mp3",
+    "active": true
+  },
+  {
+    "id": "wolf_howl",
+    "name": "Wolf heulen",
+    "category": "animals",
+    "file": "wolf_howl.mp3",
+    "active": true
+  },
+  {
+    "id": "horse_neigh",
+    "name": "Pferd wiehern",
+    "category": "animals",
+    "file": "horse_neigh.mp3",
+    "active": true
+  },
+  {
+    "id": "treasure_chest",
+    "name": "Schatztruhe",
+    "category": "other",
+    "file": "treasure_chest.mp3",
+    "active": true
+  },
+  {
+    "id": "object_fall",
+    "name": "Gegenstand fällt",
+    "category": "other",
+    "file": "object_fall.mp3",
+    "active": true
+  },
+  {
+    "id": "splash",
+    "name": "Splash",
+    "category": "other",
+    "file": "splash.mp3",
+    "active": true
+  }
+]

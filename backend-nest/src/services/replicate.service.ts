@@ -30,7 +30,18 @@ export class ReplicateService {
         .map(c => c.description ? `${c.name} (${c.description})` : c.name)
         .join(', ');
       
-      const prompt = `Watercolor children's storybook illustration. ${title}. Characters: ${charDesc}. ${summary}. Warm magical lighting, soft colors, whimsical fairy tale style, no text, no words, no letters.`;
+      // Translate key German terms for better Flux results
+      const translateHints = (text: string) => text
+        .replace(/Einhorn/gi, 'unicorn')
+        .replace(/Drache/gi, 'dragon')
+        .replace(/Prinzessin/gi, 'princess')
+        .replace(/Zauber/gi, 'magic')
+        .replace(/Fee\b/gi, 'fairy')
+        .replace(/Wald/gi, 'forest')
+        .replace(/Garten/gi, 'garden')
+        .replace(/Regenbogen/gi, 'rainbow');
+      
+      const prompt = `Watercolor children's storybook illustration for a German audiobook. Scene: ${translateHints(summary || title)}. Characters: ${translateHints(charDesc)}. Style: warm magical lighting, soft pastel colors, whimsical fairy tale watercolor, cute rounded character designs, no text, no words, no letters, no writing.`;
       
       // Create prediction
       const createRes = await fetch('https://api.replicate.com/v1/predictions', {
@@ -82,7 +93,7 @@ export class ReplicateService {
       fs.mkdirSync(coversDir, { recursive: true });
       fs.writeFileSync(coverPath, buffer);
       
-      const coverUrl = `/covers/${coverFilename}`;
+      const coverUrl = `/covers/${coverFilename}?v=${Date.now()}`;
       
       // Generate OG thumbnail for social sharing (600x600 JPEG)
       try {

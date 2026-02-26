@@ -9,7 +9,7 @@ import { getAuth } from '../utils/auth';
 export function GenerateForm({ story, onDone }: { story: any; onDone: () => void }) {
   const [heroName] = useState((story as any).heroName || story.title?.replace(/(s|es) Hörspiel$/, '') || '');
   const [heroAge, setHeroAge] = useState(story.age || '');
-  const [prompt, setPrompt] = useState(story.interests || story.prompt || '');
+  const [prompt, setPrompt] = useState(story.prompt || '');
   const [useHeroName, setUseHeroName] = useState(true);
   const [sideChars, setSideChars] = useState<{ name: string; role: string }[]>([]);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
@@ -164,7 +164,7 @@ export function GenerateForm({ story, onDone }: { story: any; onDone: () => void
 
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-text-muted mb-1">Held/in</label>
             <input value={useHeroName ? heroName : '(fiktive Figur)'} readOnly className={`w-full px-3 py-2 border border-border rounded-lg text-sm ${useHeroName ? 'bg-gray-800' : 'bg-gray-800/50 text-text-muted italic'}`} />
@@ -286,7 +286,15 @@ export function GenerateForm({ story, onDone }: { story: any; onDone: () => void
             <VoicePicker
               characterName={pickerChar}
               currentVoiceId={voiceMap[pickerChar] || ''}
-              category={script.characters?.find((c: any) => c.name === pickerChar)?.gender || 'adult_m'}
+              category={(() => {
+                const c = script.characters?.find((c: any) => c.name === pickerChar);
+                if (!c) return 'adult_m';
+                const g = c.gender === 'female' ? 'f' : 'm';
+                if (c.species === 'animal' || c.species === 'creature') return `creature_${g}`;
+                if (c.age <= 12) return `child_${g}`;
+                if (c.age >= 60) return `elder_${g}`;
+                return `adult_${g}`;
+              })()}
               voices={allVoices}
               onSelect={(voiceId) => handleVoiceChange(pickerChar, voiceId)}
               onClose={() => setPickerChar(null)}

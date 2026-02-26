@@ -6,7 +6,9 @@ interface AudioCtx {
   isPlaying: boolean;
   currentTime: number;
   duration: number;
+  load: (storyId: string, title: string) => void;
   play: (storyId: string, title: string) => void;
+  stop: () => void;
   togglePlay: () => void;
   seek: (t: number) => void;
   setVolume: (v: number) => void;
@@ -24,6 +26,30 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(0.8);
+
+  const load = useCallback((id: string, t: string) => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.addEventListener('timeupdate', () => {
+        setCurrentTime(audioRef.current!.currentTime);
+      });
+      audioRef.current.addEventListener('loadedmetadata', () => {
+        setDuration(audioRef.current!.duration);
+      });
+      audioRef.current.addEventListener('ended', () => {
+        setIsPlaying(false);
+      });
+    }
+    // Only load if different story
+    if (storyId !== id) {
+      audioRef.current.src = `/api/audio/${id}?t=${Date.now()}`;
+      audioRef.current.volume = volume;
+      setStoryId(id);
+      setTitle(t);
+      setIsPlaying(false);
+      setCurrentTime(0);
+    }
+  }, [volume, storyId]);
 
   const play = useCallback((id: string, t: string) => {
     if (!audioRef.current) {
@@ -46,6 +72,18 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setTitle(t);
     setIsPlaying(true);
   }, [volume]);
+
+  const stop = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+    setStoryId(null);
+    setTitle('');
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+  }, []);
 
   const togglePlay = useCallback(() => {
     if (!audioRef.current) return;
@@ -70,7 +108,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <Ctx.Provider value={{ storyId, title, isPlaying, currentTime, duration, play, togglePlay, seek, setVolume, volume }}>
+    <Ctx.Provider value={{ storyId, title, isPlaying, currentTime, duration, load, play, stop, togglePlay, seek, setVolume, volume }}>
       {children}
     </Ctx.Provider>
   );

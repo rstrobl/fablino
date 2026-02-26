@@ -5,6 +5,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const PROMPT_PATH = path.join(__dirname, '../../../data/system-prompt.txt');
+const CLAUDE_SETTINGS_PATH = path.join(__dirname, '../../../data/claude-settings.json');
+
+const DEFAULT_CLAUDE_SETTINGS = {
+  model: 'claude-opus-4-20250514',
+  max_tokens: 16000,
+  temperature: 1.0,
+  thinking_budget: 10000,
+};
 
 @Controller('api/settings')
 export class SettingsController {
@@ -31,6 +39,27 @@ export class SettingsController {
     const settings: Record<string, number> = {};
     rows.forEach(r => { settings[r.key] = Number(r.value); });
     return settings;
+  }
+
+  @Get('claude')
+  @UseGuards(BasicAuthGuard)
+  getClaudeSettings() {
+    try {
+      const raw = fs.readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8');
+      return { ...DEFAULT_CLAUDE_SETTINGS, ...JSON.parse(raw) };
+    } catch {
+      return { ...DEFAULT_CLAUDE_SETTINGS };
+    }
+  }
+
+  @Put('claude')
+  @UseGuards(BasicAuthGuard)
+  updateClaudeSettings(@Body() body: Record<string, any>) {
+    const current = this.getClaudeSettings();
+    const updated = { ...current, ...body };
+    fs.mkdirSync(path.dirname(CLAUDE_SETTINGS_PATH), { recursive: true });
+    fs.writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(updated, null, 2));
+    return { ok: true, settings: updated };
   }
 
   @Put('audio')

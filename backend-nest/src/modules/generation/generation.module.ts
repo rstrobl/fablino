@@ -9,9 +9,10 @@ import { AudioPipelineService } from '../../services/audio-pipeline.service';
 import { ReplicateService } from '../../services/replicate.service';
 import { CostTrackingService } from '../../services/cost-tracking.service';
 import { VoicesModule } from '../voices/voices.module';
+import { SfxModule } from '../sfx/sfx.module';
 
 @Module({
-  imports: [VoicesModule],
+  imports: [VoicesModule, SfxModule],
   controllers: [GenerationController, StatusController],
   providers: [
     GenerationService,

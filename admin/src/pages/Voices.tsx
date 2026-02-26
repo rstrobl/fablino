@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchVoices } from '../api';
-import { Mic, Play, Pause, Save, Loader2, Plus, Trash2, RotateCcw } from 'lucide-react';
+import { Pencil, Play, Pause, Loader2, Plus, Trash2, Save } from 'lucide-react';
 import { useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 
@@ -8,38 +8,36 @@ interface VoiceData {
   voice_id: string;
   name: string;
   category: string;
-  description: string;
-  stability: number;
-  similarity_boost: number;
-  style: number;
-  use_speaker_boost: boolean;
-  traits: string[];
+  gender: string;
+  age_min: number;
+  age_max: number;
+  types: string[];
+  voice_character: string;
   active: boolean;
+  preview_url?: string;
 }
 
-const CATEGORIES = ['narrator', 'child_m', 'child_f', 'adult_m', 'adult_f', 'elder_m', 'elder_f', 'creature'];
-const CATEGORY_LABELS: Record<string, string> = {
+const TYPE_OPTIONS = ['human', 'creature'];
+const VOICE_CHARACTER_OPTIONS = ['kind', 'funny', 'evil', 'wise'];
+const VC_LABELS: Record<string, string> = { kind: '😊 Kind', funny: '😄 Funny', evil: '😈 Evil', wise: '🦉 Wise' };
+
+const GROUP_LABELS: Record<string, string> = {
   narrator: '🎙️ Erzähler',
-  child_m: '👦 Junge',
-  child_f: '👧 Mädchen',
-  adult_m: '👨 Mann',
-  adult_f: '👩 Frau',
-  elder_m: '👴 Opa',
-  elder_f: '👵 Oma',
-  creature: '🐉 Fabelwesen',
+  male: '♂ Männlich',
+  female: '♀ Weiblich',
 };
+
+const GROUP_ORDER = ['narrator', 'male', 'female'];
+
+function voiceGroup(v: VoiceData): string {
+  if (v.category === 'narrator') return 'narrator';
+  return v.gender || 'male';
+}
 
 const PREVIEW_TEXT = 'Oh nein, mein Schläger! Und in zwei Stunden ist das große Turnier!';
 
-function Slider({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-text-muted w-20 shrink-0">{label}</span>
-      <input type="range" min="0" max="1" step="0.05" value={value} onChange={e => onChange(+e.target.value)}
-        className="flex-1 h-1.5 accent-brand" />
-      <span className="text-xs w-8 text-right font-mono">{value.toFixed(2)}</span>
-    </div>
-  );
+function AgeRange({ min, max }: { min: number; max: number }) {
+  return <span className="text-xs text-text-muted">{min}–{max} J.</span>;
 }
 
 function VoiceCard({ voice, onSaved }: { voice: VoiceData; onSaved: () => void }) {
@@ -49,8 +47,6 @@ function VoiceCard({ voice, onSaved }: { voice: VoiceData; onSaved: () => void }
   const [loading, setLoading] = useState(false);
   const [previewText, setPreviewText] = useState(PREVIEW_TEXT);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const settingsChanged = form.stability !== voice.stability || form.similarity_boost !== voice.similarity_boost || form.style !== voice.style || form.use_speaker_boost !== voice.use_speaker_boost;
 
   const saveMut = useMutation({
     mutationFn: async (data: Partial<VoiceData>) => {
@@ -86,13 +82,7 @@ function VoiceCard({ voice, onSaved }: { voice: VoiceData; onSaved: () => void }
       const res = await fetch(`/api/voices/${voice.voice_id}/preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: previewText,
-          stability: form.stability,
-          similarity_boost: form.similarity_boost,
-          style: form.style,
-          use_speaker_boost: form.use_speaker_boost,
-        }),
+        body: JSON.stringify({ text: previewText }),
       });
       if (!res.ok) throw new Error('Preview failed');
       const blob = await res.blob();
@@ -111,83 +101,110 @@ function VoiceCard({ voice, onSaved }: { voice: VoiceData; onSaved: () => void }
 
   return (
     <div className={`bg-surface border rounded-lg p-4 transition-colors ${voice.active ? 'border-border hover:border-brand/30' : 'border-red-900/30 opacity-60'}`}>
-      <div className="flex items-center justify-between mb-3">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-brand/15 flex items-center justify-center">
-            <Mic size={18} className="text-brand" />
+          <div className="w-10 h-10 rounded-full bg-brand/15 flex items-center justify-center text-lg">
+            {voice.gender === 'female' ? '♀' : '♂'}
           </div>
           <div>
-            {editing ? (
-              <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                className="font-medium text-sm bg-gray-900 border border-border rounded px-2 py-0.5" />
-            ) : (
-              <p className="font-medium text-sm">{voice.name}</p>
-            )}
-            <p className="text-xs text-text-muted">{CATEGORY_LABELS[voice.category] || voice.category}</p>
+            <p className="font-medium text-sm">{voice.name}</p>
+            <p className="text-xs text-text-muted">
+              {voice.age_min}–{voice.age_max} Jahre
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {settingsChanged && !editing && (<>
-            <button onClick={() => setForm({ ...form, stability: voice.stability, similarity_boost: voice.similarity_boost, style: voice.style, use_speaker_boost: voice.use_speaker_boost })}
-              className="p-1.5 rounded hover:bg-surface-hover text-text-muted hover:text-orange-400 transition-colors" title="Zurücksetzen">
-              <RotateCcw size={14} />
-            </button>
-            <button onClick={() => saveMut.mutate({ stability: form.stability, similarity_boost: form.similarity_boost, style: form.style, use_speaker_boost: form.use_speaker_boost })}
-              className="p-1.5 rounded bg-brand/15 hover:bg-brand/30 text-brand transition-colors" title="Settings speichern">
-              <Save size={14} />
-            </button>
-          </>)}
-          {editing && (
-            <button onClick={() => deleteMut.mutate()} className="p-1.5 rounded hover:bg-red-900/30 text-red-400" title="Löschen">
-              <Trash2 size={14} />
+          {editing ? (
+            <>
+              <button onClick={() => { if (confirm('Löschen?')) deleteMut.mutate(); }}
+                className="p-1.5 rounded hover:bg-red-900/30 text-red-400" title="Löschen">
+                <Trash2 size={14} />
+              </button>
+              <button onClick={() => saveMut.mutate(form)}
+                className="p-1.5 rounded bg-brand/15 hover:bg-brand/30 text-brand" title="Speichern">
+                <Save size={14} />
+              </button>
+            </>
+          ) : (
+            <button onClick={() => setEditing(true)}
+              className="p-1.5 rounded hover:bg-surface-hover text-text-muted hover:text-brand" title="Bearbeiten">
+              <Pencil size={14} />
             </button>
           )}
-          <button onClick={() => { if (editing) { saveMut.mutate(form); } else { setEditing(true); } }}
-            className="p-1.5 rounded hover:bg-surface-hover text-text-muted hover:text-brand transition-colors" title={editing ? 'Speichern' : 'Bearbeiten'}>
-            {editing ? <Save size={14} /> : <Mic size={14} />}
-          </button>
         </div>
       </div>
 
+      {/* Edit mode */}
       {editing && (
-        <div className="space-y-2 mb-3">
-          <div className="flex gap-2">
-            <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
-              className="text-xs bg-gray-900 border border-border rounded px-2 py-1">
-              {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>)}
+        <div className="space-y-2 mb-3 bg-gray-900/50 rounded-lg p-3">
+          <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+            placeholder="Name" className="w-full text-xs bg-gray-900 border border-border rounded px-2 py-1.5" />
+          <div className="flex flex-wrap gap-2 items-center">
+            <select value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}
+              className="text-xs bg-gray-900 border border-border rounded px-2 py-1.5">
+              <option value="male">♂ Männl</option>
+              <option value="female">♀ Weibl</option>
             </select>
-            <label className="flex items-center gap-1 text-xs text-text-muted">
+            <div className="flex gap-1 items-center">
+              <span className="text-xs text-text-muted">Alter</span>
+              <input type="number" value={form.age_min} onChange={e => setForm({ ...form, age_min: +e.target.value })}
+                className="w-14 text-xs bg-gray-900 border border-border rounded px-2 py-1.5 text-center" />
+              <span className="text-xs text-text-muted">–</span>
+              <input type="number" value={form.age_max} onChange={e => setForm({ ...form, age_max: +e.target.value })}
+                className="w-14 text-xs bg-gray-900 border border-border rounded px-2 py-1.5 text-center" />
+            </div>
+            <label className="flex items-center gap-1 text-xs text-text-muted ml-auto">
               <input type="checkbox" checked={form.active} onChange={e => setForm({ ...form, active: e.target.checked })} />
               Aktiv
             </label>
           </div>
-          <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
-            placeholder="Beschreibung..." className="w-full text-xs bg-gray-900 border border-border rounded px-2 py-1" />
-          <input value={(form.traits || []).join(', ')} onChange={e => setForm({ ...form, traits: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })}
-            placeholder="Traits (komma-getrennt)..." className="w-full text-xs bg-gray-900 border border-border rounded px-2 py-1" />
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex gap-1 items-center">
+              <span className="text-xs text-text-muted">Typ</span>
+              {TYPE_OPTIONS.map(t => {
+                const active = (form.types || []).includes(t);
+                return (
+                  <button key={t} onClick={() => {
+                    const cur = form.types || [];
+                    const next = active ? cur.filter((x: string) => x !== t) : [...cur, t];
+                    if (next.length > 0) setForm({ ...form, types: next });
+                  }}
+                    className={`text-xs px-2 py-0.5 rounded border ${active ? 'border-brand text-brand bg-brand/10' : 'border-border text-text-muted'}`}>
+                    {t === 'human' ? '👤' : '🧚'} {t}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-1 items-center">
+              <span className="text-xs text-text-muted">Stimme</span>
+              {VOICE_CHARACTER_OPTIONS.map(vc => (
+                <button key={vc} onClick={() => setForm({ ...form, voice_character: vc })}
+                  className={`text-xs px-2 py-0.5 rounded border ${form.voice_character === vc ? 'border-brand text-brand bg-brand/10' : 'border-border text-text-muted'}`}>
+                  {VC_LABELS[vc]}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="text-xs text-text-muted mb-2">{voice.description}</div>
-      {voice.traits?.length > 0 && (
-        <div className="flex gap-1 flex-wrap mb-3">
-          {voice.traits.map(t => (
-            <span key={t} className="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded">{t}</span>
-          ))}
+      {/* Display mode */}
+      {!editing && (
+        <div className="flex gap-2 items-center flex-wrap mb-2">
+          <span className="text-xs bg-gray-800 text-text-muted px-2 py-0.5 rounded">
+            {(voice.types || []).map(t => t === 'human' ? '👤' : '🧚').join('')} {(voice.types || []).join(', ')}
+          </span>
+          {voice.voice_character && (
+            <span className="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded">
+              {VC_LABELS[voice.voice_character] || voice.voice_character}
+            </span>
+          )}
         </div>
       )}
 
-      <div className="space-y-1.5 mb-3">
-        <Slider label="Stability" value={form.stability} onChange={v => setForm({ ...form, stability: v })} />
-        <Slider label="Similarity" value={form.similarity_boost} onChange={v => setForm({ ...form, similarity_boost: v })} />
-        <Slider label="Style" value={form.style} onChange={v => setForm({ ...form, style: v })} />
-        <label className="flex items-center gap-2 text-xs text-text-muted">
-          <input type="checkbox" checked={form.use_speaker_boost} onChange={e => setForm({ ...form, use_speaker_boost: e.target.checked })} />
-          Speaker Boost
-        </label>
-      </div>
-
-      <div className="flex gap-2">
+      {/* Preview */}
+      <div className="flex gap-2 mt-2">
         <input value={previewText} onChange={e => setPreviewText(e.target.value)}
           className="flex-1 text-xs bg-gray-900 border border-border rounded px-2 py-1.5" placeholder="Preview-Text..." />
         <button onClick={preview} disabled={loading}
@@ -203,7 +220,10 @@ function VoiceCard({ voice, onSaved }: { voice: VoiceData; onSaved: () => void }
 
 function AddVoiceForm({ onAdded }: { onAdded: () => void }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ voice_id: '', name: '', category: 'child_f', description: '' });
+  const [form, setForm] = useState({
+    voice_id: '', name: '', category: 'child_f', gender: 'female' as string,
+    age_min: 5, age_max: 12, types: ['human'] as string[], voice_character: 'kind',
+  });
 
   const addMut = useMutation({
     mutationFn: async () => {
@@ -214,12 +234,18 @@ function AddVoiceForm({ onAdded }: { onAdded: () => void }) {
       });
       if (!res.ok) throw new Error('Create failed');
     },
-    onSuccess: () => { toast.success('Voice hinzugefügt'); setOpen(false); setForm({ voice_id: '', name: '', category: 'child_f', description: '' }); onAdded(); },
+    onSuccess: () => {
+      toast.success('Voice hinzugefügt');
+      setOpen(false);
+      setForm({ voice_id: '', name: '', category: 'child_f', gender: 'female', age_min: 5, age_max: 12, types: ['human'], voice_character: 'kind' });
+      onAdded();
+    },
     onError: () => toast.error('Fehler'),
   });
 
   if (!open) return (
-    <button onClick={() => setOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+    <button onClick={() => setOpen(true)}
+      className="flex items-center gap-2 px-4 py-2 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
       <Plus size={16} /> Voice hinzufügen
     </button>
   );
@@ -232,19 +258,54 @@ function AddVoiceForm({ onAdded }: { onAdded: () => void }) {
           placeholder="ElevenLabs Voice ID" className="text-xs bg-gray-900 border border-border rounded px-2 py-1.5" />
         <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
           placeholder="Name" className="text-xs bg-gray-900 border border-border rounded px-2 py-1.5" />
-        <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
+        <select value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}
           className="text-xs bg-gray-900 border border-border rounded px-2 py-1.5">
-          {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>)}
+          <option value="male">♂ Männlich</option>
+          <option value="female">♀ Weiblich</option>
         </select>
-        <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
-          placeholder="Beschreibung" className="text-xs bg-gray-900 border border-border rounded px-2 py-1.5" />
+        <div className="flex gap-1 items-center">
+          <input type="number" value={form.age_min} onChange={e => setForm({ ...form, age_min: +e.target.value })}
+            className="w-full text-xs bg-gray-900 border border-border rounded px-2 py-1.5" placeholder="Alter min" />
+          <span className="text-xs text-text-muted">–</span>
+          <input type="number" value={form.age_max} onChange={e => setForm({ ...form, age_max: +e.target.value })}
+            className="w-full text-xs bg-gray-900 border border-border rounded px-2 py-1.5" placeholder="Alter max" />
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <div className="flex gap-1 items-center">
+          <span className="text-xs text-text-muted">Typ</span>
+          {TYPE_OPTIONS.map(t => {
+            const active = (form.types || []).includes(t);
+            return (
+              <button key={t} onClick={() => {
+                const cur = form.types || [];
+                const next = active ? cur.filter((x: string) => x !== t) : [...cur, t];
+                if (next.length > 0) setForm({ ...form, types: next });
+              }}
+                className={`text-xs px-2 py-0.5 rounded border ${active ? 'border-brand text-brand bg-brand/10' : 'border-border text-text-muted'}`}>
+                {t === 'human' ? '👤' : '🧚'} {t}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex gap-1 items-center">
+          <span className="text-xs text-text-muted">Stimme</span>
+          {VOICE_CHARACTER_OPTIONS.map(vc => (
+            <button key={vc} onClick={() => setForm({ ...form, voice_character: vc })}
+              className={`text-xs px-2 py-0.5 rounded border ${form.voice_character === vc ? 'border-brand text-brand bg-brand/10' : 'border-border text-text-muted'}`}>
+              {VC_LABELS[vc]}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="flex gap-2">
         <button onClick={() => addMut.mutate()} disabled={!form.voice_id || !form.name}
           className="px-3 py-1.5 bg-brand hover:bg-green-700 text-white rounded text-xs font-medium disabled:opacity-50">
           Hinzufügen
         </button>
-        <button onClick={() => setOpen(false)} className="px-3 py-1.5 bg-surface-hover border border-border rounded text-xs">Abbrechen</button>
+        <button onClick={() => setOpen(false)} className="px-3 py-1.5 bg-surface-hover border border-border rounded text-xs">
+          Abbrechen
+        </button>
       </div>
     </div>
   );
@@ -255,15 +316,15 @@ export function Voices() {
   const { data: voices = [], isLoading } = useQuery<VoiceData[]>({ queryKey: ['voices'], queryFn: fetchVoices as any });
   const [filter, setFilter] = useState('');
 
-  const categories = CATEGORIES.filter(c => voices.some(v => v.category === c));
-  const filtered = filter ? voices.filter(v => v.category === filter) : voices;
+  const groups = GROUP_ORDER.filter(g => voices.some(v => voiceGroup(v) === g));
+  const filtered = filter ? voices.filter(v => voiceGroup(v) === filter) : voices;
   const grouped: Record<string, VoiceData[]> = {};
-  filtered.forEach(v => { (grouped[v.category] ??= []).push(v); });
+  filtered.forEach(v => { (grouped[voiceGroup(v)] ??= []).push(v); });
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['voices'] });
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Voice Library</h2>
         <span className="text-sm text-text-muted">{voices.length} Stimmen</span>
@@ -274,12 +335,12 @@ export function Voices() {
       <div className="flex gap-2 flex-wrap">
         <button onClick={() => setFilter('')}
           className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${!filter ? 'bg-brand/15 border-brand text-brand' : 'bg-surface border-border text-text-muted hover:bg-surface-hover'}`}>
-          Alle
+          Alle ({voices.length})
         </button>
-        {categories.map(c => (
-          <button key={c} onClick={() => setFilter(c)}
-            className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${filter === c ? 'bg-brand/15 border-brand text-brand' : 'bg-surface border-border text-text-muted hover:bg-surface-hover'}`}>
-            {CATEGORY_LABELS[c] || c}
+        {groups.map(g => (
+          <button key={g} onClick={() => setFilter(g)}
+            className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${filter === g ? 'bg-brand/15 border-brand text-brand' : 'bg-surface border-border text-text-muted hover:bg-surface-hover'}`}>
+            {GROUP_LABELS[g] || g} ({voices.filter(v => voiceGroup(v) === g).length})
           </button>
         ))}
       </div>
@@ -287,11 +348,13 @@ export function Voices() {
       {isLoading ? (
         <p className="text-text-muted">Lade Stimmen…</p>
       ) : (
-        Object.entries(grouped).sort(([a], [b]) => CATEGORIES.indexOf(a) - CATEGORIES.indexOf(b)).map(([cat, vs]) => (
-          <div key={cat}>
-            <h3 className="text-lg font-semibold mb-3">{CATEGORY_LABELS[cat] || cat} <span className="text-sm text-text-muted font-normal">({vs.length})</span></h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-              {vs.map(v => <VoiceCard key={v.voice_id} voice={v} onSaved={refresh} />)}
+        Object.entries(grouped).sort(([a], [b]) => GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b)).map(([grp, vs]) => (
+          <div key={grp}>
+            <h3 className="text-lg font-semibold mb-3">
+              {GROUP_LABELS[grp] || grp} <span className="text-sm text-text-muted font-normal">({vs.length})</span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {vs.sort((a, b) => (b.active === a.active ? 0 : b.active ? 1 : -1) || a.age_min - b.age_min).map(v => <VoiceCard key={v.voice_id} voice={v} onSaved={refresh} />)}
             </div>
           </div>
         ))

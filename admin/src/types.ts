@@ -35,6 +35,7 @@ export interface Story {
   requesterSource: string | null;
   requesterContact: string | null;
   interests: string | null;
+  durationSeconds: number | null;
   characters: Character[];
   lines: Line[];
 }

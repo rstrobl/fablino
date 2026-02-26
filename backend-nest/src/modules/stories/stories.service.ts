@@ -1,22 +1,12 @@
 import { Injectable, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { TtsService } from '../../services/tts.service';
-import { AudioMixService } from '../../services/audio.service';
-import { AudioPipelineService, AUDIO_DIR } from '../../services/audio-pipeline.service';
-import { VoicesService } from '../voices/voices.service';
 import { CostTrackingService } from '../../services/cost-tracking.service';
 import { ScriptData } from '../../types/script-data';
-import * as fs from 'fs';
-import * as path from 'path';
 
 @Injectable()
 export class StoriesService {
   constructor(
     private prisma: PrismaService,
-    private ttsService: TtsService,
-    private audioService: AudioMixService,
-    private audioPipeline: AudioPipelineService,
-    private voicesService: VoicesService,
     private costTracking: CostTrackingService,
   ) {}
 
@@ -141,13 +131,18 @@ export class StoriesService {
   }
 
   async updateStatus(id: string, status: string) {
-    const validStatuses = ['requested', 'draft', 'produced', 'sent', 'feedback'];
+    const validStatuses = ['requested', 'draft', 'produced', 'published', 'feedback'];
     if (!validStatuses.includes(status)) {
       throw new HttpException(`Invalid status. Must be one of: ${validStatuses.join(', ')}`, HttpStatus.BAD_REQUEST);
     }
+    const data: any = { status };
+    // When reverting to draft, clear audio so it can be re-generated
+    if (status === 'draft') {
+      data.audioPath = null;
+    }
     const story = await this.prisma.story.update({
       where: { id },
-      data: { status },
+      data,
     });
     return { status: 'ok', newStatus: story.status };
   }
@@ -178,104 +173,11 @@ export class StoriesService {
     return { status: 'ok', voiceMap };
   }
 
-  async voiceSwap(storyId: string, character: string, voiceId: string) {
-    if (!character || !voiceId) {
-      throw new HttpException('character and voiceId required', HttpStatus.BAD_REQUEST);
-    }
-
-    try {
-      // Check story exists
-      const story = await this.prisma.story.findUnique({
-        where: { id: storyId },
-      });
-
-      if (!story) {
-        throw new NotFoundException('Story nicht gefunden');
-      }
-
-      // Update voice in characters table
-      const updateResult = await this.prisma.character.updateMany({
-        where: {
-          storyId,
-          name: character,
-        },
-        data: { voiceId },
-      });
-
-      if (updateResult.count === 0) {
-        throw new NotFoundException('Character nicht gefunden');
-      }
-
-      // Get all lines for this story
-      const allLines = await this.prisma.line.findMany({
-        where: { storyId },
-        orderBy: [
-          { sceneIdx: 'asc' },
-          { lineIdx: 'asc' },
-        ],
-      });
-
-      if (allLines.length === 0) {
-        return { status: 'no_lines', message: 'No lines in DB to regenerate' };
-      }
-
-      const voiceSettings = await this.voicesService.getSettingsForVoice(voiceId) || this.ttsService.DEFAULT_VOICE_SETTINGS;
-      const linesDir = path.join(AUDIO_DIR, 'lines', storyId);
-      fs.mkdirSync(linesDir, { recursive: true });
-
-      // Regenerate only lines for the specified character (with context)
-      let globalIdx = 0;
-      for (let i = 0; i < allLines.length; i++) {
-        const line = allLines[i];
-        const linePath = path.join(linesDir, `line_${globalIdx}.mp3`);
-        
-        if (line.speaker === character || character.includes(line.speaker) || line.speaker?.includes(character)) {
-          const previous_text = i > 0 ? 
-            allLines.slice(Math.max(0, i - 2), i).map(l => l.text).join(' ') : 
-            undefined;
-          const next_text = i < allLines.length - 1 ? allLines[i + 1].text : undefined;
-          
-          await this.ttsService.generateTTS(
-            line.text,
-            voiceId,
-            linePath,
-            voiceSettings,
-            { previous_text, next_text },
-          );
-          
-          await this.prisma.line.update({
-            where: { id: line.id },
-            data: { audioPath: `audio/lines/${storyId}/line_${globalIdx}.mp3` },
-          });
-        }
-        globalIdx++;
-      }
-
-      // Recombine all lines with proper scene breaks and mix settings
-      const segments = [];
-      for (let i = 0; i < allLines.length; i++) {
-        const p = path.join(linesDir, `line_${i}.mp3`);
-        if (fs.existsSync(p)) {
-          segments.push(p);
-        }
-      }
-
-      if (segments.length > 0) {
-        const sceneBreaks = this.audioPipeline.calculateSceneBreaks(allLines);
-        await this.audioPipeline.recombineStoryAudio(storyId, segments, sceneBreaks);
-      }
-
-      const linesRegenerated = allLines.filter(l => l.speaker === character).length;
-      const charsRegenerated = allLines.filter(l => l.speaker === character || character.includes(l.speaker) || l.speaker?.includes(character)).reduce((sum, l) => sum + l.text.length, 0);
-      await this.costTracking.trackElevenLabs(storyId, 'tts_voice_swap', charsRegenerated).catch(() => {});
-      return { status: 'ok', character, voiceId, linesRegenerated };
-    } catch (error) {
-      if (error instanceof NotFoundException || error instanceof HttpException) {
-        throw error;
-      }
-      console.error('Voice update error:', error);
-      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+  async updateCoverUrl(id: string, coverUrl: string) {
+    await this.prisma.story.update({
+      where: { id },
+      data: { coverUrl },
+    });
   }
 
   async deleteStory(id: string) {

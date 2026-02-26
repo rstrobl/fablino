@@ -1,13 +1,18 @@
-import { Controller, Get, Delete, Patch, Param, Query, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Param, Query, Body, HttpCode, HttpStatus, NotFoundException } from '@nestjs/common';
 import { StoriesService } from './stories.service';
-import { ToggleFeaturedDto, VoiceSwapDto } from '../../dto/stories.dto';
+import { ToggleFeaturedDto } from '../../dto/stories.dto';
 import { CostTrackingService } from '../../services/cost-tracking.service';
+import { ReplicateService } from '../../services/replicate.service';
+import * as path from 'path';
 
 @Controller('api/stories')
 export class StoriesController {
+  private readonly COVERS_DIR = path.resolve('./covers');
+
   constructor(
     private readonly storiesService: StoriesService,
     private readonly costTracking: CostTrackingService,
+    private readonly replicateService: ReplicateService,
   ) {}
 
   @Get()
@@ -31,11 +36,6 @@ export class StoriesController {
     return this.storiesService.toggleFeatured(id, dto.featured);
   }
 
-  @Patch(':id/voice')
-  async voiceSwap(@Param('id') id: string, @Body() dto: VoiceSwapDto) {
-    return this.storiesService.voiceSwap(id, dto.character, dto.voiceId);
-  }
-
   @Patch(':id/voice-map')
   async updateVoiceMap(@Param('id') id: string, @Body() body: { voiceMap: Record<string, string> }) {
     return this.storiesService.updateVoiceMap(id, body.voiceMap);
@@ -44,6 +44,30 @@ export class StoriesController {
   @Get(':id/costs')
   async getStoryCosts(@Param('id') id: string) {
     return this.costTracking.getStoryCosts(id);
+  }
+
+  @Post(':id/generate-cover')
+  async generateCover(@Param('id') id: string) {
+    const story = await this.storiesService.getStory(id);
+    if (!story) throw new NotFoundException('Story not found');
+    const scriptData = (story as any).scriptData;
+    const script = scriptData?.script;
+    if (!script) return { error: 'No script found' };
+
+    const coverUrl = await this.replicateService.generateCover(
+      script.title || story.title || 'Story',
+      script.summary || story.summary || '',
+      script.characters || [],
+      id,
+      this.COVERS_DIR,
+    );
+
+    if (coverUrl) {
+      await this.storiesService.updateCoverUrl(id, coverUrl);
+      await this.costTracking.trackReplicate(id, 'cover', 1).catch(() => {});
+    }
+
+    return { coverUrl };
   }
 
   @Delete(':id')

@@ -21,7 +21,7 @@ interface ReviewResult {
   suggestions: ReviewSuggestion[];
 }
 
-export function DraftPreview({ story, onDone }: { story: any; onDone: () => void }) {
+export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; onDone: () => void; mode?: 'draft' | 'readonly' }) {
   const [phase, setPhase] = useState<'preview' | 'reviewing' | 'reviewed' | 'producing' | 'done' | 'error'>('preview');
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
@@ -31,7 +31,16 @@ export function DraftPreview({ story, onDone }: { story: any; onDone: () => void
   const [allVoices, setAllVoices] = useState<any[]>([]);
   const [pickerChar, setPickerChar] = useState<string | null>(null);
   const [showRegenModal, setShowRegenModal] = useState(false);
-  const [regenPrompt, setRegenPrompt] = useState(story.interests || story.prompt || '');
+  const [regenPrompt, setRegenPrompt] = useState(story.prompt || '');
+  const [regenSideChars, setRegenSideChars] = useState<Array<{ name: string; role: string }>>(
+    (story as any).scriptData?.userCharacters?.sideCharacters || []
+  );
+
+  const getSideChars = () => {
+    return (story as any).scriptData?.userCharacters?.sideCharacters || [];
+  };
+  const [coverUrl, setCoverUrl] = useState(story.coverUrl || '');
+  const [coverLoading, setCoverLoading] = useState(false);
 
   useEffect(() => {
     if (!voiceMap) return;
@@ -248,18 +257,19 @@ export function DraftPreview({ story, onDone }: { story: any; onDone: () => void
   return (
     <div className="bg-surface border border-brand/30 rounded-xl p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">📝 Skript-Vorschau</h3>
-        <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">Entwurf</span>
+        <h3 className="text-lg font-semibold flex items-center gap-2">📝 {mode === 'draft' ? 'Skript-Vorschau' : 'Skript'}</h3>
+        {mode === 'draft' && <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">Entwurf</span>}
       </div>
 
-      <div>
-        <h4 className="text-sm font-medium mb-2">Charaktere & Stimmen <span className="text-text-muted">(klicken zum Ändern)</span></h4>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <h4 className="text-sm font-medium mb-2">Charaktere & Stimmen {mode === 'draft' && <span className="text-text-muted">(klicken zum Ändern)</span>}</h4>
         <div className="flex gap-2 flex-wrap">
           {script.characters?.map((c: any) => (
             <button
               key={c.name}
-              onClick={() => setPickerChar(c.name)}
-              className="px-3 py-1.5 bg-gray-800 border border-border rounded-full text-xs flex items-center gap-1.5 transition-colors hover:border-brand/50 cursor-pointer"
+              onClick={() => mode === 'draft' && setPickerChar(c.name)}
+              className={`px-3 py-1.5 bg-gray-800 border border-border rounded-full text-xs flex items-center gap-1.5 transition-colors ${mode === 'draft' ? 'hover:border-brand/50 cursor-pointer' : 'cursor-default'}`}
             >
               <TwemojiIcon emoji={c.emoji || '✨'} size={16} />
               <span>{c.name}</span>
@@ -273,13 +283,35 @@ export function DraftPreview({ story, onDone }: { story: any; onDone: () => void
           <VoicePicker
             characterName={pickerChar}
             currentVoiceId={voiceMap[pickerChar] || ''}
-            category={script.characters?.find((c: any) => c.name === pickerChar)?.gender || 'adult_m'}
+            category={(() => {
+              const c = script.characters?.find((c: any) => c.name === pickerChar);
+              if (!c) return 'adult_m';
+              const g = c.gender === 'female' ? 'f' : 'm';
+              if (c.species === 'animal' || c.species === 'creature') return `creature_${g}`;
+              if (c.age <= 12) return `child_${g}`;
+              if (c.age >= 60) return `elder_${g}`;
+              return `adult_${g}`;
+            })()}
             voices={allVoices}
             onSelect={(voiceId) => handleVoiceChange(pickerChar, voiceId)}
             onClose={() => setPickerChar(null)}
           />
         )}
+        </div>
       </div>
+
+      {mode === 'draft' && (story.prompt || story.interests) && (
+        <div className="bg-gray-900/50 rounded-lg p-3">
+          <p className="text-xs text-text-muted mb-1">Prompt</p>
+          <p className="text-sm">{story.prompt}</p>
+          {story.interests && story.interests !== story.prompt && (
+            <>
+              <p className="text-xs text-text-muted mb-1 mt-2">Interessen</p>
+              <p className="text-sm">{story.interests}</p>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-4 text-xs text-text-muted">
         <span>{script.scenes?.length} Szenen</span>
@@ -292,16 +324,27 @@ export function DraftPreview({ story, onDone }: { story: any; onDone: () => void
           <div key={si} className="bg-gray-900/50 rounded-lg p-3">
             <p className="text-xs text-text-muted mb-2">Szene {si + 1}</p>
             {scene.lines?.map((line: any, li: number) => (
-              <div key={li} className="mb-1">
-                <span className="text-brand font-medium text-sm"><TwemojiIcon emoji={script.characters?.find((c: any) => c.name === line.speaker)?.emoji || '✨'} size={14} /> {line.speaker}:</span>{' '}
-                <span className="text-sm">{line.text}</span>
-              </div>
+              line.sfx ? (
+                <div key={li} className="mb-1 flex items-center gap-1.5 text-xs text-yellow-400/80 italic">
+                  <span>🔊</span>
+                  <span>{line.sfx}</span>
+                  <span className="text-text-muted">({line.duration}s)</span>
+                </div>
+              ) : (
+                <div key={li} className="mb-1">
+                  <span className="text-brand font-medium text-sm"><TwemojiIcon emoji={script.characters?.find((c: any) => c.name === line.speaker)?.emoji || '✨'} size={14} /> {line.speaker}:</span>{' '}
+                  {line.emotion && line.emotion !== 'neutral' && (
+                    <span className="text-[10px] bg-purple-500/20 text-purple-300 rounded px-1 py-0.5 mr-1">{line.emotion}</span>
+                  )}
+                  <span className="text-sm">{line.text}</span>
+                </div>
+              )
             ))}
           </div>
         ))}
       </div>
 
-      {showRegenModal && (
+      {mode === 'draft' && showRegenModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowRegenModal(false)}>
           <div className="bg-surface border border-border rounded-xl p-6 w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-3">🔄 Neu generieren</h3>
@@ -310,9 +353,36 @@ export function DraftPreview({ story, onDone }: { story: any; onDone: () => void
               value={regenPrompt}
               onChange={e => setRegenPrompt(e.target.value)}
               rows={3}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-brand"
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-brand"
               placeholder="z.B. Minecraft, Zeitreisen, Technik"
             />
+            <label className="text-sm text-text-muted mb-1 block">Nebencharaktere</label>
+            <div className="space-y-2 mb-3">
+              {regenSideChars.map((c, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    value={c.name}
+                    onChange={e => { const next = [...regenSideChars]; next[i] = { ...next[i], name: e.target.value }; setRegenSideChars(next); }}
+                    placeholder="Name"
+                    className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand"
+                  />
+                  <input
+                    value={c.role}
+                    onChange={e => { const next = [...regenSideChars]; next[i] = { ...next[i], role: e.target.value }; setRegenSideChars(next); }}
+                    placeholder="Rolle (z.B. große Schwester, Hund)"
+                    className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand"
+                  />
+                  <button
+                    onClick={() => setRegenSideChars(regenSideChars.filter((_, j) => j !== i))}
+                    className="text-red-400 hover:text-red-300 text-sm px-2"
+                  >✕</button>
+                </div>
+              ))}
+              <button
+                onClick={() => setRegenSideChars([...regenSideChars, { name: '', role: '' }])}
+                className="text-xs text-brand hover:text-green-400 transition-colors"
+              >+ Charakter hinzufügen</button>
+            </div>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowRegenModal(false)}
@@ -329,7 +399,12 @@ export function DraftPreview({ story, onDone }: { story: any; onDone: () => void
                     const res = await fetch(`/api/generate/${story.id}/regenerate`, {
                       method: 'POST',
                       headers: { Authorization: getAuth(), 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ prompt: regenPrompt || undefined }),
+                      body: JSON.stringify({ 
+                        prompt: regenPrompt || undefined,
+                        characters: {
+                          sideCharacters: regenSideChars.filter(c => c.name.trim()),
+                        },
+                      }),
                     });
                     if (!res.ok) throw new Error('Neu-Generierung fehlgeschlagen');
                     for (;;) {
@@ -353,20 +428,26 @@ export function DraftPreview({ story, onDone }: { story: any; onDone: () => void
           </div>
         </div>
       )}
-      <div className="flex gap-3 pt-2">
-        <button
-          onClick={() => { setRegenPrompt(story.interests || story.prompt || ''); setShowRegenModal(true); }}
-          className="flex items-center gap-2 px-5 py-2.5 bg-surface border border-border hover:bg-surface-hover rounded-lg text-sm font-medium transition-colors"
-        >
-          🔄 Neu generieren
-        </button>
-        <button
-          onClick={handleConfirm}
-          className="flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          <Check size={16} /> Skript bestätigen & Audio generieren
-        </button>
-      </div>
+      {mode === 'draft' && (
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={() => { 
+              setRegenPrompt(story.interests || story.prompt || ''); 
+              setRegenSideChars(getSideChars());
+              setShowRegenModal(true); 
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 bg-surface border border-border hover:bg-surface-hover rounded-lg text-sm font-medium transition-colors"
+          >
+            🔄 Neu generieren
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            <Check size={16} /> Skript bestätigen & Audio generieren
+          </button>
+        </div>
+      )}
     </div>
   );
 }

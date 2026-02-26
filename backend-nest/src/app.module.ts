@@ -13,6 +13,7 @@ import { SharingModule } from './modules/sharing/sharing.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { PlaysModule } from './modules/plays/plays.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { SfxModule } from './modules/sfx/sfx.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { SettingsModule } from './modules/settings/settings.module';
     AdminModule,
     PlaysModule,
     SettingsModule,
+    SfxModule,
   ],
 })
 export class AppModule {}

@@ -39,10 +39,10 @@ export class VoicesController {
   @Post(':voiceId/preview')
   async preview(
     @Param('voiceId') voiceId: string,
-    @Body() body: { text: string; stability?: number; similarity_boost?: number; style?: number; use_speaker_boost?: boolean },
+    @Body() body: { text: string },
     @Res() res: Response,
   ) {
-    const audioBuffer = await this.voicesService.preview(voiceId, body.text, body);
+    const audioBuffer = await this.voicesService.preview(voiceId, body.text);
     res.set({ 'Content-Type': 'audio/mpeg', 'Content-Length': audioBuffer.length });
     res.send(audioBuffer);
   }

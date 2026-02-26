@@ -1,8 +1,7 @@
 import { Controller, Post, Get, Param, Body, Query, Res, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { GenerationService, Job } from './generation.service';
-import { GenerateStoryDto, PreviewLineDto } from '../../dto/generation.dto';
+import { GenerateStoryDto } from '../../dto/generation.dto';
 import { BasicAuthGuard } from '../../guards/basic-auth.guard';
-import { Response } from 'express';
 
 @Controller('api/generate')
 export class GenerationController {
@@ -18,16 +17,6 @@ export class GenerationController {
     return this.generationService.confirmScript(id);
   }
 
-  @Post('preview-line')
-  async previewLine(@Body() dto: PreviewLineDto, @Res() res: Response) {
-    return this.generationService.previewLine(dto, res);
-  }
-
-  @Post('replace-line')
-  async replaceLine(@Body() body: { storyId: string; lineId: number; voiceId: string; text: string; voiceSettings?: any }) {
-    return this.generationService.replaceLine(body);
-  }
-
   @Get('status/:id')
   async getJobStatus(@Param('id') id: string): Promise<Job | { status: 'not_found' }> {
     return this.generationService.getJobStatus(id);
@@ -35,7 +24,7 @@ export class GenerationController {
 
   @Post(':id/regenerate')
   @UseGuards(BasicAuthGuard)
-  async regenerateScript(@Param('id') id: string, @Body() body?: { prompt?: string }) {
-    return this.generationService.regenerateScript(id, body?.prompt);
+  async regenerateScript(@Param('id') id: string, @Body() body?: { prompt?: string; characters?: any }) {
+    return this.generationService.regenerateScript(id, body?.prompt, body?.characters);
   }
 }

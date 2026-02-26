@@ -59,20 +59,4 @@ export class PreviewLineDto {
 
   @IsString()
   voiceId: string;
-
-  @IsOptional()
-  voiceSettings?: {
-    stability?: number;
-    similarity_boost?: number;
-    style?: number;
-    use_speaker_boost?: boolean;
-  };
-
-  @IsOptional()
-  @IsString()
-  previous_text?: string;
-
-  @IsOptional()
-  @IsString()
-  next_text?: string;
 }

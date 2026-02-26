@@ -278,7 +278,7 @@ describe('TtsService', () => {
       const fetchCall = (global.fetch as jest.Mock).mock.calls[0][1];
       const body = JSON.parse(fetchCall.body);
       
-      expect(body.model_id).toBe('eleven_multilingual_v2');
+      expect(body.model_id).toBe('eleven_v3');
     });
   });
 

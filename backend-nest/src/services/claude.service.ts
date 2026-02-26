@@ -1,10 +1,32 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const CLAUDE_SETTINGS_PATH = path.join(__dirname, '../../data/claude-settings.json');
+const DEFAULT_CLAUDE_SETTINGS = {
+  model: 'claude-opus-4-20250514',
+  max_tokens: 16000,
+  temperature: 1.0,
+  thinking_budget: 10000,
+};
+
+function loadClaudeSettings() {
+  try {
+    const raw = fs.readFileSync(CLAUDE_SETTINGS_PATH, 'utf-8');
+    return { ...DEFAULT_CLAUDE_SETTINGS, ...JSON.parse(raw) };
+  } catch {
+    return { ...DEFAULT_CLAUDE_SETTINGS };
+  }
+}
 
 export interface Character {
   name: string;
-  gender: 'child_m' | 'child_f' | 'adult_m' | 'adult_f' | 'elder_m' | 'elder_f' | 'creature';
-  traits: string[];
+  gender: 'male' | 'female';
+  age: number;
+  type: string;
+  species: string;
+  voice_character: string;
   emoji?: string;
   description?: string;
 }
@@ -12,10 +34,22 @@ export interface Character {
 export interface Line {
   speaker: string;
   text: string;
+  emotion?: string;
+}
+
+export interface SfxLine {
+  sfx: string;
+  duration: number;
+}
+
+export type ScriptLine = Line | SfxLine;
+
+export function isSfxLine(line: any): line is SfxLine {
+  return 'sfx' in line && !('speaker' in line);
 }
 
 export interface Scene {
-  lines: Line[];
+  lines: ScriptLine[];
 }
 
 export interface Script {
@@ -111,21 +145,32 @@ Antworte NUR mit validem JSON (kein Markdown, kein \`\`\`):
 {
   "title": "Kreativer Titel",
   "summary": "Ein kurzer Teaser-Satz, der neugierig macht und mit einer offenen Frage endet (z.B. 'Wird sie es schaffen?', 'Ob das gut geht?'). Maximal EIN Satz. Nicht spoilern!",
-  "characters": [{ "name": "Name", "gender": "child_m|child_f|adult_m|adult_f|elder_m|elder_f|creature", "traits": ["trait1", "trait2"], "description": "kurze visuelle Beschreibung mit Rolle, z.B. 'griesgrämiger Waldgeist mit moosigem Bart' oder 'mutiges Mädchen mit Pferdeschwanz'" }],
-  "scenes": [{ "lines": [{ "speaker": "Name", "text": "Dialog" }] }]
+  "characters": [{ "name": "Name", "gender": "male|female", "age": 8, "type": "human|creature", "species": "human|unicorn|owl|dragon|...", "voice_character": "kind|funny|evil|wise", "description": "kurze visuelle Beschreibung mit Rolle" }],
+  "scenes": [{ "lines": [{ "speaker": "Name", "text": "Dialog", "emotion": "neutral" }, { "sfx": "english sound description", "duration": 2 }] }]
 }
 
-WICHTIG zu gender:
-- child_m = männliches Kind/Junge, child_f = weibliches Kind/Mädchen
-- adult_m = erwachsener Mann, adult_f = erwachsene Frau
-- elder_m = älterer Mann, elder_f = ältere Frau
-- creature = Fabelwesen, Tiere, Drachen, etc.
-- Der Erzähler hat IMMER gender "adult_m" (wird automatisch zugewiesen)
-- KEINE SFX — lasse das "sfx" Feld komplett weg
+WICHTIG zu SFX-Zeilen in scenes:
+- SFX-Zeilen haben KEIN "speaker" und KEIN "text" — nur "sfx" (englische Beschreibung) und "duration" (Sekunden, 1-5)
+- SFX stehen ZWISCHEN normalen Sprechzeilen
+- 1-3 SFX pro Szene, sparsam und wirkungsvoll einsetzen
+- Die sfx-Beschreibung ist IMMER auf Englisch (z.B. "door creaking open", "thunder rumbling", "leaves rustling")
 
-WICHTIG zu traits (1-3 pro Charakter):
-Wähle aus: mutig, neugierig, schüchtern, lustig, albern, fröhlich, warm, liebevoll, streng, arrogant, verschmitzt, gerissen, verrückt, cool, ruhig, dominant, sarkastisch, durchtrieben, sanft, märchenhaft
-Die traits beschreiben die PERSÖNLICHKEIT des Charakters und werden für die Stimmzuordnung genutzt.`;
+WICHTIG zu emotion:
+- Jede Sprechzeile MUSS ein "emotion"-Feld haben (englisch)
+- Erlaubte Werte: neutral, happy, excited, sad, angry, scared, nervous, surprised, proud, shy, mysterious, whispering, shouting, laughing, crying
+- Die Emotion beschreibt die GRUNDSTIMMUNG der Zeile — zusätzliche Audio-Tags im Text sind weiterhin erlaubt
+- Emotionen dürfen sich über mehrere Zeilen halten (trauriges Einhorn bleibt "sad" bis sich etwas ändert)
+- JEDE Figur (außer Erzähler) MUSS eine passende Emotion haben — "neutral" ist fast nie richtig! Auch "Hallo, hast du meine Mama gesehen?" ist mindestens "nervous" oder "hopeful"
+- Der Erzähler darf neutral sein, aber andere Figuren nicht
+- SFX-Zeilen haben KEIN emotion-Feld
+
+WICHTIG zu Charakteren:
+- gender: "male" oder "female" — auch für Tiere und Fabelwesen
+- age: geschätztes Alter als Zahl. Bei Tieren/Kreaturen: wie alt KLINGT die Figur? (kleiner Troll = 8, weise Eule = 80, junges Einhorn = 4)
+- type: "human" für Menschen, "creature" für alles andere (Tiere, Fabelwesen, Monster, Roboter etc.)
+- species: die KONKRETE Spezies auf Englisch (für Icons). Beispiele: "human", "unicorn", "owl", "dragon", "fox", "troll", "fairy", "robot", "cat", "bear". Bei Menschen immer "human"
+- voice_character: beschreibt den STIMMCHARAKTER — "kind" (warm, freundlich), "funny" (verspielt, albern), "evil" (bedrohlich, dunkel), "wise" (ruhig, weise)
+- Der Erzähler hat IMMER gender "male", age 35, type "human", species "human", voice_character "kind" (wird automatisch zugewiesen)`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -134,16 +179,20 @@ Die traits beschreiben die PERSÖNLICHKEIT des Charakters und werden für die St
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'claude-opus-4-20250514',
-        max_tokens: 16000,
-        thinking: {
-          type: 'enabled',
-          budget_tokens: 10000,
-        },
-        messages: [{ role: 'user', content: `Schreibe ein Hörspiel basierend auf diesem Prompt:\n\n${prompt}\n\nDenke zuerst gründlich nach: Plane die Story-Struktur, die Charaktere und ihre Beziehungen, den Spannungsbogen, und wie der Held das Problem clever löst. Prüfe auf Logikfehler und Widersprüche. Dann schreibe das finale JSON.` }],
-        system: systemPrompt,
-      }),
+      body: JSON.stringify((() => {
+        const cs = loadClaudeSettings();
+        return {
+          model: cs.model,
+          max_tokens: cs.max_tokens,
+          temperature: cs.temperature,
+          thinking: {
+            type: 'enabled',
+            budget_tokens: cs.thinking_budget,
+          },
+          messages: [{ role: 'user', content: `Schreibe ein Hörspiel basierend auf diesem Prompt:\n\n${prompt}\n\nDenke zuerst gründlich nach: Plane die Story-Struktur, die Charaktere und ihre Beziehungen, den Spannungsbogen, und wie der Held das Problem clever löst. Prüfe auf Logikfehler und Widersprüche. Dann schreibe das finale JSON.` }],
+          system: systemPrompt,
+        };
+      })()),
     });
 
     if (!response.ok) {
@@ -158,7 +207,23 @@ Die traits beschreiben die PERSÖNLICHKEIT des Charakters und werden für die St
     const text = textBlock.text.trim();
     // Parse JSON, handle potential markdown wrapping
     const jsonStr = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '');
-    const script = JSON.parse(jsonStr);
+    let script: any;
+    try {
+      script = JSON.parse(jsonStr);
+    } catch (e) {
+      // Try to fix common Claude JSON errors: trailing commas, unescaped quotes in strings
+      const fixed = jsonStr
+        .replace(/,\s*([\]}])/g, '$1')  // trailing commas
+        .replace(/([^\\])"\s*\n/g, '$1\\"\n');  // unescaped quotes
+      try {
+        script = JSON.parse(fixed);
+        console.log('JSON auto-fixed (trailing comma or similar)');
+      } catch {
+        console.error('Script generation error:', e);
+        console.error('Raw JSON (first 500 chars):', jsonStr.substring(0, 500));
+        throw e;
+      }
+    }
     
     // Extract thinking tokens
     const thinkingBlock = data.content.find((b: any) => b.type === 'thinking');
@@ -179,9 +244,9 @@ Die traits beschreiben die PERSÖNLICHKEIT des Charakters und werden für die St
     const ANTHROPIC_API_KEY = this.configService.get<string>('ANTHROPIC_API_KEY');
     if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY nicht konfiguriert');
 
-    const totalLines = script.scenes.reduce((t, s) => t + s.lines.length, 0);
+    const totalLines = script.scenes.reduce((t, s) => t + s.lines.filter(l => !isSfxLine(l)).length, 0);
     const scriptText = script.scenes.map((scene, si) =>
-      scene.lines.map(l => `[Szene ${si + 1}] ${l.speaker}: ${l.text}`).join('\n')
+      scene.lines.map(l => isSfxLine(l) ? `[Szene ${si + 1}] 🔊 SFX: ${l.sfx}` : `[Szene ${si + 1}] ${l.speaker}: ${l.text}`).join('\n')
     ).join('\n\n');
 
     const systemPrompt = `Du bist ein erfahrener Lektor für deutsche Kinderhörspiele. Du überprüfst Skripte auf Qualität, Natürlichkeit und Altersangemessenheit.
@@ -229,7 +294,7 @@ Maximal 15 Vorschläge, fokussiert auf die wichtigsten Verbesserungen. Bei "inse
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-20250514',
+        model: loadClaudeSettings().model,
         max_tokens: 4096,
         system: systemPrompt,
         messages: [{ role: 'user', content: `Hier ist das Skript für ein Kinderhörspiel (${age} Jahre, ${script.scenes.length} Szenen, ${totalLines} Zeilen):\n\nTitel: ${script.title}\n\nCharaktere: ${script.characters.map(c => `${c.name} (${c.gender})`).join(', ')}\n\n${scriptText}` }],

@@ -25,7 +25,10 @@ const CATEGORY_MAP: Record<string, string[]> = {
   adult_f: ['adult_f'],
   elder_m: ['elder_m'],
   elder_f: ['elder_f'],
-  creature: ['creature'],
+  creature_m: ['creature_m'],
+  creature_f: ['creature_f'],
+  // Legacy support
+  creature: ['creature_m', 'creature_f'],
 };
 
 export function VoicePicker({ characterName, currentVoiceId, category, voices, onSelect, onClose }: Props) {
@@ -39,15 +42,27 @@ export function VoicePicker({ characterName, currentVoiceId, category, voices, o
   const filtered = [...matching, ...others];
   const matchingCount = matching.length;
 
-  const playPreview = (voice: Voice) => {
+  const playPreview = async (voice: Voice) => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     if (playingId === voice.voice_id) { setPlayingId(null); return; }
-    if (!voice.preview_url) return;
-    const audio = new Audio(voice.preview_url);
-    audio.onended = () => setPlayingId(null);
-    audio.play();
-    audioRef.current = audio;
     setPlayingId(voice.voice_id);
+    try {
+      // Use backend preview endpoint (generates on-demand via ElevenLabs)
+      const res = await fetch(`/api/voices/${voice.voice_id}/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: sessionStorage.getItem('fablino_auth') || '' },
+        body: JSON.stringify({ text: `Hallo! Ich bin ${voice.name}. Ich erzähle dir eine Geschichte!` }),
+      });
+      if (!res.ok) throw new Error('Preview failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => setPlayingId(null);
+      audio.play();
+      audioRef.current = audio;
+    } catch {
+      setPlayingId(null);
+    }
   };
 
   useEffect(() => {
@@ -78,10 +93,9 @@ export function VoicePicker({ characterName, currentVoiceId, category, voices, o
             >
               <button
                 onClick={(e) => { e.stopPropagation(); playPreview(voice); }}
-                disabled={!voice.preview_url}
                 className={`p-1.5 rounded-full transition-colors ${
-                  playingId === voice.voice_id ? 'bg-brand text-white' : 'bg-gray-800 hover:bg-gray-700'
-                } ${!voice.preview_url ? 'opacity-30' : ''}`}
+                  playingId === voice.voice_id ? 'bg-brand text-white animate-pulse' : 'bg-gray-800 hover:bg-gray-700'
+                }`}
               >
                 {playingId === voice.voice_id ? <VolumeX size={14} /> : <Volume2 size={14} />}
               </button>

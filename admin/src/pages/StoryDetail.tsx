@@ -1,26 +1,23 @@
+import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchStory, deleteStory, toggleFeatured, updateStoryStatus } from '../api';
 import { useAudio } from '../audioContext';
-import { ArrowLeft, Play, Star, Trash2, Check, Copy } from 'lucide-react';
+import { ArrowLeft, Play, Star, Trash2, Check, Copy, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TwemojiIcon } from '../charEmoji';
 import { GenerateForm } from '../components/GenerateForm';
 import { DraftPreview } from '../components/DraftPreview';
-import { ScriptLine } from '../components/ScriptLine';
+// ScriptLine removed — DraftPreview handles all script rendering
+import { getAuth } from '../utils/auth';
 
 export function StoryDetail() {
   const { id } = useParams<{ id: string }>();
   const nav = useNavigate();
   const qc = useQueryClient();
-  const { play } = useAudio();
+  const { load, stop } = useAudio();
   const { data: story, isLoading } = useQuery({ queryKey: ['story', id], queryFn: () => fetchStory(id!) });
-  const { data: allVoices = [] } = useQuery({ queryKey: ['voices'], queryFn: () => fetch('/api/voices').then(r => r.json()) });
   const { data: costsData } = useQuery({ queryKey: ['costs', id], queryFn: () => fetch(`/api/stories/${id}/costs`).then(r => r.json()), enabled: !!id });
-  const voiceSettings: Record<string, any> = {};
-  (allVoices as any[]).forEach((v: any) => {
-    voiceSettings[v.voice_id] = { stability: v.stability, similarity_boost: v.similarity_boost, style: v.style, use_speaker_boost: v.use_speaker_boost };
-  });
 
   const delMut = useMutation({
     mutationFn: deleteStory,
@@ -31,31 +28,62 @@ export function StoryDetail() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['story', id] }); toast.success('Featured aktualisiert'); },
   });
 
+  const [coverLoading, setCoverLoading] = React.useState(false);
+  const [localCoverUrl, setLocalCoverUrl] = React.useState<string | undefined>(undefined);
+
+  const handleGenerateCover = async () => {
+    setCoverLoading(true);
+    try {
+      const res = await fetch(`/api/stories/${id}/generate-cover`, { method: 'POST', headers: { Authorization: getAuth() } });
+      const data = await res.json();
+      if (data.coverUrl) {
+        setLocalCoverUrl(data.coverUrl + '?t=' + Date.now() as string);
+        qc.invalidateQueries({ queryKey: ['story', id] });
+        toast.success('Cover generiert!');
+      }
+    } catch { toast.error('Cover-Generierung fehlgeschlagen'); }
+    setCoverLoading(false);
+  };
+
+  // Auto-load GlobalPlayer when story has audio, stop on unmount
+  React.useEffect(() => {
+    if (story && (story as any).audioUrl) {
+      load(story.id, story.title);
+    }
+    return () => stop();
+  }, [story?.id, (story as any)?.audioUrl]);
+
   if (isLoading || !story) return <p className="p-6 text-text-muted">Laden…</p>;
 
   const isRequested = (story as any).status === 'requested';
   const isDraft = (story as any).status === 'draft';
 
-  const grouped: Record<number, typeof story.lines> = {};
-  story.lines?.forEach((l) => {
-    (grouped[l.sceneIdx] ??= []).push(l);
-  });
+  const isDraftOrProduced = isDraft || (story as any).status === 'produced';
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-4xl">
       <button onClick={() => nav('/stories')} className="flex items-center gap-1 text-text-muted hover:text-text text-sm">
         <ArrowLeft size={16} /> Zurück
       </button>
 
-      <div className="flex gap-6">
-        {story.coverUrl ? (
-          <img src={story.coverUrl} alt="" className="w-48 h-48 rounded-xl object-cover" />
-        ) : (
-          <div className="w-48 h-48 rounded-xl bg-surface-alt flex items-center justify-center text-5xl">📖</div>
-        )}
+      <div className="flex flex-col sm:flex-row gap-4 md:gap-6">
+        <div className="relative w-32 h-32 sm:w-48 sm:h-48 rounded-xl overflow-hidden group cursor-pointer shrink-0 mx-auto sm:mx-0" onClick={handleGenerateCover}>
+          {(localCoverUrl || story.coverUrl) ? (
+            <>
+              <img src={localCoverUrl || story.coverUrl || ''} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
+                {coverLoading ? <Loader2 size={24} className="animate-spin" /> : <><span className="text-2xl">🔄</span><span className="text-xs mt-1">Neu generieren</span></>}
+              </div>
+            </>
+          ) : (
+            <div className="w-full h-full bg-surface-alt flex flex-col items-center justify-center gap-2">
+              {coverLoading ? <Loader2 size={24} className="animate-spin text-text-muted" /> : <><span className="text-4xl">🎨</span><span className="text-xs text-text-muted">Cover generieren</span></>}
+            </div>
+          )}
+        </div>
         <div className="flex-1 space-y-2">
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold">{story.title}</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <h2 className="text-xl md:text-2xl font-bold">{story.title}</h2>
             {costsData?.costs?.length > 0 && (
               <details className="ml-auto shrink-0">
                 <summary className="text-sm font-medium text-text-muted cursor-pointer hover:text-text bg-surface border border-border rounded-lg px-3 py-1.5">
@@ -99,21 +127,26 @@ export function StoryDetail() {
           )}
           {story.summary && !story.summary.startsWith('{') && <p className="text-sm">{story.summary}</p>}
           <div className="flex gap-2 mt-3 flex-wrap">
-            {(story as any).audioUrl && (
-              <button onClick={() => play(story.id, story.title)} className="flex items-center gap-2 px-4 py-2 bg-brand rounded-lg text-sm text-white hover:bg-green-700 transition-colors">
-                <Play size={16} /> Abspielen
+            {(story as any).status === 'produced' && (
+              <button onClick={async () => {
+                if (!confirm('Audio löschen und zurück zum Entwurf?')) return;
+                await updateStoryStatus(story.id, 'draft');
+                qc.invalidateQueries({ queryKey: ['story', id] });
+                toast.success('Zurück zum Entwurf');
+              }} className="flex items-center gap-2 px-4 py-2 bg-surface border border-border rounded-lg text-sm hover:bg-surface-hover transition-colors">
+                ✏️ Zurück zu Entwurf
               </button>
             )}
-            {isDraft && (story as any).audioUrl && (
+            {(isDraft || (story as any).status === 'produced') && (story as any).audioUrl && (
               <button onClick={async () => {
-                await updateStoryStatus(story.id, 'produced');
+                await updateStoryStatus(story.id, 'published');
                 qc.invalidateQueries({ queryKey: ['story', id] });
                 toast.success('Hörbuch veröffentlicht');
               }} className="flex items-center gap-2 px-4 py-2 bg-brand rounded-lg text-sm text-white hover:bg-green-700 transition-colors">
-                <Check size={16} /> → Hörbuch
+                <Check size={16} /> Veröffentlichen
               </button>
             )}
-            {!isRequested && !isDraft && (
+            {['published', 'feedback'].includes((story as any).status) && (
               <>
                 <button onClick={() => { navigator.clipboard.writeText(`https://fablino.de/story/${story.id}`); toast.success('Link kopiert'); }}
                   className="flex items-center gap-2 px-4 py-2 bg-surface border border-border rounded-lg text-sm hover:bg-surface-hover transition-colors">
@@ -143,11 +176,12 @@ export function StoryDetail() {
         />
       )}
 
-      {/* Draft: show script preview with confirm/regenerate */}
-      {isDraft && (story as any).scriptData && (
+      {/* Script view: draft mode with buttons, or readonly for published */}
+      {(story as any).scriptData && (
         <DraftPreview
           story={story}
           onDone={() => qc.invalidateQueries({ queryKey: ['story', id] })}
+          mode={isDraft ? 'draft' : 'readonly'}
         />
       )}
 
@@ -159,38 +193,8 @@ export function StoryDetail() {
         />
       )}
 
-      {/* Characters */}
-      {story.characters?.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Charaktere</h3>
-          <div className="flex gap-2 flex-wrap">
-            {story.characters.map((c) => (
-              <span key={c.id} className="px-3 py-1 bg-surface border border-border rounded-full text-sm">
-                <TwemojiIcon emoji={c.emoji || '✨'} size={16} /> {c.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Characters + Script blocks removed — DraftPreview handles both */}
 
-      {/* Script */}
-      {Object.keys(grouped).length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold mb-3">Skript</h3>
-          <div className="space-y-4">
-            {Object.entries(grouped).sort(([a], [b]) => Number(a) - Number(b)).map(([scene, lines]) => (
-              <div key={scene} className="bg-surface border border-border rounded-lg p-4">
-                <p className="text-xs text-text-muted mb-2">Szene {Number(scene) + 1}</p>
-                <div className="space-y-2">
-                  {lines.sort((a, b) => a.lineIdx - b.lineIdx).map((l) => (
-                    <ScriptLine key={l.id} line={l} story={story} voiceSettings={voiceSettings} onUpdated={() => qc.invalidateQueries({ queryKey: ['story', id] })} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

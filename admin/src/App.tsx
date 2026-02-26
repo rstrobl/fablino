@@ -9,6 +9,7 @@ import { Stories } from './pages/Stories';
 import { StoryDetail } from './pages/StoryDetail';
 import { Waitlist } from './pages/Waitlist';
 import { Voices } from './pages/Voices';
+import { SoundEffects } from './pages/SoundEffects';
 import { SettingsPage } from './pages/SettingsPage';
 import Login from './pages/Login';
 
@@ -31,6 +32,7 @@ function AppRoutes() {
           <Route path="/stories/:id" element={<StoryDetail />} />
           <Route path="/waitlist" element={<Waitlist />} />
           <Route path="/voices" element={<Voices />} />
+          <Route path="/sfx" element={<SoundEffects />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>
