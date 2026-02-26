@@ -268,12 +268,14 @@ WICHTIG zu Charakteren:
     age: number = 6,
     characters?: CharacterRequest,
     systemPromptOverride?: string,
+    onProgress?: (step: string) => void,
   ): Promise<GeneratedScript> {
     const cs = loadClaudeSettings();
     const pipeline: PipelineLog = { steps: [], totalTokens: { input: 0, output: 0 } };
 
     // === STEP 1: Author writes the story ===
     console.log('🖊️ Agent 1/4: Author writing story...');
+    onProgress?.('Autor schreibt Story...');
     const authorStart = Date.now();
 
     const authorPrompt = loadPromptFile('agent-author.txt') || loadPromptFile('system-prompt.txt');
@@ -310,6 +312,7 @@ WICHTIG zu Charakteren:
 
     // === STEP 2: Reviewer checks the story ===
     console.log('🔍 Agent 2/4: Reviewer checking...');
+      onProgress?.('Lektor prüft Story...');
     const reviewerStart = Date.now();
 
     const reviewerPrompt = loadPromptFile('agent-reviewer.txt');
@@ -347,6 +350,7 @@ WICHTIG zu Charakteren:
       // === STEP 3: Author revises if needed ===
       if (!review.approved && review.issues.length > 0) {
         console.log('✏️ Agent 3/4: Author revising...');
+        onProgress?.('Autor überarbeitet Story...');
         const revisionStart = Date.now();
 
         const issueList = review.issues
@@ -387,6 +391,7 @@ WICHTIG zu Charakteren:
 
     // === STEP 4: TTS optimization ===
     console.log('🎙️ Agent 4/4: TTS optimizing...');
+    onProgress?.('TTS-Optimierung...');
     const ttsStart = Date.now();
 
     const ttsPrompt = loadPromptFile('agent-tts.txt');

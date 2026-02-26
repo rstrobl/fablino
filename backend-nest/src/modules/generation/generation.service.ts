@@ -103,13 +103,14 @@ export class GenerationService {
 
   private async generateScriptAsync(id: string, prompt: string, age: number, characters: any, systemPromptOverride?: string) {
     try {
-      await this.updateGenerationState(id, { progress: 'Skript wird geschrieben...' });
+      await this.updateGenerationState(id, { progress: 'Autor schreibt Story...' });
 
       const { script, systemPrompt, pipeline, usage } = await this.claudeService.generateScript(
         prompt,
         age,
         characters,
         systemPromptOverride,
+        (step) => this.updateGenerationState(id, { progress: step }).catch(() => {}),
       );
 
       // Track Claude cost
