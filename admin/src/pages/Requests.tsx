@@ -96,7 +96,7 @@ export function Requests() {
     .filter((s: any) => s.status === tab)
     .filter((s: any) => !search || 
       (s.heroName || '').toLowerCase().includes(search.toLowerCase()) || 
-      (s.interests || '').toLowerCase().includes(search.toLowerCase()) || 
+      
       (s.requesterName || '').toLowerCase().includes(search.toLowerCase()) ||
       (s.prompt || '').toLowerCase().includes(search.toLowerCase())
     );
@@ -119,7 +119,7 @@ export function Requests() {
         body: JSON.stringify({
           heroName: req.heroName || undefined,
           age: req.age || undefined,
-          prompt: req.prompt || req.interests || undefined,
+          prompt: req.prompt || undefined,
         }),
       });
       const data = await res.json();
@@ -177,10 +177,10 @@ export function Requests() {
             </div>
           )}
 
-          {(s.prompt || s.interests) && (
+          {(s.prompt) && (
             <div>
               <h3 className="text-sm font-medium text-text-muted mb-1">Wünsche / Interessen</h3>
-              <p className="text-sm whitespace-pre-wrap">{s.prompt || s.interests}</p>
+              <p className="text-sm whitespace-pre-wrap">{s.prompt}</p>
             </div>
           )}
 
@@ -279,8 +279,8 @@ export function Requests() {
                     {s.age && <span className="text-xs text-text-muted bg-surface-alt px-2 py-0.5 rounded">{s.age} J.</span>}
                     <StatusBadge status={s.status} />
                   </div>
-                  {(s.prompt || s.interests) && (
-                    <p className="text-sm text-text-muted line-clamp-2 mb-2">{s.prompt || s.interests}</p>
+                  {(s.prompt) && (
+                    <p className="text-sm text-text-muted line-clamp-2 mb-2">{s.prompt}</p>
                   )}
                   <div className="flex items-center gap-3 text-xs text-text-muted">
                     {s.requesterName && (

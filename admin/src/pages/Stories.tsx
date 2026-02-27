@@ -77,7 +77,7 @@ export function Stories() {
   });
 
   const filtered = stories
-    .filter((s: any) => !search || (s.title || '').toLowerCase().includes(search.toLowerCase()) || (s.interests || '').toLowerCase().includes(search.toLowerCase()) || (s.requesterName || '').toLowerCase().includes(search.toLowerCase()))
+    .filter((s: any) => !search || (s.title || '').toLowerCase().includes(search.toLowerCase()) || (s.requesterName || '').toLowerCase().includes(search.toLowerCase()))
     .filter((s: any) => {
       if (!statusFilter) return true;
       if (statusFilter === 'draft') return ['draft', 'produced'].includes(s.status);

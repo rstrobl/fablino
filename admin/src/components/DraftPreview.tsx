@@ -506,17 +506,10 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
         </div>
       </div>
 
-      {mode === 'draft' && (story.prompt || story.interests) && (
+      {mode === 'draft' && (story.prompt) && (
         <div className="bg-gray-900/50 rounded-lg p-3">
           <p className="text-xs text-text-muted mb-1">Prompt</p>
           <p className="text-sm">{story.prompt}</p>
-          {story.interests && story.interests !== story.prompt && (
-            <>
-              <p className="text-xs text-text-muted mb-1 mt-2">Interessen</p>
-              <p className="text-sm">{story.interests}</p>
-            </>
-          )}
-        </div>
       )}
 
       <div className="flex gap-4 text-xs text-text-muted">

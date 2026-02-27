@@ -120,8 +120,6 @@ export function StoryDetail() {
               {(story as any).requesterSource && <span className="text-text-muted"> ({(story as any).requesterSource})</span>}
             </p>
           )}
-          {(story as any).interests && (
-            <p className="text-sm">Interessen: <span className="text-text-muted">{(story as any).interests}</span></p>
           )}
           {story.summary && !story.summary.startsWith('{') && <p className="text-sm">{story.summary}</p>}
           <div className="flex gap-2 mt-3 flex-wrap">

@@ -589,7 +589,7 @@ export class GenerationService {
     if (customPrompt) {
       await this.prisma.story.update({
         where: { id: storyId },
-        data: { interests: customPrompt },
+        data: { prompt: customPrompt },
       });
     }
 
