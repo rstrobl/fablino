@@ -244,7 +244,7 @@
     "id": "dragon_roar",
     "name": "Drache",
     "category": "animals",
-    "prompt": "Dragon roaring fiercely, deep powerful roar with slight echo",
+    "prompt": "Dragon roaring fiercely, deep powerful roar",
     "duration": 4,
     "file": "dragon_roar.mp3",
     "active": true

@@ -24,20 +24,24 @@ export class ReplicateService {
     }
 
     try {
-      // Separate humans and creatures for clearer image generation
+      // Build character descriptions from script data
       const nonNarrator = characters.filter(c => c.name !== 'Erzähler').slice(0, 4);
-      const humans = nonNarrator
-        .filter(c => !c.species || c.species === 'human')
-        .map(c => `a ${c.age || 8} year old ${c.gender === 'female' ? 'girl' : 'boy'} with ${c.description || 'adventurous look'}`)
-        .join(', ');
-      const creatures = nonNarrator
-        .filter(c => c.species && c.species !== 'human')
-        .map(c => `a ${c.species}`)
+      const charDescriptions = nonNarrator
+        .map(c => {
+          const name = c.name;
+          const desc = c.description || '';
+          const species = c.species && c.species !== 'human' ? c.species : '';
+          if (species) return `${name} (a ${species}${desc ? ', ' + desc : ''})`;
+          const age = c.age || 8;
+          const genderWord = c.gender === 'female' ? 'girl' : 'boy';
+          return `${name} (a ${age} year old ${genderWord}${desc ? ', ' + desc : ''})`;
+        })
         .join(', ');
       
-      const charPart = [humans, creatures].filter(Boolean).join('. Accompanied by: ');
+      const charPart = charDescriptions || 'colorful fantasy characters';
+      const scenePart = summary || title;
       
-      const prompt = `Watercolor children's storybook illustration. Main character: ${charPart || 'a child on an adventure'}. Scene: ${summary || title}. Style: warm magical lighting, soft pastel colors, whimsical fairy tale watercolor, cute rounded character designs, no text, no words, no letters, no writing. The human child must look fully human with no animal features.`;
+      const prompt = `Watercolor children's storybook illustration. Characters: ${charPart}. Scene: ${scenePart}. Style: warm magical lighting, soft pastel colors, whimsical fairy tale watercolor, cute rounded character designs, no text, no words, no letters, no writing.`;
       
       // Create prediction
       const createRes = await fetch('https://api.replicate.com/v1/predictions', {
