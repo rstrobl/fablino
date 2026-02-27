@@ -82,7 +82,7 @@ export class GenerationService {
       await this.prisma.story.update({
         where: { id },
         data: {
-          status: 'requested',
+          status: 'draft',
           scriptData: {
             generationState: { status: 'waiting_for_script', progress: 'Skript wird geschrieben...', startedAt: Date.now() },
           } as any,
@@ -92,7 +92,7 @@ export class GenerationService {
       await this.prisma.story.create({
         data: {
           id,
-          status: 'requested',
+          status: 'draft',
           prompt,
           age: age || null,
           scriptData: {
