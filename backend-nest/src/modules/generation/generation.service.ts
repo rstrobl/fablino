@@ -515,6 +515,18 @@ export class GenerationService {
 
     // Active generation states
     if (genState.status === 'waiting_for_script') {
+      // If script already exists (in scriptData or currentScript), treat as preview
+      const resolvedScript = scriptData?.script || (genState as any).currentScript;
+      if (resolvedScript) {
+        return {
+          status: 'preview',
+          script: resolvedScript,
+          voiceMap: scriptData?.voiceMap,
+          prompt: story.prompt,
+          age: Number(story.age) || 6,
+          systemPrompt: scriptData?.systemPrompt,
+        };
+      }
       return {
         status: 'waiting_for_script',
         progress: genState.progress || 'Skript wird geschrieben...',
