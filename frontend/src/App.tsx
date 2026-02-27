@@ -601,7 +601,7 @@ function App() {
                     <div key={s.id} className="featured-card">
                       <div className="featured-clickable" onClick={() => playStory(s)}>
                         {s.coverUrl && (
-                          <img src={s.coverUrl} alt={s.title} className="featured-cover" />
+                          <img src={s.coverUrl.replace('/covers/', '/covers/thumb/')} alt={s.title} className="featured-cover" loading="lazy" />
                         )}
                         <h3>{s.title}</h3>
                         {s.heroName && <span className="story-hero">Für {s.heroName}{s.age ? `, ${Math.round(s.age)} Jahre` : ''}</span>}
