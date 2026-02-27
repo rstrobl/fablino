@@ -1,10 +1,17 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchStories, deleteStory } from '../api';
-import { Search, Plus, Trash2, User, X, Wand2, ArrowLeft, Mail, Calendar, MessageSquare } from 'lucide-react';
+import { Search, Plus, Trash2, User, X, Wand2, ArrowLeft, Mail, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { GenerateForm } from '../components/GenerateForm';
 import { getAuth } from '../utils/auth';
+
+const API = '/api/requests';
+
+async function fetchRequests() {
+  const res = await fetch(API);
+  if (!res.ok) throw new Error('Failed to fetch requests');
+  return res.json();
+}
 
 function timeAgo(date: string) {
   const d = new Date(date);
@@ -21,47 +28,52 @@ function timeAgo(date: string) {
 function SourceBadge({ source }: { source: string | null }) {
   if (!source) return null;
   const colors: Record<string, string> = {
-    'Antler WhatsApp': 'bg-amber-500/20 text-amber-400',
-    'Freund': 'bg-blue-500/20 text-blue-400',
     'Direktkontakt': 'bg-green-500/20 text-green-400',
+    'Webseite': 'bg-blue-500/20 text-blue-400',
     'Anderes': 'bg-purple-500/20 text-purple-400',
   };
   return <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${colors[source] || 'bg-gray-500/20 text-gray-400'}`}>{source}</span>;
 }
 
+function StatusBadge({ status }: { status: string }) {
+  if (status === 'done') return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400">Erledigt</span>;
+  return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">Offen</span>;
+}
+
 export function Requests() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
-  const [selectedStory, setSelectedStory] = useState<any | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [showGenerateForm, setShowGenerateForm] = useState(false);
   const [showCreateRequest, setShowCreateRequest] = useState(false);
 
   // New request form state
   const [reqName, setReqName] = useState('');
   const [reqAge, setReqAge] = useState('');
-  const [reqHero, setReqHero] = useState('');
   const [reqPrompt, setReqPrompt] = useState('');
   const [reqContact, setReqContact] = useState('');
   const [reqSource, setReqSource] = useState('Direktkontakt');
 
-  const { data: stories = [], isLoading } = useQuery({
-    queryKey: ['stories'],
-    queryFn: fetchStories,
+  const { data: requests = [], isLoading } = useQuery({
+    queryKey: ['requests'],
+    queryFn: fetchRequests,
   });
 
-  const delMut = useMutation({
-    mutationFn: deleteStory,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['stories'] }); toast.success('Anfrage gelöscht'); },
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API}/${id}`, { method: 'DELETE', headers: { Authorization: getAuth() } });
+      if (!res.ok) throw new Error('Failed');
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['requests'] }); toast.success('Anfrage gelöscht'); },
   });
 
   const createMut = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/reserve', {
+      const res = await fetch(API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: getAuth() },
         body: JSON.stringify({
-          heroName: reqHero || undefined,
-          heroAge: reqAge || undefined,
+          age: reqAge ? parseFloat(reqAge) : undefined,
           prompt: reqPrompt || undefined,
           requesterName: reqName || undefined,
           requesterSource: reqSource || undefined,
@@ -72,42 +84,46 @@ export function Requests() {
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['stories'] });
+      qc.invalidateQueries({ queryKey: ['requests'] });
       toast.success('Anfrage erstellt');
       setShowCreateRequest(false);
-      setReqName(''); setReqAge(''); setReqHero(''); setReqPrompt(''); setReqContact(''); setReqSource('Direktkontakt');
+      setReqName(''); setReqAge(''); setReqPrompt(''); setReqContact(''); setReqSource('Direktkontakt');
     },
   });
 
-  const requests = stories
-    .filter((s: any) => s.status === 'requested')
+  const filtered = requests
     .filter((s: any) => !search || 
-      (s.title || '').toLowerCase().includes(search.toLowerCase()) || 
+      (s.heroName || '').toLowerCase().includes(search.toLowerCase()) || 
       (s.interests || '').toLowerCase().includes(search.toLowerCase()) || 
       (s.requesterName || '').toLowerCase().includes(search.toLowerCase()) ||
       (s.prompt || '').toLowerCase().includes(search.toLowerCase())
-    )
-    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  const handleDone = () => {
-    setShowGenerateForm(false);
-    setSelectedStory(null);
-    qc.invalidateQueries({ queryKey: ['stories'] });
-  };
+    );
 
   const handleDelete = (id: string) => {
     if (confirm('Anfrage wirklich löschen?')) {
-      delMut.mutate(id);
-      if (selectedStory?.id === id) setSelectedStory(null);
+      deleteMut.mutate(id);
+      if (selectedRequest?.id === id) setSelectedRequest(null);
     }
   };
 
-  // Detail view for a selected request
-  if (selectedStory && !showGenerateForm) {
-    const s = selectedStory;
+  // When creating a story from a request, we build a story-like object for GenerateForm
+  const storyFromRequest = selectedRequest ? {
+    id: null, // will be created via /api/reserve
+    status: 'requested',
+    heroName: selectedRequest.heroName || '',
+    age: selectedRequest.age || '',
+    prompt: selectedRequest.prompt || selectedRequest.interests || '',
+    interests: selectedRequest.interests || '',
+    title: selectedRequest.heroName ? `${selectedRequest.heroName}s Hörspiel` : '',
+    _requestId: selectedRequest.id, // to link back after creation
+  } : null;
+
+  // Detail view
+  if (selectedRequest && !showGenerateForm) {
+    const s = selectedRequest;
     return (
       <div className="p-4 md:p-6 space-y-4 max-w-2xl">
-        <button onClick={() => setSelectedStory(null)} className="flex items-center gap-1 text-text-muted hover:text-text text-sm">
+        <button onClick={() => setSelectedRequest(null)} className="flex items-center gap-1 text-text-muted hover:text-text text-sm">
           <ArrowLeft size={16} /> Zurück
         </button>
 
@@ -115,14 +131,16 @@ export function Requests() {
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-xl font-bold">
-                {s.heroName || s.title?.replace(/s Hörspiel$/, '') || s.title || '(Ohne Titel)'}
+                {s.heroName || s.prompt?.slice(0, 40) || '(Ohne Titel)'}
               </h2>
-              {s.age && <span className="text-sm text-text-muted">{s.age} Jahre</span>}
+              <div className="flex items-center gap-2 mt-1">
+                {s.age && <span className="text-sm text-text-muted">{s.age} Jahre</span>}
+                <StatusBadge status={s.status} />
+              </div>
             </div>
             <SourceBadge source={s.requesterSource} />
           </div>
 
-          {/* Contact info */}
           {(s.requesterName || s.requesterContact) && (
             <div className="bg-gray-900/50 rounded-lg p-4 space-y-2">
               <h3 className="text-sm font-medium text-text-muted mb-2">Kontakt</h3>
@@ -141,18 +159,10 @@ export function Requests() {
             </div>
           )}
 
-          {/* Story details */}
           {(s.prompt || s.interests) && (
             <div>
-              <h3 className="text-sm font-medium text-text-muted mb-1">Beschreibung / Interessen</h3>
+              <h3 className="text-sm font-medium text-text-muted mb-1">Wünsche / Interessen</h3>
               <p className="text-sm whitespace-pre-wrap">{s.prompt || s.interests}</p>
-            </div>
-          )}
-
-          {s.heroName && (
-            <div>
-              <h3 className="text-sm font-medium text-text-muted mb-1">Held</h3>
-              <p className="text-sm">{s.heroName}</p>
             </div>
           )}
 
@@ -161,14 +171,21 @@ export function Requests() {
             <span>Erstellt: {new Date(s.createdAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
           </div>
 
-          {/* Actions */}
+          {s.storyId && (
+            <div className="bg-green-900/20 border border-green-800/30 rounded-lg p-3">
+              <p className="text-sm text-green-400">✅ Story erstellt — <a href={`/stories/${s.storyId}`} className="underline hover:text-green-300">Zur Story</a></p>
+            </div>
+          )}
+
           <div className="flex gap-3 pt-2 border-t border-border">
-            <button
-              onClick={() => setShowGenerateForm(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-            >
-              <Wand2 size={16} /> Story erstellen
-            </button>
+            {!s.storyId && (
+              <button
+                onClick={() => setShowGenerateForm(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                <Wand2 size={16} /> Story erstellen
+              </button>
+            )}
             <button
               onClick={() => handleDelete(s.id)}
               className="flex items-center gap-2 px-4 py-2.5 bg-red-900/30 border border-red-800/50 rounded-lg text-sm text-red-400 hover:bg-red-900/50 transition-colors"
@@ -186,7 +203,7 @@ export function Requests() {
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl md:text-2xl font-bold">Anfragen</h2>
-        <span className="text-sm text-text-muted">{requests.length} offen</span>
+        <span className="text-sm text-text-muted">{filtered.filter((r: any) => r.status === 'open').length} offen</span>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
@@ -209,25 +226,26 @@ export function Requests() {
 
       {isLoading ? (
         <p className="text-text-muted">Laden…</p>
-      ) : requests.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="bg-surface border border-border rounded-xl p-8 text-center">
-          <p className="text-text-muted">Keine offenen Anfragen</p>
+          <p className="text-text-muted">Keine Anfragen</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {requests.map((s: any) => (
+          {filtered.map((s: any) => (
             <div
               key={s.id}
-              onClick={() => setSelectedStory(s)}
+              onClick={() => setSelectedRequest(s)}
               className="bg-surface border border-border rounded-xl p-4 cursor-pointer hover:border-brand/30 transition-colors"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-medium text-sm">
-                      {s.heroName || s.title?.replace(/s Hörspiel$/, '') || s.title || '(Ohne Titel)'}
+                      {s.heroName || s.prompt?.slice(0, 50) || '(Ohne Titel)'}
                     </p>
                     {s.age && <span className="text-xs text-text-muted bg-surface-alt px-2 py-0.5 rounded">{s.age} J.</span>}
+                    <StatusBadge status={s.status} />
                   </div>
                   {(s.prompt || s.interests) && (
                     <p className="text-sm text-text-muted line-clamp-2 mb-2">{s.prompt || s.interests}</p>
@@ -328,22 +346,24 @@ export function Requests() {
       )}
 
       {/* GenerateForm Modal — from request detail */}
-      {showGenerateForm && selectedStory && (
+      {showGenerateForm && storyFromRequest && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowGenerateForm(false)}>
           <div className="bg-surface border border-border rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-surface border-b border-border px-6 py-4 flex items-center justify-between z-10">
-              <h3 className="text-lg font-bold">
-                Story: {selectedStory.heroName || selectedStory.title || '(Ohne Titel)'}
-              </h3>
+              <h3 className="text-lg font-bold">Story erstellen</h3>
               <button onClick={() => setShowGenerateForm(false)} className="text-text-muted hover:text-text">
                 <X size={20} />
               </button>
             </div>
             <div className="p-6">
               <GenerateForm
-                story={selectedStory}
-                onDone={handleDone}
-                onDelete={() => handleDelete(selectedStory.id)}
+                story={storyFromRequest}
+                onDone={() => {
+                  setShowGenerateForm(false);
+                  setSelectedRequest(null);
+                  qc.invalidateQueries({ queryKey: ['requests'] });
+                  qc.invalidateQueries({ queryKey: ['stories'] });
+                }}
               />
             </div>
           </div>

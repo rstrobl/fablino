@@ -14,6 +14,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { PlaysModule } from './modules/plays/plays.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { SfxModule } from './modules/sfx/sfx.module';
+import { RequestsModule } from './modules/requests/requests.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { SfxModule } from './modules/sfx/sfx.module';
     PlaysModule,
     SettingsModule,
     SfxModule,
+    RequestsModule,
   ],
 })
 export class AppModule {}

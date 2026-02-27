@@ -23,7 +23,7 @@ model Story {
   coverUrl      String?    @map("cover_url")
   voiceSettings Json?      @map("voice_settings")
   systemPrompt  String?    @map("system_prompt")
-  status          String     @default("requested")
+  status          String     @default("draft")
   requesterName   String?    @map("requester_name")
   requesterSource String?    @map("requester_source")
   requesterContact String?   @map("requester_contact")
@@ -98,6 +98,23 @@ model Line {
 
   @@index([storyId])
   @@map("lines")
+}
+
+model Request {
+  id               String   @id @default(uuid()) @db.Uuid
+  heroName         String?  @map("hero_name") @db.VarChar(100)
+  age              Float?
+  prompt           String?
+  interests        String?
+  requesterName    String?  @map("requester_name")
+  requesterSource  String?  @map("requester_source")
+  requesterContact String?  @map("requester_contact")
+  status           String   @default("open") @db.VarChar(20)
+  storyId          String?  @map("story_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@map("requests")
 }
 
 // waitlist table removed
