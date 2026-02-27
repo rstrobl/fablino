@@ -4,6 +4,7 @@ import { fetchStories, deleteStory } from '../api';
 import { Search, Plus, Trash2, User, X, Wand2, ArrowLeft, Mail, Calendar, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { GenerateForm } from '../components/GenerateForm';
+import { getAuth } from '../utils/auth';
 
 function timeAgo(date: string) {
   const d = new Date(date);
@@ -23,6 +24,7 @@ function SourceBadge({ source }: { source: string | null }) {
     'Antler WhatsApp': 'bg-amber-500/20 text-amber-400',
     'Freund': 'bg-blue-500/20 text-blue-400',
     'Direktkontakt': 'bg-green-500/20 text-green-400',
+    'Manuell': 'bg-purple-500/20 text-purple-400',
   };
   return <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${colors[source] || 'bg-gray-500/20 text-gray-400'}`}>{source}</span>;
 }
@@ -32,7 +34,15 @@ export function Requests() {
   const [search, setSearch] = useState('');
   const [selectedStory, setSelectedStory] = useState<any | null>(null);
   const [showGenerateForm, setShowGenerateForm] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreateRequest, setShowCreateRequest] = useState(false);
+
+  // New request form state
+  const [reqName, setReqName] = useState('');
+  const [reqAge, setReqAge] = useState('');
+  const [reqHero, setReqHero] = useState('');
+  const [reqPrompt, setReqPrompt] = useState('');
+  const [reqContact, setReqContact] = useState('');
+  const [reqSource, setReqSource] = useState('Manuell');
 
   const { data: stories = [], isLoading } = useQuery({
     queryKey: ['stories'],
@@ -42,6 +52,31 @@ export function Requests() {
   const delMut = useMutation({
     mutationFn: deleteStory,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['stories'] }); toast.success('Anfrage gelöscht'); },
+  });
+
+  const createMut = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: getAuth() },
+        body: JSON.stringify({
+          heroName: reqHero || undefined,
+          heroAge: reqAge || undefined,
+          prompt: reqPrompt || undefined,
+          requesterName: reqName || undefined,
+          requesterSource: reqSource || undefined,
+          requesterContact: reqContact || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error('Fehler beim Erstellen');
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['stories'] });
+      toast.success('Anfrage erstellt');
+      setShowCreateRequest(false);
+      setReqName(''); setReqAge(''); setReqHero(''); setReqPrompt(''); setReqContact(''); setReqSource('Manuell');
+    },
   });
 
   const requests = stories
@@ -56,7 +91,6 @@ export function Requests() {
 
   const handleDone = () => {
     setShowGenerateForm(false);
-    setShowCreate(false);
     setSelectedStory(null);
     qc.invalidateQueries({ queryKey: ['stories'] });
   };
@@ -67,18 +101,6 @@ export function Requests() {
       if (selectedStory?.id === id) setSelectedStory(null);
     }
   };
-
-  const blankStory = {
-    id: null,
-    status: 'requested',
-    heroName: '',
-    age: '',
-    prompt: '',
-    interests: '',
-    title: '',
-  };
-
-  const generateStory = showCreate ? blankStory : selectedStory;
 
   // Detail view for a selected request
   if (selectedStory && !showGenerateForm) {
@@ -101,7 +123,7 @@ export function Requests() {
           </div>
 
           {/* Contact info */}
-          {(s.requesterName || s.requesterEmail || s.requesterPhone) && (
+          {(s.requesterName || s.requesterContact) && (
             <div className="bg-gray-900/50 rounded-lg p-4 space-y-2">
               <h3 className="text-sm font-medium text-text-muted mb-2">Kontakt</h3>
               {s.requesterName && (
@@ -110,16 +132,10 @@ export function Requests() {
                   <span>{s.requesterName}</span>
                 </div>
               )}
-              {s.requesterEmail && (
+              {s.requesterContact && (
                 <div className="flex items-center gap-2 text-sm">
                   <Mail size={14} className="text-text-muted" />
-                  <a href={`mailto:${s.requesterEmail}`} className="text-brand hover:underline">{s.requesterEmail}</a>
-                </div>
-              )}
-              {s.requesterPhone && (
-                <div className="flex items-center gap-2 text-sm">
-                  <MessageSquare size={14} className="text-text-muted" />
-                  <span>{s.requesterPhone}</span>
+                  <span>{s.requesterContact}</span>
                 </div>
               )}
             </div>
@@ -184,10 +200,10 @@ export function Requests() {
           />
         </div>
         <button
-          onClick={() => setShowCreate(true)}
+          onClick={() => setShowCreateRequest(true)}
           className="flex items-center justify-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors text-sm font-medium whitespace-nowrap"
         >
-          <Plus size={16} /> Neue Story
+          <Plus size={16} /> Neue Anfrage
         </button>
       </div>
 
@@ -196,12 +212,6 @@ export function Requests() {
       ) : requests.length === 0 ? (
         <div className="bg-surface border border-border rounded-xl p-8 text-center">
           <p className="text-text-muted">Keine offenen Anfragen</p>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="mt-3 flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors text-sm font-medium mx-auto"
-          >
-            <Wand2 size={16} /> Neue Story erstellen
-          </button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -244,23 +254,107 @@ export function Requests() {
         </div>
       )}
 
-      {/* GenerateForm Modal — either from request detail or "Neue Story" */}
-      {(showGenerateForm || showCreate) && generateStory && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setShowGenerateForm(false); setShowCreate(false); }}>
+      {/* Neue Anfrage Modal */}
+      {showCreateRequest && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowCreateRequest(false)}>
+          <div className="bg-surface border border-border rounded-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h3 className="text-lg font-bold">Neue Anfrage</h3>
+              <button onClick={() => setShowCreateRequest(false)} className="text-text-muted hover:text-text"><X size={20} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm text-text-muted mb-1">Name des Anfragers</label>
+                <input
+                  value={reqName}
+                  onChange={e => setReqName(e.target.value)}
+                  placeholder="z.B. David, Familie Müller…"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-text-muted mb-1">Kontakt (Email, Telefon…)</label>
+                <input
+                  value={reqContact}
+                  onChange={e => setReqContact(e.target.value)}
+                  placeholder="z.B. david@example.com"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+                />
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm text-text-muted mb-1">Quelle</label>
+                  <select
+                    value={reqSource}
+                    onChange={e => setReqSource(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+                  >
+                    <option value="Manuell">Manuell</option>
+                    <option value="Antler WhatsApp">Antler WhatsApp</option>
+                    <option value="Freund">Freund</option>
+                    <option value="Direktkontakt">Direktkontakt</option>
+                    <option value="Webseite">Webseite</option>
+                  </select>
+                </div>
+                <div className="w-24">
+                  <label className="block text-sm text-text-muted mb-1">Alter</label>
+                  <input
+                    value={reqAge}
+                    onChange={e => setReqAge(e.target.value)}
+                    placeholder="z.B. 5"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-text-muted mb-1">Name der Hauptfigur (optional)</label>
+                <input
+                  value={reqHero}
+                  onChange={e => setReqHero(e.target.value)}
+                  placeholder="z.B. Laura, Captain Blubber…"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-text-muted mb-1">Wünsche / Interessen</label>
+                <textarea
+                  value={reqPrompt}
+                  onChange={e => setReqPrompt(e.target.value)}
+                  placeholder="Was wünscht sich das Kind? Themen, Lieblingsfiguren, Interessen…"
+                  rows={3}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand resize-none"
+                />
+              </div>
+              <button
+                onClick={() => createMut.mutate()}
+                disabled={createMut.isPending}
+                className="w-full py-2.5 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors font-medium disabled:opacity-50"
+              >
+                {createMut.isPending ? 'Erstellen…' : 'Anfrage erstellen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GenerateForm Modal — from request detail */}
+      {showGenerateForm && selectedStory && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowGenerateForm(false)}>
           <div className="bg-surface border border-border rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-surface border-b border-border px-6 py-4 flex items-center justify-between z-10">
               <h3 className="text-lg font-bold">
-                {showCreate ? 'Neue Story erstellen' : `Story: ${generateStory.heroName || generateStory.title || '(Ohne Titel)'}`}
+                Story: {selectedStory.heroName || selectedStory.title || '(Ohne Titel)'}
               </h3>
-              <button onClick={() => { setShowGenerateForm(false); setShowCreate(false); }} className="text-text-muted hover:text-text">
+              <button onClick={() => setShowGenerateForm(false)} className="text-text-muted hover:text-text">
                 <X size={20} />
               </button>
             </div>
             <div className="p-6">
               <GenerateForm
-                story={generateStory}
+                story={selectedStory}
                 onDone={handleDone}
-                onDelete={generateStory.id ? () => handleDelete(generateStory.id) : undefined}
+                onDelete={() => handleDelete(selectedStory.id)}
               />
             </div>
           </div>

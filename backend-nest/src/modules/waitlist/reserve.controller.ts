@@ -21,6 +21,9 @@ export class ReserveController {
         age,
         interests: dto.prompt || null,
         status: 'requested',
+        requesterName: dto.requesterName || null,
+        requesterSource: dto.requesterSource || null,
+        requesterContact: dto.requesterContact || null,
       },
     });
 

@@ -12,4 +12,16 @@ export class ReserveDto {
   @IsOptional()
   @IsString()
   prompt?: string;
+
+  @IsOptional()
+  @IsString()
+  requesterName?: string;
+
+  @IsOptional()
+  @IsString()
+  requesterSource?: string;
+
+  @IsOptional()
+  @IsString()
+  requesterContact?: string;
 }
