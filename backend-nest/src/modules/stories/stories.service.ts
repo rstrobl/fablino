@@ -188,6 +188,18 @@ export class StoriesService {
     return { status: 'ok', voiceMap };
   }
 
+  async setScriptConfirmed(id: string, confirmed: boolean) {
+    const story = await this.prisma.story.findUnique({ where: { id } });
+    if (!story) throw new NotFoundException('Story not found');
+    const scriptData = (story as any).scriptData as any || {};
+    scriptData.scriptConfirmed = confirmed;
+    await this.prisma.story.update({
+      where: { id },
+      data: { scriptData: scriptData as any },
+    });
+    return { status: 'ok', scriptConfirmed: confirmed };
+  }
+
   async resetScript(id: string) {
     const story = await this.prisma.story.findUnique({ where: { id } });
     if (!story) throw new NotFoundException('Story not found');

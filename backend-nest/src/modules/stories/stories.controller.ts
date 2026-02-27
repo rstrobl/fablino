@@ -51,6 +51,16 @@ export class StoriesController {
     return this.storiesService.resetScript(id);
   }
 
+  @Patch(':id/confirm-script')
+  async confirmScript(@Param('id') id: string) {
+    return this.storiesService.setScriptConfirmed(id, true);
+  }
+
+  @Patch(':id/unconfirm-script')
+  async unconfirmScript(@Param('id') id: string) {
+    return this.storiesService.setScriptConfirmed(id, false);
+  }
+
   @Get(':id/costs')
   async getStoryCosts(@Param('id') id: string) {
     return this.costTracking.getStoryCosts(id);

@@ -14,7 +14,7 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
   const [error, setError] = useState('');
   const [lectorReview, setLectorReview] = useState<any>(null);
   const [lectorInstructions, setLectorInstructions] = useState('');
-  const { script, voiceMap } = (story as any).scriptData || {};
+  const { script, voiceMap, scriptConfirmed } = (story as any).scriptData || {};
   const [allVoices, setAllVoices] = useState<any[]>([]);
   const [pickerChar, setPickerChar] = useState<string | null>(null);
 
@@ -41,6 +41,12 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
     } catch {}
     setPickerChar(null);
   };
+
+  // --- Pipeline state ---
+  const isProduced = story.status === 'produced' || story.status === 'published';
+  const isPublished = story.status === 'published';
+  const isConfirmed = !!scriptConfirmed || isProduced;
+  const isDraft = story.status === 'draft';
 
   // --- Agent actions ---
 
@@ -86,6 +92,32 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
     }
   };
 
+  const handleConfirmScript = async () => {
+    try {
+      await fetch(`/api/stories/${story.id}/confirm-script`, {
+        method: 'PATCH',
+        headers: { Authorization: getAuth() },
+      });
+      onDone();
+    } catch (err: any) {
+      setError(err.message);
+      setPhase('error');
+    }
+  };
+
+  const handleUnconfirmScript = async () => {
+    try {
+      await fetch(`/api/stories/${story.id}/unconfirm-script`, {
+        method: 'PATCH',
+        headers: { Authorization: getAuth() },
+      });
+      onDone();
+    } catch (err: any) {
+      setError(err.message);
+      setPhase('error');
+    }
+  };
+
   const handleTtsOptimization = async () => {
     setPhase('tts-optimizing');
     setProgress('TTS-Optimierung läuft...');
@@ -103,7 +135,7 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
     }
   };
 
-  const handleConfirm = async () => {
+  const handleProduce = async () => {
     setPhase('producing');
     setProgress('Wird vertont...');
     try {
@@ -112,7 +144,6 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
         headers: { Authorization: getAuth() },
       });
       if (!res.ok) throw new Error('Vertonung fehlgeschlagen');
-      // Poll until done
       for (;;) {
         await new Promise(r => setTimeout(r, 2000));
         const s = await fetch(`/api/generate/status/${story.id}`, { headers: { Authorization: getAuth() } });
@@ -136,49 +167,33 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
     onDone();
   };
 
-  // --- Pipeline status ---
-  const getPipelineStatus = () => {
-    const pipeline = (story as any).scriptData?.pipeline;
-    const steps = pipeline?.steps || [];
-    const completedSteps = new Set(steps.map((step: any) => step.agent));
-    return {
-      author: completedSteps.has('author') || completedSteps.has('adapter'),
-      lector: completedSteps.has('lector') || completedSteps.has('reviewer'),
-      tts: completedSteps.has('tts'),
-      produced: story.status === 'produced' || story.status === 'published',
-    };
-  };
-
-  const pipelineStatus = getPipelineStatus();
   const isAgentBusy = ['lector', 'lector-revising', 'tts-optimizing', 'producing'].includes(phase);
 
   if (!script) return null;
 
+  // --- Pipeline steps for status bar ---
+  const pipelineSteps = [
+    { label: 'Entwurf', done: true },
+    { label: 'Bestätigt', done: isConfirmed },
+    { label: 'Vertont', done: isProduced },
+    { label: 'Veröffentlicht', done: isPublished },
+  ];
+
   return (
     <div className="space-y-4">
       {/* Pipeline Status Bar */}
-      {mode === 'draft' && (
-        <div className="bg-surface border border-border rounded-xl px-4 py-3">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-text-muted font-medium">Pipeline:</span>
-            <div className="flex items-center gap-1 flex-wrap">
-              {[
-                { key: 'author', label: 'Autor', done: pipelineStatus.author },
-                { key: 'lector', label: 'Lektorat', done: pipelineStatus.lector },
-                { key: 'tts', label: 'TTS', done: pipelineStatus.tts },
-                { key: 'produced', label: 'Vertont', done: pipelineStatus.produced },
-              ].map((step, i) => (
-                <span key={step.key} className="flex items-center gap-1">
-                  {i > 0 && <span className="text-gray-600">→</span>}
-                  <span className={`px-2 py-1 rounded text-xs ${step.done ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                    {step.done ? '✅' : '⬜'} {step.label}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </div>
+      <div className="bg-surface border border-border rounded-xl px-4 py-3">
+        <div className="flex items-center gap-1 text-sm flex-wrap">
+          {pipelineSteps.map((step, i) => (
+            <span key={step.label} className="flex items-center gap-1">
+              {i > 0 && <span className="text-gray-600 mx-1">→</span>}
+              <span className={`px-2 py-1 rounded text-xs font-medium ${step.done ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                {step.done ? '✅' : '⬜'} {step.label}
+              </span>
+            </span>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Agent Loading Indicator */}
       {isAgentBusy && (
@@ -188,6 +203,7 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
           {phase === 'lector' && <p className="text-xs text-text-muted">Das kann 15-30 Sekunden dauern</p>}
           {phase === 'lector-revising' && <p className="text-xs text-text-muted">Das kann 30-60 Sekunden dauern</p>}
           {phase === 'tts-optimizing' && <p className="text-xs text-text-muted">Audio-Tags und Emotionen werden optimiert...</p>}
+          {phase === 'producing' && <p className="text-xs text-text-muted">ElevenLabs generiert Audio...</p>}
         </div>
       )}
 
@@ -204,7 +220,7 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
         <div className="bg-surface border border-red-500/30 rounded-xl p-4 space-y-2">
           <p className="text-red-400 font-medium text-sm">Fehler: {error}</p>
           <button onClick={() => { setPhase('idle'); setError(''); }} className="px-3 py-1.5 bg-surface border border-border rounded-lg text-xs hover:bg-surface-hover">
-            Nochmal versuchen
+            Schließen
           </button>
         </div>
       )}
@@ -259,23 +275,24 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
         </div>
       )}
 
-      {/* Script Display — always visible (not hidden by loading) */}
+      {/* Script Display — always visible except during lector-result */}
       {!isAgentBusy && phase !== 'lector-result' && (
         <div className="bg-surface border border-brand/30 rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold flex items-center gap-2">📝 {mode === 'draft' ? 'Skript-Vorschau' : 'Skript'}</h3>
-            {mode === 'draft' && <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">Entwurf</span>}
+            <h3 className="text-lg font-semibold flex items-center gap-2">📝 Skript</h3>
+            {isDraft && !isConfirmed && <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">Entwurf</span>}
+            {isDraft && isConfirmed && <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">Bestätigt</span>}
           </div>
 
           {/* Characters & Voices */}
           <div>
-            <h4 className="text-sm font-medium mb-2">Charaktere & Stimmen {mode === 'draft' && <span className="text-text-muted">(klicken zum Ändern)</span>}</h4>
+            <h4 className="text-sm font-medium mb-2">Charaktere & Stimmen {isDraft && <span className="text-text-muted">(klicken zum Ändern)</span>}</h4>
             <div className="flex gap-2 flex-wrap">
               {script.characters?.map((c: any) => (
                 <button
                   key={c.name}
-                  onClick={() => mode === 'draft' && setPickerChar(c.name)}
-                  className={`px-3 py-1.5 bg-gray-800 border border-border rounded-full text-xs flex items-center gap-1.5 transition-colors ${mode === 'draft' ? 'hover:border-brand/50 cursor-pointer' : 'cursor-default'}`}
+                  onClick={() => isDraft && setPickerChar(c.name)}
+                  className={`px-3 py-1.5 bg-gray-800 border border-border rounded-full text-xs flex items-center gap-1.5 transition-colors ${isDraft ? 'hover:border-brand/50 cursor-pointer' : 'cursor-default'}`}
                 >
                   <TwemojiIcon emoji={c.emoji || '✨'} size={16} />
                   <span>{c.name}</span>
@@ -290,7 +307,7 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
                 characterName={pickerChar}
                 currentVoiceId={voiceMap[pickerChar] || ''}
                 category={(() => {
-                  const c = script.characters?.find((c: any) => c.name === pickerChar);
+                  const c = script.characters?.find((ch: any) => ch.name === pickerChar);
                   if (!c) return 'adult_m';
                   const g = c.gender === 'female' ? 'f' : 'm';
                   if (c.species === 'animal' || c.species === 'creature') return `creature_${g}`;
@@ -306,7 +323,7 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
           </div>
 
           {/* Prompt */}
-          {mode === 'draft' && story.prompt && (
+          {story.prompt && (
             <div className="bg-gray-900/50 rounded-lg p-3">
               <p className="text-xs text-text-muted mb-1">Prompt</p>
               <p className="text-sm">{story.prompt}</p>
@@ -351,23 +368,38 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
             ))}
           </div>
 
-          {/* Action Buttons */}
-          {mode === 'draft' && (
-            <div className="flex gap-3 pt-2 flex-wrap">
-              <button onClick={handleResetScript} className="flex items-center gap-2 px-5 py-2.5 bg-surface border border-border hover:bg-surface-hover rounded-lg text-sm font-medium transition-colors">
-                🔄 Neu generieren
-              </button>
-              <button onClick={handleLectorReview} className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors">
-                📝 Lektorat
-              </button>
-              <button onClick={handleTtsOptimization} className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors">
-                🎙️ TTS-Optimierung
-              </button>
-              <button onClick={handleConfirm} className="flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
-                <Check size={16} /> Vertonen
-              </button>
+          {/* Action Buttons — gated by pipeline state */}
+          {isDraft && (
+            <div className="flex gap-3 pt-2 flex-wrap border-t border-border">
+              {!isConfirmed ? (
+                <>
+                  {/* Phase: Skript entworfen */}
+                  <button onClick={handleResetScript} className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border hover:bg-surface-hover rounded-lg text-sm font-medium transition-colors">
+                    🔄 Neu generieren
+                  </button>
+                  <button onClick={handleLectorReview} className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    📝 Lektorat
+                  </button>
+                  <button onClick={handleConfirmScript} className="flex items-center gap-2 px-4 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    <Check size={16} /> Skript bestätigen
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Phase: Skript bestätigt */}
+                  <button onClick={handleUnconfirmScript} className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border hover:bg-surface-hover rounded-lg text-sm font-medium transition-colors">
+                    ← Zurück zu Entwurf
+                  </button>
+                  <button onClick={handleTtsOptimization} className="flex items-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    🎙️ TTS-Optimierung
+                  </button>
+                  <button onClick={handleProduce} className="flex items-center gap-2 px-4 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    🔊 Vertonen
+                  </button>
+                </>
+              )}
               {onDelete && (
-                <button onClick={onDelete} className="flex items-center gap-2 px-5 py-2.5 bg-red-900/30 border border-red-800/50 rounded-lg text-sm text-red-400 hover:bg-red-900/50 transition-colors font-medium ml-auto">
+                <button onClick={onDelete} className="flex items-center gap-2 px-4 py-2.5 bg-red-900/30 border border-red-800/50 rounded-lg text-sm text-red-400 hover:bg-red-900/50 transition-colors font-medium ml-auto">
                   <Trash2 size={16} /> Löschen
                 </button>
               )}
