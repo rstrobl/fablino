@@ -226,12 +226,7 @@
             
             <!-- ElevenLabs Conversational AI Widget -->
             <div id="elevenlabs-widget">
-                <!-- Widget will be inserted here -->
-                <div class="widget-placeholder">
-                    <div class="loading"></div>
-                    <p>ElevenLabs Agent wird geladen...</p>
-                    <p><small>Agent-ID wird nach der Erstellung eingefügt</small></p>
-                </div>
+                <elevenlabs-convai agent-id="agent_9501kjgm7xyteaar28afba2cnmzm"></elevenlabs-convai>
             </div>
         </div>
 
@@ -251,11 +246,7 @@
     <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
     
     <script>
-        // Initialize widget when agent ID is available
-        function initializeWidget(agentId) {
-            const widgetContainer = document.getElementById('elevenlabs-widget');
-            widgetContainer.innerHTML = '<elevenlabs-convai agent-id="' + agentId + '"></elevenlabs-convai>';
-        }
+        // Widget is now directly embedded with agent ID
 
         // Add atmospheric sound effects (optional)
         document.addEventListener('DOMContentLoaded', function() {
