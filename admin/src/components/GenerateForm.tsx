@@ -342,14 +342,6 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
           >
             <Wand2 size={16} /> {mode === 'story' ? 'Geschichte adaptieren' : 'Skript generieren'}
           </button>
-          {onDelete && (
-            <button
-              onClick={onDelete}
-              className="flex items-center gap-2 px-5 py-2.5 bg-red-900/30 border border-red-800/50 rounded-lg text-sm text-red-400 hover:bg-red-900/50 transition-colors font-medium ml-auto"
-            >
-              🗑️ Löschen
-            </button>
-          )}
         </div>
       </div>
     );
