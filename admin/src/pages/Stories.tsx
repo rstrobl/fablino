@@ -1,10 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStories, deleteStory, toggleFeatured, fetchPlayStats } from '../api';
-import { Star, Trash2, Search, Play, User, FileText, Clock, Headphones, Copy, Plus, X } from 'lucide-react';
+import { Star, Trash2, Search, Play, User, Clock, Headphones, Copy } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { getAuth } from '../utils/auth';
 
 function timeAgo(date: string) {
   const now = Date.now();
@@ -24,7 +23,6 @@ function timeAgo(date: string) {
 }
 
 const STATUSES = [
-  { value: 'requested', label: 'Anfragen', icon: 'FileText', color: 'bg-yellow-600' },
   { value: 'draft', label: 'Entwürfe', icon: 'Clock', color: 'bg-blue-600' },
   { value: 'published', label: 'Hörbücher', icon: 'Headphones', color: 'bg-green-600' },
 ];
@@ -44,41 +42,16 @@ function SourceBadge({ source }: { source: string | null }) {
 }
 
 export function Stories() {
-  const nav = useNavigate();
   const qc = useQueryClient();
+  const nav = useNavigate();
   const { data: stories = [], isLoading } = useQuery({ queryKey: ['stories'], queryFn: fetchStories });
   const { data: playStats = [] } = useQuery({ queryKey: ['playStats'], queryFn: fetchPlayStats });
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
-  const statusFilter = searchParams.get('status') || 'requested';
+  const statusFilter = searchParams.get('status') || 'draft';
   const setStatusFilter = (status: string) => setSearchParams({ status });
 
   const playMap = new Map(playStats.map(p => [p.storyId, p.plays]));
-
-  const [showCreate, setShowCreate] = useState(false);
-  const [newHeroName, setNewHeroName] = useState('');
-  const [newTargetAge, setNewTargetAge] = useState('');
-  const [newPrompt, setNewPrompt] = useState('');
-
-  const createMut = useMutation({
-    mutationFn: async () => {
-      const res = await fetch('/api/reserve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${btoa(getAuth())}` },
-        body: JSON.stringify({ heroName: newHeroName || undefined, age: newTargetAge || undefined, prompt: newPrompt || undefined }),
-      });
-      if (!res.ok) throw new Error('Fehler beim Erstellen');
-      return res.json();
-    },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ['stories'] });
-      toast.success('Story erstellt');
-      setShowCreate(false);
-      setNewHeroName(''); setNewTargetAge(''); setNewPrompt('');
-      setStatusFilter('requested');
-      if (data?.storyId) nav(`/stories/${data.storyId}`);
-    },
-  });
 
   const delMut = useMutation({
     mutationFn: deleteStory,
@@ -108,9 +81,7 @@ export function Stories() {
     }).length,
   }));
 
-  const isRequest = statusFilter === 'requested';
   const isDraftStage = statusFilter === 'draft';
-  const isEarlyStage = isRequest || isDraftStage;
   const isLateStage = statusFilter === 'published' || statusFilter === 'feedback';
 
   return (
@@ -118,9 +89,9 @@ export function Stories() {
       <h2 className="text-xl md:text-2xl font-bold">Stories</h2>
 
       {/* Pipeline overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {pipelineCounts.map((s) => {
-          const Icon = s.icon === 'FileText' ? FileText : s.icon === 'Clock' ? Clock : Headphones;
+          const Icon = s.icon === 'Clock' ? Clock : Headphones;
           return (
             <Link
               key={s.value}
@@ -152,64 +123,7 @@ export function Stories() {
             className="w-full pl-9 pr-3 py-2 bg-surface border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
           />
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors text-sm font-medium whitespace-nowrap"
-        >
-          <Plus size={16} /> Neue Story
-        </button>
       </div>
-
-      {/* Create Story Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowCreate(false)}>
-          <div className="bg-surface border border-border rounded-xl p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold">Neue Story erstellen</h3>
-              <button onClick={() => setShowCreate(false)} className="text-text-muted hover:text-text"><X size={20} /></button>
-            </div>
-            <div>
-              <label className="block text-sm text-text-muted mb-1">Zielalter (Zuhörer)</label>
-              <div className="flex items-center gap-2">
-                <input
-                  value={newTargetAge}
-                  onChange={e => setNewTargetAge(e.target.value)}
-                  placeholder="z.B. 6"
-                  className="w-24 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
-                  autoFocus
-                />
-                <span className="text-sm text-text-muted">Jahre</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm text-text-muted mb-1">Prompt</label>
-              <textarea
-                value={newPrompt}
-                onChange={e => setNewPrompt(e.target.value)}
-                placeholder="Beschreibe die Geschichte frei — Thema, Charaktere, Setting…"
-                rows={3}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand resize-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-text-muted mb-1">Name der Hauptfigur (optional)</label>
-              <input
-                value={newHeroName}
-                onChange={e => setNewHeroName(e.target.value)}
-                placeholder="z.B. Laura, Popopipifurz, Captain Blubber…"
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
-              />
-            </div>
-            <button
-              onClick={() => createMut.mutate()}
-              disabled={createMut.isPending || !newPrompt.trim()}
-              className="w-full py-2.5 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors font-medium disabled:opacity-50"
-            >
-              {createMut.isPending ? 'Erstellen…' : 'Story erstellen'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {isLoading ? (
         <p className="text-text-muted">Laden…</p>
@@ -227,14 +141,14 @@ export function Stories() {
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">
-                    {isRequest ? (s.heroName || s.title?.replace(/s Hörspiel$/, '') || s.title || '(Untitled)') : (s.title || '(Untitled)')}
+                    {false ? (s.heroName || s.title?.replace(/s Hörspiel$/, '') || s.title || '(Untitled)') : (s.title || '(Untitled)')}
                   </p>
                   <p className="text-xs text-text-muted mt-0.5">
                     {s.age ? `${s.age} J.` : ''} · {timeAgo(s.updatedAt || s.createdAt)}
                     {isLateStage && s.durationSeconds ? ` · ${Math.floor(s.durationSeconds / 60)}:${String(s.durationSeconds % 60).padStart(2, '0')}` : ''}
                   </p>
-                  {isEarlyStage && s.interests && <p className="text-xs text-text-muted mt-1 line-clamp-1">{s.interests}</p>}
-                  {isEarlyStage && s.requesterName && (
+                  {isDraftStage && s.interests && <p className="text-xs text-text-muted mt-1 line-clamp-1">{s.interests}</p>}
+                  {isDraftStage && s.requesterName && (
                     <div className="flex items-center gap-1.5 mt-1">
                       <User size={10} className="text-text-muted" />
                       <span className="text-xs text-text-muted">{s.requesterName}</span>
@@ -264,11 +178,11 @@ export function Stories() {
             <thead>
               <tr className="border-b border-border text-text-muted text-left">
                 <th className="p-3">Cover</th>
-                <th className="p-3">{isRequest ? 'Held' : 'Titel'}</th>
+                <th className="p-3">{false ? 'Held' : 'Titel'}</th>
                 {(isLateStage || isDraftStage) && <th className="p-3">Kind</th>}
                 <th className="p-3">Alter</th>
-                {isEarlyStage && <th className="p-3">Interessen</th>}
-                {isEarlyStage && <th className="p-3">Anfrage von</th>}
+                {isDraftStage && <th className="p-3">Interessen</th>}
+                {isDraftStage && <th className="p-3">Anfrage von</th>}
                 {isLateStage && <th className="p-3">Länge</th>}
                 {isLateStage && <th className="p-3">Plays</th>}
                 <th className="p-3">Aktionen</th>
@@ -286,7 +200,7 @@ export function Stories() {
                   </td>
                   <td className="p-3">
                     <Link to={`/stories/${s.id}`} className="hover:text-brand transition-colors font-medium">
-                      {isRequest ? (s.heroName || s.title?.replace(/s Hörspiel$/, '') || s.title || '(Untitled)') : (s.title || '(Untitled)')}
+                      {false ? (s.heroName || s.title?.replace(/s Hörspiel$/, '') || s.title || '(Untitled)') : (s.title || '(Untitled)')}
                     </Link>
                     <span className="block text-xs text-text-muted mt-0.5">{timeAgo(s.updatedAt || s.createdAt)}</span>
                   </td>
@@ -294,8 +208,8 @@ export function Stories() {
                     <td className="p-3 whitespace-nowrap">{s.heroName || s.characters?.find((c: any) => c.name !== 'Erzähler')?.name || '—'}</td>
                   )}
                   <td className="p-3 whitespace-nowrap">{s.age ? `${s.age} J.` : '—'}</td>
-                  {isEarlyStage && <td className="p-3 max-w-xs"><p className="text-text-muted text-xs line-clamp-2">{s.interests || '—'}</p></td>}
-                  {isEarlyStage && (
+                  {isDraftStage && <td className="p-3 max-w-xs"><p className="text-text-muted text-xs line-clamp-2">{s.interests || '—'}</p></td>}
+                  {isDraftStage && (
                     <td className="p-3">
                       {(s.requesterName || s.requesterContact) ? (
                         <div className="flex flex-col gap-0.5">

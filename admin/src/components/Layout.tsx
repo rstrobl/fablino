@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Mic, Volume2, Settings, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, BookOpen, FileText, Mic, Volume2, Settings, LogOut, Menu, X } from 'lucide-react';
 import { GlobalPlayer } from './GlobalPlayer';
 import { useAuth } from '../auth';
 
 const links = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/requests', icon: FileText, label: 'Anfragen' },
   { to: '/stories', icon: BookOpen, label: 'Stories' },
   { to: '/voices', icon: Mic, label: 'Voices' },
   { to: '/sfx', icon: Volume2, label: 'Soundeffekte' },

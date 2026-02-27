@@ -5,6 +5,7 @@ import { AudioProvider } from './audioContext';
 import { AuthProvider, useAuth } from './auth';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
+import { Requests } from './pages/Requests';
 import { Stories } from './pages/Stories';
 import { StoryDetail } from './pages/StoryDetail';
 import { Waitlist } from './pages/Waitlist';
@@ -28,6 +29,7 @@ function AppRoutes() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/requests" element={<Requests />} />
           <Route path="/stories" element={<Stories />} />
           <Route path="/stories/:id" element={<StoryDetail />} />
           <Route path="/waitlist" element={<Waitlist />} />
