@@ -530,50 +530,6 @@ WICHTIG zu Charakteren:
   }
 
   /**
-   * Manual TTS optimization step
-   */
-  async runTtsOptimization(script: Script): Promise<{ script: Script; step: PipelineStep }> {
-    const cs = loadClaudeSettings();
-    const ttsPrompt = loadPromptFile('agent-tts.txt');
-    if (!ttsPrompt) {
-      return { script, step: { agent: 'tts', model: cs.ttsModel || cs.model, durationMs: 0, tokens: { input: 0, output: 0 }, scriptSnapshot: script } };
-    }
-
-    console.log('🎙️ Manual TTS optimization...');
-    const start = Date.now();
-
-    const sfxPrompt = cs.sfxEnabled ? this.buildSfxPrompt() : '';
-
-    const ttsResult = await this.callClaude({
-      model: cs.ttsModel || cs.model,
-      systemPrompt: sfxPrompt ? `${ttsPrompt}\n\n${sfxPrompt}` : ttsPrompt,
-      userMessage: `Optimiere dieses Hörspiel-Skript für TTS. Gib das KOMPLETTE Skript als JSON zurück:\n\n${JSON.stringify(script, null, 2)}`,
-      maxTokens: cs.max_tokens,
-      temperature: 0.3,
-    });
-
-    let optimized: Script;
-    try {
-      optimized = this.parseJson(ttsResult.text) as Script;
-      console.log(`✅ TTS optimization done (${Date.now() - start}ms)`);
-    } catch {
-      console.warn('⚠️ TTS parse failed, keeping original');
-      optimized = script;
-    }
-
-    return {
-      script: optimized,
-      step: {
-        agent: 'tts',
-        model: cs.ttsModel || cs.model,
-        durationMs: Date.now() - start,
-        tokens: { input: ttsResult.usage.input_tokens, output: ttsResult.usage.output_tokens },
-        scriptSnapshot: JSON.parse(JSON.stringify(optimized)),
-      },
-    };
-  }
-
-  /**
    * Manual TTS optimization - returns optimized script
    */
   async runTtsOptimization(script: Script): Promise<{ script: Script; step: PipelineStep }> {
