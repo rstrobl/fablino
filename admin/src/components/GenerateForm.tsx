@@ -9,8 +9,11 @@ import { getAuth } from '../utils/auth';
 
 export function GenerateForm({ story, onDone }: { story: any; onDone: () => void }) {
   const [heroName] = useState((story as any).heroName || story.title?.replace(/(s|es) Hörspiel$/, '') || '');
-  const [heroAge, setHeroAge] = useState(story.age || '');
+  const [targetAge, setTargetAge] = useState(story.age || '6');
   const [prompt, setPrompt] = useState(story.prompt || '');
+  const [characters, setCharacters] = useState<{ name: string; role: string; age: string }[]>(
+    heroName ? [{ name: heroName, role: 'Hauptfigur', age: '' }] : []
+  );
   const [useHeroName, setUseHeroName] = useState(true);
   const [sideChars, setSideChars] = useState<{ name: string; role: string }[]>([]);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
@@ -64,6 +67,14 @@ export function GenerateForm({ story, onDone }: { story: any; onDone: () => void
     setVoiceMap((prev: any) => ({ ...prev, [charName]: voiceId }));
     setPickerChar(null);
   };
+
+  const addCharacter = () => setCharacters([...characters, { name: '', role: '', age: '' }]);
+  const updateCharacter = (i: number, field: string, val: string) => {
+    const copy = [...characters];
+    copy[i] = { ...copy[i], [field]: val };
+    setCharacters(copy);
+  };
+  const removeCharacter = (i: number) => setCharacters(characters.filter((_, idx) => idx !== i));
 
   const addSideChar = () => setSideChars([...sideChars, { name: '', role: '' }]);
   const updateSideChar = (i: number, field: string, val: string) => {
@@ -128,16 +139,27 @@ export function GenerateForm({ story, onDone }: { story: any; onDone: () => void
     setPhase('generating');
     setProgress('Skript wird geschrieben...');
     try {
+      const namedChars = characters.filter(c => c.name.trim());
+      const heroChar = namedChars.find(c => c.role === 'Hauptfigur') || namedChars[0];
+      const otherChars = namedChars.filter(c => c !== heroChar);
+      
+      // Build prompt with character info
+      let fullPrompt = prompt;
+      if (namedChars.length > 0) {
+        const charDesc = namedChars.map(c => 
+          `${c.name}${c.role ? ` (${c.role})` : ''}${c.age ? `, ${c.age} Jahre` : ''}`
+        ).join('; ');
+        fullPrompt = `Charaktere: ${charDesc}. ${prompt}`;
+      }
+
       const body: any = {
         storyId: story.id,
-        prompt: useHeroName
-          ? `Name: ${heroName}, Alter: ${heroAge} Jahre. Interessen/Thema: ${prompt}`
-          : `Alter des Kindes: ${heroAge} Jahre. Interessen/Thema: ${prompt}. Der Held soll NICHT das Kind selbst sein, sondern eine fiktive Figur.`,
-        age: parseFloat(heroAge) || 6,
+        prompt: fullPrompt,
+        age: parseFloat(targetAge) || 6,
         ...(systemPrompt.trim() && defaultPromptLoaded && { systemPromptOverride: systemPrompt.trim() }),
         characters: {
-          ...(useHeroName && { hero: { name: heroName, age: heroAge } }),
-          sideCharacters: sideChars.filter(c => c.name),
+          ...(heroChar && { hero: { name: heroChar.name, age: heroChar.age || undefined } }),
+          sideCharacters: otherChars.map(c => ({ name: c.name, role: c.role || c.name })),
         },
       };
       const res = await fetch('/api/generate', {
@@ -178,31 +200,26 @@ export function GenerateForm({ story, onDone }: { story: any; onDone: () => void
       <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
         <h3 className="text-lg font-semibold flex items-center gap-2"><Wand2 size={18} /> Hörspiel generieren</h3>
         
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" checked={useHeroName} onChange={e => setUseHeroName(e.target.checked)} className="rounded" />
-            Kind als Held (Name im Hörspiel verwenden)
-          </label>
-
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-text-muted mb-1">Held/in</label>
-            <input value={useHeroName ? heroName : '(fiktive Figur)'} readOnly className={`w-full px-3 py-2 border border-border rounded-lg text-sm ${useHeroName ? 'bg-gray-800' : 'bg-gray-800/50 text-text-muted italic'}`} />
-          </div>
-          <div>
-            <label className="block text-sm text-text-muted mb-1">Alter</label>
-            <input value={heroAge} onChange={e => setHeroAge(e.target.value)} className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand" />
+        <div>
+          <label className="block text-sm text-text-muted mb-1">Zielalter (Zuhörer)</label>
+          <div className="flex items-center gap-3">
+            <input 
+              value={targetAge} 
+              onChange={e => setTargetAge(e.target.value)} 
+              className="w-24 px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand" 
+              placeholder="6"
+            />
+            <span className="text-sm text-text-muted">Jahre</span>
           </div>
         </div>
 
         <div>
-          <label className="block text-sm text-text-muted mb-1">Interessen / Thema</label>
+          <label className="block text-sm text-text-muted mb-1">Prompt</label>
           <textarea
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
-            rows={3}
+            rows={4}
+            placeholder="Beschreibe die Geschichte frei — Thema, Setting, Stimmung, was passieren soll..."
             className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
           />
         </div>
@@ -216,24 +233,30 @@ export function GenerateForm({ story, onDone }: { story: any; onDone: () => void
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm text-text-muted">Nebencharaktere</label>
-            <button onClick={addSideChar} className="text-xs text-brand hover:text-brand-light">+ Hinzufügen</button>
+            <label className="block text-sm text-text-muted">Charaktere (optional)</label>
+            <button onClick={addCharacter} className="text-xs text-brand hover:text-brand-light">+ Hinzufügen</button>
           </div>
-          {sideChars.map((c, i) => (
+          {characters.map((c, i) => (
             <div key={i} className="flex gap-2 mb-2">
               <input
                 placeholder="Name"
                 value={c.name}
-                onChange={e => updateSideChar(i, 'name', e.target.value)}
-                className="flex-1 px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+                onChange={e => updateCharacter(i, 'name', e.target.value)}
+                className="flex-[2] px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
               />
               <input
-                placeholder="Rolle (z.B. Schwester, Hund)"
+                placeholder="Rolle (z.B. Hauptfigur, Schwester)"
                 value={c.role}
-                onChange={e => updateSideChar(i, 'role', e.target.value)}
-                className="flex-1 px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+                onChange={e => updateCharacter(i, 'role', e.target.value)}
+                className="flex-[2] px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
               />
-              <button onClick={() => removeSideChar(i)} className="text-red-400 hover:text-red-300 px-2">✕</button>
+              <input
+                placeholder="Alter"
+                value={c.age}
+                onChange={e => updateCharacter(i, 'age', e.target.value)}
+                className="w-20 px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+              />
+              <button onClick={() => removeCharacter(i)} className="text-red-400 hover:text-red-300 px-2">✕</button>
             </div>
           ))}
         </div>
