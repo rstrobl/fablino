@@ -37,9 +37,15 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
   const [pickerChar, setPickerChar] = useState<string | null>(null);
   const [showRegenModal, setShowRegenModal] = useState(false);
   const [regenPrompt, setRegenPrompt] = useState(story.prompt || '');
-  const [regenSideChars, setRegenSideChars] = useState<Array<{ name: string; role: string }>>(
-    (story as any).scriptData?.userCharacters?.sideCharacters || []
-  );
+  const [regenSideChars, setRegenSideChars] = useState<Array<{ name: string; role: string }>>(() => {
+    const userChars = (story as any).scriptData?.userCharacters?.sideCharacters;
+    if (userChars?.length) return userChars;
+    // Fallback: extract from script characters (exclude Erzähler)
+    const scriptChars = (story as any).scriptData?.script?.characters || [];
+    return scriptChars
+      .filter((c: any) => c.name !== 'Erzähler')
+      .map((c: any) => ({ name: c.name, role: c.description || '' }));
+  });
 
   const getSideChars = () => {
     return (story as any).scriptData?.userCharacters?.sideCharacters || [];
