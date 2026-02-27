@@ -183,10 +183,7 @@ export function StoryDetail() {
         />
       )}
 
-      {/* Pipeline Log (hide during active generation) */}
-      {(story as any).scriptData?.pipeline && !['requested'].includes((story as any).status) && !['waiting_for_script', 'generating_audio'].includes((story as any).scriptData?.generationState?.status) && (
-        <PipelineLog pipeline={(story as any).scriptData.pipeline} />
-      )}
+      {/* Pipeline Log is now rendered inside DraftPreview */}
 
       {/* Characters + Script blocks removed — DraftPreview handles both */}
 
