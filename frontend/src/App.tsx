@@ -40,6 +40,8 @@ interface Story {
   createdAt: string
   audioUrl: string
   coverUrl?: string
+  heroName?: string
+  age?: number
   lines?: { speaker: string; text: string }[]
 }
 
@@ -565,17 +567,15 @@ function App() {
                 if (!heroName.trim() || !heroAge.trim()) return;
                 setWaitlistSubmitted(false); setWaitlistMsg(''); setError('');
                 try {
-                  const res = await fetch('/api/reserve', {
+                  const res = await fetch('/api/requests', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ heroName: heroName.trim(), heroAge: heroAge.trim(), prompt: prompt.trim() || undefined })
+                    body: JSON.stringify({ heroName: heroName.trim(), age: parseFloat(heroAge.trim()) || undefined, prompt: prompt.trim() || undefined, requesterSource: 'Webseite' })
                   });
                   const data = await res.json();
-                  if (data.storyId) {
-                    setReservedStoryId(data.storyId);
-                    setCurrentStory({ id: data.storyId, title: `${heroName.trim()}s Hörspiel`, characters: [], voiceMap: {}, prompt: prompt.trim(), summary: JSON.stringify({ heroName: heroName.trim(), heroAge: heroAge.trim(), prompt: prompt.trim() || null }), ageGroup: (parseInt(heroAge) || 5) <= 5 ? '3-5' : '6-9', createdAt: new Date().toISOString(), audioUrl: '' } as Story);
-                    window.history.pushState({}, '', `/story/${data.storyId}`);
-                    setView('player');
+                  if (data.ok) {
+                    setWaitlistSubmitted(true);
+                    setWaitlistMsg('Dein Hörspiel-Wunsch ist eingegangen! Wir melden uns bald. ✨');
                   }
                 } catch { setError('Verbindungsfehler. Bitte versuche es später noch mal.'); }
               }}
