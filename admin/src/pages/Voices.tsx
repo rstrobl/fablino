@@ -36,10 +36,6 @@ function voiceGroup(v: VoiceData): string {
 
 const PREVIEW_TEXT = 'Oh nein, mein Schläger! Und in zwei Stunden ist das große Turnier!';
 
-function AgeRange({ min, max }: { min: number; max: number }) {
-  return <span className="text-xs text-text-muted">{min}–{max} J.</span>;
-}
-
 function VoiceCard({ voice, onSaved }: { voice: VoiceData; onSaved: () => void }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...voice });

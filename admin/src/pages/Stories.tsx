@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchStories, deleteStory, toggleFeatured, updateStoryStatus, fetchPlayStats } from '../api';
+import { fetchStories, deleteStory, toggleFeatured, fetchPlayStats } from '../api';
 import { Star, Trash2, Search, Play, User, FileText, Clock, Headphones, Copy, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
@@ -24,32 +24,10 @@ function timeAgo(date: string) {
 }
 
 const STATUSES = [
-  { value: 'requested', label: 'Anfragen', icon: 'FileText' },
-  { value: 'draft', label: 'Entwürfe', icon: 'Clock' },
-  { value: 'published', label: 'Hörbücher', icon: 'Headphones' },
+  { value: 'requested', label: 'Anfragen', icon: 'FileText', color: 'bg-yellow-600' },
+  { value: 'draft', label: 'Entwürfe', icon: 'Clock', color: 'bg-blue-600' },
+  { value: 'published', label: 'Hörbücher', icon: 'Headphones', color: 'bg-green-600' },
 ];
-
-function StatusBadge({ status, storyId }: { status: string; storyId: string }) {
-  const qc = useQueryClient();
-  const mut = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => updateStoryStatus(id, status),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['stories'] }); toast.success('Status aktualisiert'); },
-  });
-
-  const current = STATUSES.find(s => s.value === status) || STATUSES[0];
-
-  return (
-    <select
-      value={status}
-      onChange={(e) => mut.mutate({ id: storyId, status: e.target.value })}
-      className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer ${current.color} text-white`}
-    >
-      {STATUSES.map(s => (
-        <option key={s.value} value={s.value}>{s.label}</option>
-      ))}
-    </select>
-  );
-}
 
 function SourceBadge({ source }: { source: string | null }) {
   if (!source) return null;
@@ -96,7 +74,7 @@ export function Stories() {
       qc.invalidateQueries({ queryKey: ['stories'] });
       toast.success('Story erstellt');
       setShowCreate(false);
-      setNewHeroName(''); setNewHeroAge(''); setNewPrompt('');
+      setNewHeroName(''); setNewTargetAge(''); setNewPrompt('');
       setStatusFilter('requested');
       if (data?.storyId) nav(`/stories/${data.storyId}`);
     },

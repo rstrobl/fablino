@@ -116,7 +116,7 @@ export function PipelineLog({ pipeline, activeStep }: Props) {
         {pipeline.steps.map((step, i) => {
           const hasReview = !!step.reviewResult;
           const hasScript = !!step.scriptSnapshot;
-          const expandable = hasReview || hasScript;
+          const _expandable = hasReview || hasScript;
           const expandedSection = expanded[i];
 
           return (

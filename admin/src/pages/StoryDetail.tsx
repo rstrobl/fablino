@@ -3,9 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchStory, deleteStory, toggleFeatured, updateStoryStatus } from '../api';
 import { useAudio } from '../audioContext';
-import { ArrowLeft, Play, Star, Trash2, Check, Copy, Loader2 } from 'lucide-react';
+import { ArrowLeft, Star, Trash2, Check, Copy, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { TwemojiIcon } from '../charEmoji';
 import { GenerateForm } from '../components/GenerateForm';
 import { DraftPreview } from '../components/DraftPreview';
 import { PipelineLog } from '../components/PipelineLog';
@@ -58,8 +57,6 @@ export function StoryDetail() {
 
   const isRequested = (story as any).status === 'requested';
   const isDraft = (story as any).status === 'draft';
-
-  const isDraftOrProduced = isDraft || (story as any).status === 'produced';
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-4xl">

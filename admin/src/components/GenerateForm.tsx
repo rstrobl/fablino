@@ -79,12 +79,12 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
   const removeCharacter = (i: number) => setCharacters(characters.filter((_, idx) => idx !== i));
 
   const addSideChar = () => setSideChars([...sideChars, { name: '', role: '' }]);
-  const updateSideChar = (i: number, field: string, val: string) => {
+  const _updateSideChar = (i: number, field: string, val: string) => {
     const copy = [...sideChars];
     copy[i] = { ...copy[i], [field]: val };
     setSideChars(copy);
   };
-  const removeSideChar = (i: number) => setSideChars(sideChars.filter((_, idx) => idx !== i));
+  const _removeSideChar = (i: number) => setSideChars(sideChars.filter((_, idx) => idx !== i));
 
   const pollStatus = (id: string) => {
     pollRef.current = setInterval(async () => {
@@ -200,7 +200,7 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
       // Update story status to draft
       await updateStoryStatus(story.id, 'draft');
       
-      const res = await fetch(`/api/generate/${jobId}/confirm`, {
+      const _res = await fetch(`/api/generate/${jobId}/confirm`, {
         method: 'POST',
         headers: { Authorization: getAuth() },
       });

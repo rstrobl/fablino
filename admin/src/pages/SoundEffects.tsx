@@ -9,6 +9,8 @@ interface SfxEntry {
   category: string;
   file: string;
   active: boolean;
+  duration?: number;
+  prompt?: string;
 }
 
 const API = '/api';
