@@ -54,12 +54,17 @@ export function Stories() {
   const setStatusFilter = (status: string) => setSearchParams({ status });
 
   const playMap = new Map(playStats.map(p => [p.storyId, p.plays]));
-  const [showCreate, setShowCreate] = useState(false);
-  const [createStory, setCreateStory] = useState<any>(null);
 
-  const openCreateModal = () => {
-    setCreateStory({ id: null, status: 'requested', heroName: '', age: '', prompt: '', title: '' });
-    setShowCreate(true);
+  const createAndNav = async () => {
+    try {
+      const res = await fetch('/api/stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: getAuth() },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.id) nav(`/stories/${data.id}`);
+    } catch { toast.error('Fehler beim Erstellen'); }
   };
 
   const delMut = useMutation({
@@ -133,7 +138,7 @@ export function Stories() {
           />
         </div>
         <button
-          onClick={openCreateModal}
+          onClick={createAndNav}
           className="flex items-center justify-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors text-sm font-medium whitespace-nowrap"
         >
           <Plus size={16} /> Neue Story
@@ -229,23 +234,6 @@ export function Stories() {
         </>
       )}
 
-      {/* GenerateForm Modal */}
-      {showCreate && createStory && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowCreate(false)}>
-          <div className="bg-surface border border-border rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="sticky top-0 bg-surface border-b border-border px-6 py-4 flex items-center justify-between z-10">
-              <h3 className="text-lg font-bold">Neue Story erstellen</h3>
-              <button onClick={() => setShowCreate(false)} className="text-text-muted hover:text-text"><X size={20} /></button>
-            </div>
-            <div className="p-6">
-              <GenerateForm
-                story={createStory}
-                onDone={() => { setShowCreate(false); qc.invalidateQueries({ queryKey: ['stories'] }); }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

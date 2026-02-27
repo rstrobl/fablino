@@ -10,6 +10,23 @@ export class StoriesService {
     private costTracking: CostTrackingService,
   ) {}
 
+  async createStory(body: { title?: string; heroName?: string; age?: number; prompt?: string }) {
+    const { randomUUID } = require('crypto');
+    const id = randomUUID();
+    const title = body.title || (body.heroName ? `${body.heroName}s Hörspiel` : 'Neues Hörspiel');
+    const story = await this.prisma.story.create({
+      data: {
+        id,
+        title,
+        heroName: body.heroName || null,
+        age: body.age || null,
+        prompt: body.prompt || null,
+        status: 'draft',
+      },
+    });
+    return { id: story.id };
+  }
+
   async getStories(showAll: boolean = false) {
     const stories = await this.prisma.story.findMany({
       include: {

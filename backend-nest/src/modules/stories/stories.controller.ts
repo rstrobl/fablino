@@ -15,6 +15,11 @@ export class StoriesController {
     private readonly replicateService: ReplicateService,
   ) {}
 
+  @Post()
+  async createStory(@Body() body: { title?: string; heroName?: string; age?: number; prompt?: string }) {
+    return this.storiesService.createStory(body);
+  }
+
   @Get()
   async getStories(@Query('all') all?: string) {
     const showAll = all === 'true';

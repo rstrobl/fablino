@@ -55,12 +55,12 @@ export function StoryDetail() {
 
   if (isLoading || !story) return <p className="p-6 text-text-muted">Laden…</p>;
 
-  const isRequested = (story as any).status === 'requested';
   const isDraft = (story as any).status === 'draft';
+  const hasScript = !!(story as any).scriptData?.script;
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-4xl">
-      <button onClick={() => { const s = (story as any).status; const tab = (s === 'draft' || s === 'produced') ? 'draft' : (s === 'published' || s === 'feedback') ? 'published' : 'requested'; nav(`/stories?status=${tab}`); }} className="flex items-center gap-1 text-text-muted hover:text-text text-sm">
+      <button onClick={() => { const s = (story as any).status; const tab = (s === 'published' || s === 'feedback') ? 'published' : 'draft'; nav(`/stories?status=${tab}`); }} className="flex items-center gap-1 text-text-muted hover:text-text text-sm">
         <ArrowLeft size={16} /> Zurück
       </button>
 
@@ -166,8 +166,8 @@ export function StoryDetail() {
         </div>
       </div>
 
-      {/* Generation form for requested stories */}
-      {isRequested && (
+      {/* Generation form for stories without script */}
+      {isDraft && !hasScript && (
         <GenerateForm
           story={story}
           onDone={() => qc.invalidateQueries({ queryKey: ['story', id] })}
@@ -176,20 +176,11 @@ export function StoryDetail() {
       )}
 
       {/* Script view: draft mode with buttons, or readonly for published */}
-      {!isRequested && (story as any).scriptData?.script && (
+      {hasScript && (
         <DraftPreview
           story={story}
           onDone={() => qc.invalidateQueries({ queryKey: ['story', id] })}
           mode={isDraft ? 'draft' : 'readonly'}
-          onDelete={() => { if (confirm('Story wirklich löschen?')) delMut.mutate(story.id); }}
-        />
-      )}
-
-      {/* Draft without script: show generate form */}
-      {isDraft && !(story as any).scriptData && (
-        <GenerateForm
-          story={story}
-          onDone={() => qc.invalidateQueries({ queryKey: ['story', id] })}
           onDelete={() => { if (confirm('Story wirklich löschen?')) delMut.mutate(story.id); }}
         />
       )}

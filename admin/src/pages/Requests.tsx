@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, Plus, Trash2, User, X, Wand2, ArrowLeft, Mail, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { GenerateForm } from '../components/GenerateForm';
+import { useNavigate } from 'react-router-dom';
 import { getAuth } from '../utils/auth';
 
 const API = '/api/requests';
@@ -43,8 +43,8 @@ function StatusBadge({ status }: { status: string }) {
 export function Requests() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
+  const nav = useNavigate();
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
-  const [showGenerateForm, setShowGenerateForm] = useState(false);
   const [showCreateRequest, setShowCreateRequest] = useState(false);
   const [tab, setTab] = useState<'open' | 'done'>('open');
 
@@ -111,20 +111,33 @@ export function Requests() {
     }
   };
 
-  // When creating a story from a request, we build a story-like object for GenerateForm
-  const storyFromRequest = selectedRequest ? {
-    id: null, // will be created via /api/reserve
-    status: 'requested',
-    heroName: selectedRequest.heroName || '',
-    age: selectedRequest.age || '',
-    prompt: selectedRequest.prompt || selectedRequest.interests || '',
-    interests: selectedRequest.interests || '',
-    title: selectedRequest.heroName ? `${selectedRequest.heroName}s Hörspiel` : '',
-    _requestId: selectedRequest.id, // to link back after creation
-  } : null;
+  const createStoryFromRequest = async (req: any) => {
+    try {
+      const res = await fetch('/api/stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: getAuth() },
+        body: JSON.stringify({
+          heroName: req.heroName || undefined,
+          age: req.age || undefined,
+          prompt: req.prompt || req.interests || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.id) {
+        // Link request to story
+        await fetch(`/api/requests/${req.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: getAuth() },
+          body: JSON.stringify({ storyId: data.id, status: 'done' }),
+        });
+        qc.invalidateQueries({ queryKey: ['requests'] });
+        nav(`/stories/${data.id}`);
+      }
+    } catch { toast.error('Fehler beim Erstellen'); }
+  };
 
   // Detail view
-  if (selectedRequest && !showGenerateForm) {
+  if (selectedRequest) {
     const s = selectedRequest;
     return (
       <div className="p-4 md:p-6 space-y-4 max-w-2xl">
@@ -185,7 +198,7 @@ export function Requests() {
           <div className="flex gap-3 pt-2 border-t border-border">
             {!s.storyId && (
               <button
-                onClick={() => setShowGenerateForm(true)}
+                onClick={() => createStoryFromRequest(s)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
               >
                 <Wand2 size={16} /> Story erstellen
@@ -364,30 +377,6 @@ export function Requests() {
         </div>
       )}
 
-      {/* GenerateForm Modal — from request detail */}
-      {showGenerateForm && storyFromRequest && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowGenerateForm(false)}>
-          <div className="bg-surface border border-border rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="sticky top-0 bg-surface border-b border-border px-6 py-4 flex items-center justify-between z-10">
-              <h3 className="text-lg font-bold">Story erstellen</h3>
-              <button onClick={() => setShowGenerateForm(false)} className="text-text-muted hover:text-text">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6">
-              <GenerateForm
-                story={storyFromRequest}
-                onDone={() => {
-                  setShowGenerateForm(false);
-                  setSelectedRequest(null);
-                  qc.invalidateQueries({ queryKey: ['requests'] });
-                  qc.invalidateQueries({ queryKey: ['stories'] });
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
