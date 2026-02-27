@@ -43,4 +43,10 @@ export class GenerationController {
     }
     return this.generationService.runLectorRevision(id, instructions);
   }
+
+  @Post(':id/tts-optimize')
+  @UseGuards(BasicAuthGuard)
+  async runTtsOptimization(@Param('id') id: string) {
+    return this.generationService.runTtsOptimization(id);
+  }
 }

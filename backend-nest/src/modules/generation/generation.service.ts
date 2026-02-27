@@ -715,4 +715,55 @@ export class GenerationService {
       step,
     };
   }
+
+  async runTtsOptimization(storyId: string) {
+    const story = await this.prisma.story.findUnique({ where: { id: storyId } });
+    if (!story) throw new NotFoundException('Story not found');
+    if (story.status !== 'draft') throw new HttpException('Nur Entwürfe können TTS-optimiert werden', HttpStatus.BAD_REQUEST);
+
+    const scriptData = story.scriptData as unknown as ScriptData;
+    if (!scriptData?.script) {
+      throw new HttpException('Kein Skript vorhanden', HttpStatus.BAD_REQUEST);
+    }
+
+    const { script: optimizedScript, step } = await this.claudeService.runTtsOptimization(scriptData.script);
+
+    // Track cost for TTS step
+    await this.costTracking.trackClaude(
+      storyId,
+      'tts_optimization',
+      { input_tokens: step.tokens.input, output_tokens: step.tokens.output },
+      0,
+    ).catch(() => {});
+
+    // Update script in DB and add TTS step to pipeline
+    const updatedScriptData = {
+      ...scriptData,
+      script: optimizedScript,
+      pipeline: scriptData.pipeline ? {
+        ...scriptData.pipeline,
+        steps: [...scriptData.pipeline.steps, step],
+        totalTokens: {
+          input: scriptData.pipeline.totalTokens.input + step.tokens.input,
+          output: scriptData.pipeline.totalTokens.output + step.tokens.output,
+        },
+      } : {
+        steps: [step],
+        totalTokens: { input: step.tokens.input, output: step.tokens.output },
+      },
+    };
+
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
+      JSON.stringify(updatedScriptData),
+      storyId,
+    );
+
+    console.log(`🎙️ TTS optimization for ${storyId} completed`);
+
+    return {
+      script: optimizedScript,
+      step,
+    };
+  }
 }

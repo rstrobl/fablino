@@ -23,7 +23,7 @@ interface ReviewResult {
 }
 
 export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { story: any; onDone: () => void; mode?: 'draft' | 'readonly'; onDelete?: () => void }) {
-  const [phase, setPhase] = useState<'preview' | 'reviewing' | 'reviewed' | 'producing' | 'done' | 'error' | 'lector' | 'lector-result' | 'lector-revising'>('preview');
+  const [phase, setPhase] = useState<'preview' | 'reviewing' | 'reviewed' | 'producing' | 'done' | 'error' | 'lector' | 'lector-result' | 'lector-revising' | 'tts-optimizing'>('preview');
   const [progress, setProgress] = useState('');
   const [livePipelineSteps, setLivePipelineSteps] = useState<any[]>([]);
   const [activeStep, setActiveStep] = useState<string | null>(null);
@@ -166,6 +166,23 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
     }
   };
 
+  const handleTtsOptimization = async () => {
+    setPhase('tts-optimizing');
+    setProgress('TTS-Optimierung läuft...');
+    try {
+      const res = await fetch(`/api/generate/${story.id}/tts-optimize`, { 
+        method: 'POST', 
+        headers: { Authorization: getAuth() } 
+      });
+      if (!res.ok) throw new Error('TTS-Optimierung fehlgeschlagen');
+      setPhase('preview');
+      onDone(); // Refresh to show updated script
+    } catch (err: any) {
+      setError(err.message);
+      setPhase('error');
+    }
+  };
+
   const handleConfirm = async () => {
     setPhase('producing');
     setProgress('Wird vertont...');
@@ -205,6 +222,16 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
         <Loader2 size={24} className="animate-spin mx-auto text-blue-400" />
         <p className="text-sm">✏️ Skript wird überarbeitet...</p>
         <p className="text-xs text-text-muted">Das kann 30-60 Sekunden dauern</p>
+      </div>
+    );
+  }
+
+  if (phase === 'tts-optimizing') {
+    return (
+      <div className="bg-surface border border-green-500/30 rounded-xl p-8 text-center space-y-3">
+        <Loader2 size={24} className="animate-spin mx-auto text-green-400" />
+        <p className="text-sm">🎙️ TTS-Optimierung läuft...</p>
+        <p className="text-xs text-text-muted">Audio-Tags und Emotionen werden optimiert...</p>
       </div>
     );
   }
@@ -383,6 +410,24 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
     );
   }
 
+  // Helper function to get pipeline status from scriptData
+  const getPipelineStatus = () => {
+    const pipeline = (story as any).scriptData?.pipeline;
+    const steps = pipeline?.steps || [];
+    
+    // Extract completed step types
+    const completedSteps = new Set(steps.map((step: any) => step.agent));
+    
+    return {
+      author: completedSteps.has('author') || completedSteps.has('adapter'),
+      lector: completedSteps.has('lector') || completedSteps.has('reviewer'),
+      tts: completedSteps.has('tts'),
+      produced: story.status === 'produced' || story.status === 'published'
+    };
+  };
+
+  const pipelineStatus = getPipelineStatus();
+
   if (!script) return null;
 
   return (
@@ -391,6 +436,30 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
         <h3 className="text-lg font-semibold flex items-center gap-2">📝 {mode === 'draft' ? 'Skript-Vorschau' : 'Skript'}</h3>
         {mode === 'draft' && <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">Entwurf</span>}
       </div>
+
+      {/* Pipeline Status */}
+      {mode === 'draft' && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-text-muted">Pipeline:</span>
+          <div className="flex items-center gap-1">
+            <span className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${pipelineStatus.author ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+              {pipelineStatus.author ? '✅' : '⬜'} Autor
+            </span>
+            <span className="text-gray-400">→</span>
+            <span className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${pipelineStatus.lector ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+              {pipelineStatus.lector ? '✅' : '⬜'} Lektorat
+            </span>
+            <span className="text-gray-400">→</span>
+            <span className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${pipelineStatus.tts ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+              {pipelineStatus.tts ? '✅' : '⬜'} TTS
+            </span>
+            <span className="text-gray-400">→</span>
+            <span className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${pipelineStatus.produced ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+              {pipelineStatus.produced ? '✅' : '⬜'} Vertont
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
@@ -583,6 +652,12 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
             className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
             📝 Lektorat
+          </button>
+          <button
+            onClick={handleTtsOptimization}
+            className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            🎙️ TTS-Optimierung
           </button>
           <button
             onClick={handleConfirm}
