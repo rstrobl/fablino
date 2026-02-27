@@ -88,6 +88,7 @@ export interface PipelineStep {
   model: string;
   durationMs: number;
   tokens: { input: number; output: number };
+  timestamp?: string; // ISO 8601
   reviewResult?: ReviewResult;
   scriptSnapshot?: Script;
 }
@@ -261,6 +262,7 @@ WICHTIG zu Charakteren:
   }
 
   private addStep(pipeline: PipelineLog, step: PipelineStep) {
+    step.timestamp = step.timestamp || new Date().toISOString();
     pipeline.steps.push(step);
     pipeline.totalTokens.input += step.tokens.input;
     pipeline.totalTokens.output += step.tokens.output;
@@ -301,6 +303,7 @@ WICHTIG zu Charakteren:
         model: cs.reviewerModel || cs.model,
         durationMs: Date.now() - start,
         tokens: { input: result.usage.input_tokens, output: result.usage.output_tokens },
+        timestamp: new Date().toISOString(),
         reviewResult: review,
       },
     };
@@ -466,6 +469,7 @@ WICHTIG zu Charakteren:
         model: cs.reviewerModel || cs.model,
         durationMs: Date.now() - start,
         tokens: { input: result.usage.input_tokens, output: result.usage.output_tokens },
+        timestamp: new Date().toISOString(),
         reviewResult: review,
       },
     };
@@ -524,6 +528,7 @@ WICHTIG zu Charakteren:
         model: cs.model,
         durationMs: Date.now() - start,
         tokens: { input: revisionResult.usage.input_tokens, output: revisionResult.usage.output_tokens },
+        timestamp: new Date().toISOString(),
         scriptSnapshot: JSON.parse(JSON.stringify(revisedScript)),
       },
     };
@@ -567,6 +572,7 @@ WICHTIG zu Charakteren:
         model: cs.ttsModel || cs.model,
         durationMs: Date.now() - start,
         tokens: { input: ttsResult.usage.input_tokens, output: ttsResult.usage.output_tokens },
+        timestamp: new Date().toISOString(),
         scriptSnapshot: JSON.parse(JSON.stringify(optimizedScript)),
       },
     };

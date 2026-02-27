@@ -6,6 +6,7 @@ interface PipelineStep {
   model: string;
   durationMs: number;
   tokens: { input: number; output: number };
+  timestamp?: string;
   reviewResult?: {
     approved: boolean;
     feedback?: string;
@@ -42,6 +43,19 @@ function formatDuration(ms: number) {
 
 function formatTokens(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n);
+}
+
+function timeAgo(iso?: string): string | null {
+  if (!iso) return null;
+  const diff = Date.now() - new Date(iso).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return 'gerade eben';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `vor ${m} Min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `vor ${h} Std`;
+  const d = Math.floor(h / 24);
+  return `vor ${d} Tag${d > 1 ? 'en' : ''}`;
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -145,6 +159,11 @@ export function PipelineLog({ pipeline, activeStep }: Props) {
 
                 {/* Duration */}
                 <span className="text-xs text-text-muted w-16 text-right">{formatDuration(step.durationMs)}</span>
+
+                {/* Time ago */}
+                {step.timestamp && (
+                  <span className="text-xs text-text-muted/60 w-24 text-right">{timeAgo(step.timestamp)}</span>
+                )}
 
                 {/* Action buttons */}
                 <div className="flex items-center gap-1">
