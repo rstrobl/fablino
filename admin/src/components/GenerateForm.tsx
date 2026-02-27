@@ -102,9 +102,8 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
         const data = await res.json();
         if (data.status === 'preview') {
           clearInterval(pollRef.current);
-          setScript(data.script);
-          setVoiceMap(data.voiceMap);
-          setPhase('preview');
+          setPhase('done');
+          onDone();
         } else if (data.status === 'complete') {
           clearInterval(pollRef.current);
           setPhase('done');
