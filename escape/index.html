@@ -2,278 +2,79 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESCAPE - Fablino AI Escape Room</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ESCAPE – Fablino</title>
     <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Inter', sans-serif;
-            background: radial-gradient(circle at center, #0a0a0a 0%, #000000 100%);
-            color: #e0e0e0;
-            min-height: 100vh;
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        /* Atmospheric background effects */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: 
-                radial-gradient(circle at 20% 80%, rgba(139, 69, 19, 0.1) 0%, transparent 30%),
-                radial-gradient(circle at 80% 20%, rgba(25, 25, 112, 0.05) 0%, transparent 30%),
-                radial-gradient(circle at 40% 40%, rgba(139, 69, 19, 0.03) 0%, transparent 40%);
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        /* Flickering candle light effect */
-        @keyframes flicker {
-            0%, 100% { opacity: 0.8; transform: scale(1); }
-            25% { opacity: 0.9; transform: scale(1.05); }
-            50% { opacity: 0.7; transform: scale(0.95); }
-            75% { opacity: 0.85; transform: scale(1.02); }
-        }
-
-        .candle-glow {
-            position: fixed;
-            top: 10%;
-            right: 10%;
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle, rgba(255, 165, 0, 0.3) 0%, rgba(255, 69, 0, 0.1) 50%, transparent 100%);
-            border-radius: 50%;
-            animation: flicker 3s infinite;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .container {
-            position: relative;
-            z-index: 10;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-            min-height: 100vh;
+            background: #000;
+            color: #ccc;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
             text-align: center;
+            padding: 1.5rem;
+            overflow: hidden;
+        }
+
+        /* Subtle warm glow */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 30%, rgba(255,107,53,0.06) 0%, transparent 60%);
+            pointer-events: none;
         }
 
         .title {
             font-family: 'Creepster', cursive;
-            font-size: clamp(3rem, 8vw, 6rem);
+            font-size: clamp(2.5rem, 10vw, 5rem);
             color: #ff6b35;
-            text-shadow: 
-                0 0 10px rgba(255, 107, 53, 0.5),
-                0 0 20px rgba(255, 107, 53, 0.3),
-                0 0 30px rgba(255, 107, 53, 0.2);
-            margin-bottom: 1rem;
-            animation: glow 2s ease-in-out infinite alternate;
-        }
-
-        @keyframes glow {
-            from { text-shadow: 0 0 10px rgba(255, 107, 53, 0.5), 0 0 20px rgba(255, 107, 53, 0.3), 0 0 30px rgba(255, 107, 53, 0.2); }
-            to { text-shadow: 0 0 15px rgba(255, 107, 53, 0.8), 0 0 25px rgba(255, 107, 53, 0.5), 0 0 35px rgba(255, 107, 53, 0.3); }
+            text-shadow: 0 0 20px rgba(255,107,53,0.4);
+            margin-bottom: 0.5rem;
         }
 
         .subtitle {
-            font-size: 1.5rem;
+            font-size: clamp(0.9rem, 3vw, 1.1rem);
             font-weight: 300;
-            color: #cccccc;
+            color: #999;
             margin-bottom: 2rem;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            max-width: 320px;
+            line-height: 1.4;
         }
 
-        .description {
-            max-width: 600px;
-            margin-bottom: 3rem;
-            font-size: 1.1rem;
-            line-height: 1.6;
-            color: #b0b0b0;
-            background: rgba(20, 20, 20, 0.7);
-            padding: 2rem;
-            border-radius: 15px;
-            border: 1px solid rgba(255, 107, 53, 0.2);
-            backdrop-filter: blur(10px);
-        }
-
-        .widget-container {
-            width: 100%;
-            max-width: 500px;
-            margin: 2rem 0;
-            padding: 2rem;
-            background: rgba(30, 30, 30, 0.8);
-            border-radius: 20px;
-            border: 2px solid rgba(255, 107, 53, 0.3);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(15px);
-        }
-
-        .widget-placeholder {
-            padding: 3rem;
-            text-align: center;
-            color: #888;
-            border: 2px dashed rgba(255, 107, 53, 0.3);
-            border-radius: 15px;
-            font-style: italic;
-        }
-
-        .instructions {
-            font-size: 1.2rem;
-            color: #ff6b35;
-            margin-bottom: 1rem;
-            font-weight: 500;
+        .hint {
+            font-size: 0.8rem;
+            color: #555;
+            margin-top: 2rem;
+            max-width: 280px;
+            line-height: 1.4;
         }
 
         .footer {
-            position: absolute;
-            bottom: 1rem;
-            right: 1rem;
-            font-size: 0.9rem;
-            color: #666;
-            opacity: 0.7;
-        }
-
-        .footer a {
-            color: #ff6b35;
-            text-decoration: none;
-        }
-
-        .footer a:hover {
-            text-decoration: underline;
-        }
-
-        /* Mobile responsive */
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-            
-            .description {
-                padding: 1.5rem;
-                font-size: 1rem;
-            }
-            
-            .widget-container {
-                padding: 1.5rem;
-            }
-        }
-
-        /* Stone texture overlay */
-        .stone-texture {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                repeating-linear-gradient(
-                    45deg,
-                    transparent,
-                    transparent 2px,
-                    rgba(100, 100, 100, 0.01) 2px,
-                    rgba(100, 100, 100, 0.01) 4px
-                );
-            pointer-events: none;
-            z-index: 2;
+            bottom: 0.75rem;
+            font-size: 0.75rem;
+            color: #333;
         }
-
-        /* Loading animation for widget */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255, 107, 53, 0.3);
-            border-radius: 50%;
-            border-top-color: #ff6b35;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        .footer a { color: #663a1f; text-decoration: none; }
     </style>
 </head>
 <body>
-    <div class="candle-glow"></div>
-    <div class="stone-texture"></div>
-    
-    <div class="container">
-        <h1 class="title">ESCAPE</h1>
-        <h2 class="subtitle">Hilf Luca aus dem Kellergewölbe zu entkommen</h2>
-        
-        <div class="description">
-            <p>Du befindest dich vor einem geheimnisvollen Kellergewölbe. Drinnen ist Luca eingesperrt – ein Abenteurer, der deine Hilfe braucht, um zu entkommen.</p>
-            <br>
-            <p>Sprich mit ihm, höre auf seine Beschreibungen und hilf ihm dabei, die Rätsel zu lösen. Nur gemeinsam könnt ihr den Weg in die Freiheit finden.</p>
-        </div>
+    <h1 class="title">ESCAPE</h1>
+    <p class="subtitle">Luca ist in einem Kellergewölbe eingesperrt. Sprich mit ihm und hilf ihm rauszukommen.</p>
 
-        <div class="widget-container">
-            <p class="instructions">Klick auf den Button und sprich mit Luca. Er braucht deine Hilfe!</p>
-            
-            <!-- ElevenLabs Conversational AI Widget -->
-            <div id="elevenlabs-widget">
-                <elevenlabs-convai agent-id="agent_9501kjgm7xyteaar28afba2cnmzm"></elevenlabs-convai>
-            </div>
-        </div>
+    <elevenlabs-convai agent-id="agent_9501kjgm7xyteaar28afba2cnmzm"></elevenlabs-convai>
 
-        <div style="margin-top: 2rem; padding: 1rem; background: rgba(139, 69, 19, 0.1); border-radius: 10px; border: 1px solid rgba(139, 69, 19, 0.3);">
-            <p style="font-size: 0.9rem; color: #cccccc;">
-                <strong>Hinweis:</strong> Stelle sicher, dass dein Mikrofon aktiviert ist. 
-                Luca kann dich hören und wird auf deine Stimme reagieren.
-            </p>
-        </div>
-    </div>
+    <p class="hint">🎤 Mikrofon aktivieren und auf den Button klicken</p>
 
-    <footer class="footer">
-        <a href="https://fablino.de" target="_blank">fablino.de</a>
-    </footer>
+    <div class="footer"><a href="https://fablino.de">fablino.de</a></div>
 
-    <!-- ElevenLabs Conversational AI Widget Script -->
     <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
-    
-    <script>
-        // Widget is now directly embedded with agent ID
-
-        // Add atmospheric sound effects (optional)
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add subtle hover effects
-            const containers = document.querySelectorAll('.widget-container, .description');
-            containers.forEach(container => {
-                container.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-2px)';
-                    this.style.transition = 'transform 0.3s ease';
-                });
-                
-                container.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0)';
-                });
-            });
-        });
-
-        // Add typing sound effect simulation
-        let typingTimeout;
-        document.addEventListener('keypress', function() {
-            clearTimeout(typingTimeout);
-            document.body.style.boxShadow = 'inset 0 0 100px rgba(255, 107, 53, 0.05)';
-            
-            typingTimeout = setTimeout(() => {
-                document.body.style.boxShadow = 'none';
-            }, 200);
-        });
-    </script>
 </body>
 </html>
