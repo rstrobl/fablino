@@ -24,7 +24,7 @@ function SourceBadge({ source }: { source: string | null }) {
     'Antler WhatsApp': 'bg-amber-500/20 text-amber-400',
     'Freund': 'bg-blue-500/20 text-blue-400',
     'Direktkontakt': 'bg-green-500/20 text-green-400',
-    'Manuell': 'bg-purple-500/20 text-purple-400',
+    'Anderes': 'bg-purple-500/20 text-purple-400',
   };
   return <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${colors[source] || 'bg-gray-500/20 text-gray-400'}`}>{source}</span>;
 }
@@ -42,7 +42,7 @@ export function Requests() {
   const [reqHero, setReqHero] = useState('');
   const [reqPrompt, setReqPrompt] = useState('');
   const [reqContact, setReqContact] = useState('');
-  const [reqSource, setReqSource] = useState('Manuell');
+  const [reqSource, setReqSource] = useState('Direktkontakt');
 
   const { data: stories = [], isLoading } = useQuery({
     queryKey: ['stories'],
@@ -75,7 +75,7 @@ export function Requests() {
       qc.invalidateQueries({ queryKey: ['stories'] });
       toast.success('Anfrage erstellt');
       setShowCreateRequest(false);
-      setReqName(''); setReqAge(''); setReqHero(''); setReqPrompt(''); setReqContact(''); setReqSource('Manuell');
+      setReqName(''); setReqAge(''); setReqHero(''); setReqPrompt(''); setReqContact(''); setReqSource('Direktkontakt');
     },
   });
 
@@ -290,11 +290,9 @@ export function Requests() {
                     onChange={e => setReqSource(e.target.value)}
                     className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
                   >
-                    <option value="Manuell">Manuell</option>
-                    <option value="Antler WhatsApp">Antler WhatsApp</option>
-                    <option value="Freund">Freund</option>
                     <option value="Direktkontakt">Direktkontakt</option>
                     <option value="Webseite">Webseite</option>
+                    <option value="Anderes">Anderes</option>
                   </select>
                 </div>
                 <div className="w-24">
@@ -306,15 +304,6 @@ export function Requests() {
                     className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm text-text-muted mb-1">Name der Hauptfigur (optional)</label>
-                <input
-                  value={reqHero}
-                  onChange={e => setReqHero(e.target.value)}
-                  placeholder="z.B. Laura, Captain Blubber…"
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
-                />
               </div>
               <div>
                 <label className="block text-sm text-text-muted mb-1">Wünsche / Interessen</label>
