@@ -732,7 +732,7 @@ export class GenerationService {
     };
   }
 
-  async runTtsOptimization(storyId: string) {
+  async runTtsOptimization(storyId: string, includeSfx?: boolean) {
     const story = await this.prisma.story.findUnique({ where: { id: storyId } });
     if (!story) throw new NotFoundException('Story not found');
     if (story.status !== 'draft') throw new HttpException('Nur Entwürfe können TTS-optimiert werden', HttpStatus.BAD_REQUEST);
@@ -742,7 +742,7 @@ export class GenerationService {
       throw new HttpException('Kein Skript vorhanden', HttpStatus.BAD_REQUEST);
     }
 
-    const { script: optimizedScript, step } = await this.claudeService.runTtsOptimization(scriptData.script);
+    const { script: optimizedScript, step } = await this.claudeService.runTtsOptimization(scriptData.script, includeSfx);
 
     // Track cost for TTS step
     await this.costTracking.trackClaude(

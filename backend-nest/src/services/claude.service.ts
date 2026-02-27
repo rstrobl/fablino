@@ -537,7 +537,7 @@ WICHTIG zu Charakteren:
   /**
    * Manual TTS optimization - returns optimized script
    */
-  async runTtsOptimization(script: Script): Promise<{ script: Script; step: PipelineStep }> {
+  async runTtsOptimization(script: Script, includeSfx?: boolean): Promise<{ script: Script; step: PipelineStep }> {
     const cs = loadClaudeSettings();
     const ttsPrompt = loadPromptFile('agent-tts.txt');
     const start = Date.now();
@@ -546,7 +546,9 @@ WICHTIG zu Charakteren:
       throw new Error('agent-tts.txt prompt file not found');
     }
 
-    const sfxPrompt = cs.sfxEnabled ? this.buildSfxPrompt() : '';
+    // Use explicit param if provided, otherwise fall back to settings
+    const sfxEnabled = includeSfx !== undefined ? includeSfx : !!cs.sfxEnabled;
+    const sfxPrompt = sfxEnabled ? this.buildSfxPrompt() : '';
 
     const ttsResult = await this.callClaude({
       model: cs.ttsModel || cs.model,

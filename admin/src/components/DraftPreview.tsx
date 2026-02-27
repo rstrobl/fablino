@@ -17,6 +17,15 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
   const { script, voiceMap, scriptConfirmed } = (story as any).scriptData || {};
   const [allVoices, setAllVoices] = useState<any[]>([]);
   const [pickerChar, setPickerChar] = useState<string | null>(null);
+  const [ttsIncludeSfx, setTtsIncludeSfx] = useState<boolean>(true);
+
+  // Load SFX default from settings
+  useEffect(() => {
+    fetch('/api/settings/claude', { headers: { Authorization: getAuth() } })
+      .then(r => r.json())
+      .then(s => { if (s.sfxEnabled !== undefined) setTtsIncludeSfx(s.sfxEnabled); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!voiceMap) return;
@@ -124,7 +133,8 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
     try {
       const res = await fetch(`/api/generate/${story.id}/tts-optimize`, {
         method: 'POST',
-        headers: { Authorization: getAuth() },
+        headers: { 'Content-Type': 'application/json', Authorization: getAuth() },
+        body: JSON.stringify({ includeSfx: ttsIncludeSfx }),
       });
       if (!res.ok) throw new Error('TTS-Optimierung fehlgeschlagen');
       setPhase('idle');
@@ -390,9 +400,15 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
                   <button onClick={handleUnconfirmScript} className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border hover:bg-surface-hover rounded-lg text-sm font-medium transition-colors">
                     ← Zurück zu Entwurf
                   </button>
-                  <button onClick={handleTtsOptimization} className="flex items-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors">
-                    🎙️ TTS-Optimierung
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleTtsOptimization} className="flex items-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors">
+                      🎙️ TTS-Optimierung
+                    </button>
+                    <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer select-none">
+                      <input type="checkbox" checked={ttsIncludeSfx} onChange={e => setTtsIncludeSfx(e.target.checked)} className="rounded" />
+                      SFX
+                    </label>
+                  </div>
                   <button onClick={handleProduce} className="flex items-center gap-2 px-4 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
                     🔊 Vertonen
                   </button>

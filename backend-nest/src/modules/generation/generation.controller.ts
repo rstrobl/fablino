@@ -46,7 +46,7 @@ export class GenerationController {
 
   @Post(':id/tts-optimize')
   @UseGuards(BasicAuthGuard)
-  async runTtsOptimization(@Param('id') id: string) {
-    return this.generationService.runTtsOptimization(id);
+  async runTtsOptimization(@Param('id') id: string, @Body() body?: { includeSfx?: boolean }) {
+    return this.generationService.runTtsOptimization(id, body?.includeSfx);
   }
 }
