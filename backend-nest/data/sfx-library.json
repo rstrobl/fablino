@@ -380,15 +380,16 @@
     "name": "Magenknurren",
     "category": "body",
     "file": "stomach_growl.mp3",
-    "active": true,
-    "prompt": "Loud funny stomach growling and rumbling, comedic hunger sound"
+    "active": false,
+    "prompt": "Loud funny stomach growling and rumbling, comedic hunger sound",
+    "duration": 3
   },
   {
     "id": "bubbling_pot",
     "name": "Topf brodeln",
     "category": "environment",
     "file": "bubbling_pot.mp3",
-    "active": true,
+    "active": false,
     "prompt": "Pot of porridge bubbling and cooking on stove, liquid boiling sounds"
   },
   {
@@ -396,7 +397,7 @@
     "name": "Überlaufen",
     "category": "environment",
     "file": "overflowing.mp3",
-    "active": true,
+    "active": false,
     "prompt": "Thick liquid overflowing and spilling from a pot, sloshing and splashing onto floor"
   },
   {
@@ -404,7 +405,7 @@
     "name": "Fröhliches Ende",
     "category": "music",
     "file": "happy_ending.mp3",
-    "active": true,
+    "active": false,
     "prompt": "Short happy cheerful ending jingle, fairy tale style, warm and cozy, 5 seconds"
   }
 ]
