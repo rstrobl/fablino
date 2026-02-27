@@ -128,6 +128,14 @@ export function StoryDetail() {
           )}
           {story.summary && !story.summary.startsWith('{') && <p className="text-sm">{story.summary}</p>}
           <div className="flex gap-2 mt-3 flex-wrap">
+            {(isRequested || isDraft) && (
+              <button
+                onClick={() => { if (confirm('Story wirklich löschen?')) delMut.mutate(story.id); }}
+                className="flex items-center gap-2 px-4 py-2 bg-red-900/30 border border-red-800/50 rounded-lg text-sm text-red-400 hover:bg-red-900/50 transition-colors"
+              >
+                <Trash2 size={16} /> Löschen
+              </button>
+            )}
             {(story as any).status === 'produced' && (
               <button onClick={async () => {
                 if (!confirm('Audio löschen und zurück zum Entwurf?')) return;
