@@ -224,7 +224,7 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
               mode === 'prompt' ? 'bg-brand text-white' : 'text-text-muted hover:text-text'
             }`}
           >
-            📝 Prompt
+            📝 Thema & Interessen
           </button>
           <button
             onClick={() => setMode('story')}
@@ -253,7 +253,7 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
         {mode === 'prompt' ? (
           <>
             <div>
-              <label className="block text-sm text-text-muted mb-1">Prompt</label>
+              <label className="block text-sm text-text-muted mb-1">Thema & Interessen</label>
               <textarea
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
@@ -315,25 +315,6 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
             {story.requesterSource && <span> ({story.requesterSource})</span>}
           </div>
         )}
-
-        <div>
-          <button
-            type="button"
-            onClick={() => setShowSystemPrompt(!showSystemPrompt)}
-            className="text-xs text-text-muted hover:text-text transition-colors mb-2"
-          >
-            {showSystemPrompt ? '▾ Zusätzliche Anweisungen ausblenden' : '▸ Zusätzliche Anweisungen (optional)'}
-          </button>
-          {showSystemPrompt && (
-            <textarea
-              value={systemPrompt}
-              onChange={e => setSystemPrompt(e.target.value)}
-              rows={4}
-              placeholder="z.B. 'Die Geschichte soll besonders lustig sein' oder 'Bitte langsameres Erzähltempo für kleine Kinder'"
-              className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-xs font-mono focus:outline-none focus:border-brand leading-relaxed"
-            />
-          )}
-        </div>
 
         <div className="flex gap-3">
           <button
