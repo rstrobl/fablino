@@ -79,7 +79,7 @@ export function Stories() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [newHeroName, setNewHeroName] = useState('');
-  const [newHeroAge, setNewHeroAge] = useState('');
+  const [newTargetAge, setNewTargetAge] = useState('');
   const [newPrompt, setNewPrompt] = useState('');
 
   const createMut = useMutation({
@@ -87,7 +87,7 @@ export function Stories() {
       const res = await fetch('/api/reserve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${btoa(getAuth())}` },
-        body: JSON.stringify({ heroName: newHeroName || undefined, heroAge: newHeroAge || undefined, prompt: newPrompt || undefined }),
+        body: JSON.stringify({ heroName: newHeroName || undefined, age: newTargetAge || undefined, prompt: newPrompt || undefined }),
       });
       if (!res.ok) throw new Error('Fehler beim Erstellen');
       return res.json();
@@ -191,37 +191,40 @@ export function Stories() {
               <button onClick={() => setShowCreate(false)} className="text-text-muted hover:text-text"><X size={20} /></button>
             </div>
             <div>
-              <label className="block text-sm text-text-muted mb-1">Name des Kindes</label>
-              <input
-                value={newHeroName}
-                onChange={e => setNewHeroName(e.target.value)}
-                placeholder="z.B. Laura"
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
-                autoFocus
-              />
+              <label className="block text-sm text-text-muted mb-1">Zielalter (Zuhörer)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  value={newTargetAge}
+                  onChange={e => setNewTargetAge(e.target.value)}
+                  placeholder="z.B. 6"
+                  className="w-24 px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+                  autoFocus
+                />
+                <span className="text-sm text-text-muted">Jahre</span>
+              </div>
             </div>
             <div>
-              <label className="block text-sm text-text-muted mb-1">Alter</label>
-              <input
-                value={newHeroAge}
-                onChange={e => setNewHeroAge(e.target.value)}
-                placeholder="z.B. 5"
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-text-muted mb-1">Interessen / Wünsche</label>
+              <label className="block text-sm text-text-muted mb-1">Prompt</label>
               <textarea
                 value={newPrompt}
                 onChange={e => setNewPrompt(e.target.value)}
-                placeholder="z.B. Dinosaurier, Feuerwehr, Prinzessinnen…"
+                placeholder="Beschreibe die Geschichte frei — Thema, Charaktere, Setting…"
                 rows={3}
                 className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand resize-none"
               />
             </div>
+            <div>
+              <label className="block text-sm text-text-muted mb-1">Name der Hauptfigur (optional)</label>
+              <input
+                value={newHeroName}
+                onChange={e => setNewHeroName(e.target.value)}
+                placeholder="z.B. Laura, Popopipifurz, Captain Blubber…"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+              />
+            </div>
             <button
               onClick={() => createMut.mutate()}
-              disabled={createMut.isPending || !newHeroName.trim()}
+              disabled={createMut.isPending || !newPrompt.trim()}
               className="w-full py-2.5 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors font-medium disabled:opacity-50"
             >
               {createMut.isPending ? 'Erstellen…' : 'Story erstellen'}
