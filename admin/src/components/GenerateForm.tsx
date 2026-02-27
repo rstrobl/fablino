@@ -157,18 +157,9 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
       const heroChar = namedChars.find(c => c.role === 'Hauptfigur') || namedChars[0];
       const otherChars = namedChars.filter(c => c !== heroChar);
       
-      // Build prompt with character info for prompt mode
-      let fullPrompt = mode === 'story' ? 'Geschichte adaptieren' : prompt;
-      if (mode === 'prompt' && namedChars.length > 0) {
-        const charDesc = namedChars.map(c => 
-          `${c.name}${c.role ? ` (${c.role})` : ''}${c.age ? `, ${c.age} Jahre` : ''}`
-        ).join('; ');
-        fullPrompt = `Charaktere: ${charDesc}. ${prompt}`;
-      }
-
       const body: any = {
         storyId: story.id || undefined,
-        prompt: fullPrompt,
+        prompt: mode === 'story' ? 'Geschichte adaptieren' : prompt,
         age: parseFloat(targetAge) || 6,
         mode,
         ...(mode === 'story' && { storyText }),
