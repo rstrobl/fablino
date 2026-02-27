@@ -46,6 +46,11 @@ export class StoriesController {
     return this.storiesService.updateVoiceMap(id, body.voiceMap);
   }
 
+  @Patch(':id/reset-script')
+  async resetScript(@Param('id') id: string) {
+    return this.storiesService.resetScript(id);
+  }
+
   @Get(':id/costs')
   async getStoryCosts(@Param('id') id: string) {
     return this.costTracking.getStoryCosts(id);

@@ -35,7 +35,7 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
   const { script, voiceMap } = (story as any).scriptData || {};
   const [allVoices, setAllVoices] = useState<any[]>([]);
   const [pickerChar, setPickerChar] = useState<string | null>(null);
-  const [showRegenModal, setShowRegenModal] = useState(false);
+  const [_showRegenModal, _setShowRegenModal] = useState(false);
   const [regenPrompt, setRegenPrompt] = useState(story.prompt || '');
   const [regenSideChars, setRegenSideChars] = useState<Array<{ name: string; role: string }>>(() => {
     const userChars = (story as any).scriptData?.userCharacters?.sideCharacters;
@@ -553,101 +553,16 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
         ))}
       </div>
 
-      {mode === 'draft' && showRegenModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowRegenModal(false)}>
-          <div className="bg-surface border border-border rounded-xl p-6 w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-3">🔄 Neu generieren</h3>
-            <label className="text-sm text-text-muted mb-1 block">Interessen / Prompt</label>
-            <textarea
-              value={regenPrompt}
-              onChange={e => setRegenPrompt(e.target.value)}
-              rows={3}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-brand"
-              placeholder="z.B. Minecraft, Zeitreisen, Technik"
-            />
-            <label className="text-sm text-text-muted mb-1 block">Nebencharaktere</label>
-            <div className="space-y-2 mb-3">
-              {regenSideChars.map((c, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <input
-                    value={c.name}
-                    onChange={e => { const next = [...regenSideChars]; next[i] = { ...next[i], name: e.target.value }; setRegenSideChars(next); }}
-                    placeholder="Name"
-                    className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand"
-                  />
-                  <input
-                    value={c.role}
-                    onChange={e => { const next = [...regenSideChars]; next[i] = { ...next[i], role: e.target.value }; setRegenSideChars(next); }}
-                    placeholder="Rolle (z.B. große Schwester, Hund)"
-                    className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand"
-                  />
-                  <button
-                    onClick={() => setRegenSideChars(regenSideChars.filter((_, j) => j !== i))}
-                    className="text-red-400 hover:text-red-300 text-sm px-2"
-                  >✕</button>
-                </div>
-              ))}
-              <button
-                onClick={() => setRegenSideChars([...regenSideChars, { name: '', role: '' }])}
-                className="text-xs text-brand hover:text-green-400 transition-colors"
-              >+ Charakter hinzufügen</button>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowRegenModal(false)}
-                className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-surface-hover transition-colors"
-              >
-                Abbrechen
-              </button>
-              <button
-                onClick={async () => {
-                  setShowRegenModal(false);
-                  setPhase('producing');
-                  setProgress('Skript wird neu generiert...');
-                  setLivePipelineSteps([]);
-                  try {
-                    const res = await fetch(`/api/generate/${story.id}/regenerate`, {
-                      method: 'POST',
-                      headers: { Authorization: getAuth(), 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ 
-                        prompt: regenPrompt || undefined,
-                        characters: {
-                          sideCharacters: regenSideChars.filter(c => c.name.trim()),
-                        },
-                      }),
-                    });
-                    if (!res.ok) throw new Error('Neu-Generierung fehlgeschlagen');
-                    onDone(); // invalidate story query to hide old pipeline
-                    for (;;) {
-                      await new Promise(r => setTimeout(r, 2000));
-                      const s = await fetch(`/api/generate/status/${story.id}`, { headers: { Authorization: getAuth() } });
-                      const data = await s.json();
-                      if (data.progress) setProgress(data.progress);
-                      if (data.pipelineSteps) setLivePipelineSteps(data.pipelineSteps);
-                      if (data.activeStep !== undefined) setActiveStep(data.activeStep);
-                      if (data.status === 'preview') { setLivePipelineSteps([]); onDone(); setPhase('preview'); break; }
-                      if (data.status === 'error') throw new Error(data.error || 'Fehler bei der Generierung');
-                    }
-                  } catch (err: any) {
-                    setError(err.message);
-                    setPhase('error');
-                  }
-                }}
-                className="px-4 py-2 text-sm rounded-lg bg-brand hover:bg-green-700 text-white font-medium transition-colors"
-              >
-                Generieren
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {mode === 'draft' && (
         <div className="flex gap-3 pt-2">
           <button
-            onClick={() => { 
-              setRegenPrompt(story.interests || story.prompt || ''); 
-              setRegenSideChars(getSideChars());
-              setShowRegenModal(true); 
+            onClick={async () => {
+              if (!confirm('Skript verwerfen und neu generieren?')) return;
+              await fetch(`/api/stories/${story.id}/reset-script`, {
+                method: 'PATCH',
+                headers: { Authorization: getAuth() },
+              });
+              onDone();
             }}
             className="flex items-center gap-2 px-5 py-2.5 bg-surface border border-border hover:bg-surface-hover rounded-lg text-sm font-medium transition-colors"
           >
