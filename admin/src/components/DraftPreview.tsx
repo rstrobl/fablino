@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Check, Volume2 } from 'lucide-react';
+import { Loader2, Check, Volume2, Trash2 } from 'lucide-react';
 import { fetchVoices } from '../api';
 import { TwemojiIcon } from '../charEmoji';
 import { VoicePicker } from './VoicePicker';
@@ -22,7 +22,7 @@ interface ReviewResult {
   suggestions: ReviewSuggestion[];
 }
 
-export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; onDone: () => void; mode?: 'draft' | 'readonly' }) {
+export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { story: any; onDone: () => void; mode?: 'draft' | 'readonly'; onDelete?: () => void }) {
   const [phase, setPhase] = useState<'preview' | 'reviewing' | 'reviewed' | 'producing' | 'done' | 'error'>('preview');
   const [progress, setProgress] = useState('');
   const [livePipelineSteps, setLivePipelineSteps] = useState<any[]>([]);
@@ -461,6 +461,14 @@ export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; on
           >
             <Check size={16} /> Skript bestätigen & vertonen
           </button>
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="flex items-center gap-2 px-5 py-2.5 bg-red-900/30 border border-red-800/50 rounded-lg text-sm text-red-400 hover:bg-red-900/50 transition-colors font-medium ml-auto"
+            >
+              <Trash2 size={16} /> Löschen
+            </button>
+          )}
         </div>
       )}
     </div>

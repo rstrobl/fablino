@@ -7,7 +7,7 @@ import { VoicePicker } from './VoicePicker';
 import { PipelineLog } from './PipelineLog';
 import { getAuth } from '../utils/auth';
 
-export function GenerateForm({ story, onDone }: { story: any; onDone: () => void }) {
+export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: () => void; onDelete?: () => void }) {
   const [heroName] = useState((story as any).heroName || story.title?.replace(/(s|es) Hörspiel$/, '') || '');
   const [targetAge, setTargetAge] = useState(story.age || '6');
   const [prompt, setPrompt] = useState(story.prompt || '');
@@ -280,12 +280,22 @@ export function GenerateForm({ story, onDone }: { story: any; onDone: () => void
           )}
         </div>
 
-        <button
-          onClick={handleGenerate}
-          className="flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          <Wand2 size={16} /> Skript generieren
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleGenerate}
+            className="flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            <Wand2 size={16} /> Skript generieren
+          </button>
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="flex items-center gap-2 px-5 py-2.5 bg-red-900/30 border border-red-800/50 rounded-lg text-sm text-red-400 hover:bg-red-900/50 transition-colors font-medium ml-auto"
+            >
+              🗑️ Löschen
+            </button>
+          )}
+        </div>
       </div>
     );
   }
