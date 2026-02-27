@@ -175,14 +175,6 @@ export function Stories() {
                     {s.age ? `${s.age} J.` : ''} · {timeAgo(s.updatedAt || s.createdAt)}
                     {isLateStage && s.durationSeconds ? ` · ${Math.floor(s.durationSeconds / 60)}:${String(s.durationSeconds % 60).padStart(2, '0')}` : ''}
                   </p>
-                  {isDraftStage && s.interests && <p className="text-xs text-text-muted mt-1 line-clamp-1">{s.interests}</p>}
-                  {isDraftStage && s.requesterName && (
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <User size={10} className="text-text-muted" />
-                      <span className="text-xs text-text-muted">{s.requesterName}</span>
-                      <SourceBadge source={s.requesterSource} />
-                    </div>
-                  )}
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   {isLateStage && (
@@ -209,8 +201,6 @@ export function Stories() {
                 <th className="p-3">{false ? 'Held' : 'Titel'}</th>
                 {(isLateStage || isDraftStage) && <th className="p-3">Kind</th>}
                 <th className="p-3">Alter</th>
-                {isDraftStage && <th className="p-3">Interessen</th>}
-                {isDraftStage && <th className="p-3">Anfrage von</th>}
                 {isLateStage && <th className="p-3">Länge</th>}
                 {isLateStage && <th className="p-3">Plays</th>}
                 <th className="p-3">Aktionen</th>
@@ -236,18 +226,6 @@ export function Stories() {
                     <td className="p-3 whitespace-nowrap">{s.heroName || s.characters?.find((c: any) => c.name !== 'Erzähler')?.name || '—'}</td>
                   )}
                   <td className="p-3 whitespace-nowrap">{s.age ? `${s.age} J.` : '—'}</td>
-                  {isDraftStage && <td className="p-3 max-w-xs"><p className="text-text-muted text-xs line-clamp-2">{s.interests || '—'}</p></td>}
-                  {isDraftStage && (
-                    <td className="p-3">
-                      {(s.requesterName || s.requesterContact) ? (
-                        <div className="flex flex-col gap-0.5">
-                          {s.requesterName && <span className="flex items-center gap-1 text-sm"><User size={12} className="text-text-muted" />{s.requesterName}</span>}
-                          <SourceBadge source={s.requesterSource} />
-                          {s.requesterContact && <span className="text-xs text-text-muted">{s.requesterContact}</span>}
-                        </div>
-                      ) : <span className="text-text-muted">—</span>}
-                    </td>
-                  )}
                   {isLateStage && <td className="p-3 text-text-muted whitespace-nowrap">{s.durationSeconds ? `${Math.floor(s.durationSeconds / 60)}:${String(s.durationSeconds % 60).padStart(2, '0')}` : '—'}</td>}
                   {isLateStage && <td className="p-3"><span className="flex items-center gap-1 text-text-muted"><Play size={12} /> {playMap.get(s.id) || 0}</span></td>}
                   <td className="p-3 flex items-center gap-1">
