@@ -46,6 +46,7 @@ export function Requests() {
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [showGenerateForm, setShowGenerateForm] = useState(false);
   const [showCreateRequest, setShowCreateRequest] = useState(false);
+  const [tab, setTab] = useState<'open' | 'done'>('open');
 
   // New request form state
   const [reqName, setReqName] = useState('');
@@ -92,12 +93,16 @@ export function Requests() {
   });
 
   const filtered = requests
+    .filter((s: any) => s.status === tab)
     .filter((s: any) => !search || 
       (s.heroName || '').toLowerCase().includes(search.toLowerCase()) || 
       (s.interests || '').toLowerCase().includes(search.toLowerCase()) || 
       (s.requesterName || '').toLowerCase().includes(search.toLowerCase()) ||
       (s.prompt || '').toLowerCase().includes(search.toLowerCase())
     );
+  
+  const openCount = requests.filter((r: any) => r.status === 'open').length;
+  const doneCount = requests.filter((r: any) => r.status === 'done').length;
 
   const handleDelete = (id: string) => {
     if (confirm('Anfrage wirklich löschen?')) {
@@ -203,7 +208,21 @@ export function Requests() {
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl md:text-2xl font-bold">Anfragen</h2>
-        <span className="text-sm text-text-muted">{filtered.filter((r: any) => r.status === 'open').length} offen</span>
+      </div>
+
+      <div className="flex gap-1 bg-gray-900 border border-border rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setTab('open')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === 'open' ? 'bg-brand text-white' : 'text-text-muted hover:text-text'}`}
+        >
+          Offen ({openCount})
+        </button>
+        <button
+          onClick={() => setTab('done')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === 'done' ? 'bg-brand text-white' : 'text-text-muted hover:text-text'}`}
+        >
+          Erledigt ({doneCount})
+        </button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
