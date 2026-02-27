@@ -9,7 +9,7 @@ import { getAuth } from '../utils/auth';
 
 export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: () => void; onDelete?: () => void }) {
   const [mode, setMode] = useState<'prompt' | 'story'>('prompt');
-  const [heroName] = useState((story as any).heroName || story.title?.replace(/(s|es) Hörspiel$/, '') || '');
+  const [heroName] = useState((story as any).heroName || '');
   const [targetAge, setTargetAge] = useState(story.age || '6');
   const [prompt, setPrompt] = useState(story.prompt || '');
   const [storyText, setStoryText] = useState('');
