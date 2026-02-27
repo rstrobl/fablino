@@ -31,6 +31,9 @@ export interface GenerationState {
   error?: string;
   startedAt?: number;
   completedAt?: number;
+  activeStep?: string;
+  pipelineSteps?: any[];
+  currentScript?: any;
 }
 
 export interface ScriptData {

@@ -83,11 +83,12 @@ export interface PipelineLog {
 }
 
 export interface PipelineStep {
-  agent: 'author' | 'reviewer' | 'revision' | 'reviewer2' | 'tts';
+  agent: 'author' | 'reviewer' | 'revision' | 'reviewer2' | 'revision2' | 'tts';
   model: string;
   durationMs: number;
   tokens: { input: number; output: number };
   reviewResult?: ReviewResult;
+  scriptSnapshot?: Script;
 }
 
 export interface CharacterRequest {
@@ -112,8 +113,11 @@ export interface ReviewIssue {
 
 export interface ReviewResult {
   approved: boolean;
-  issues: ReviewIssue[];
-  summary: string;
+  feedback: string;
+  severity?: 'critical' | 'major' | 'minor';
+  // Legacy fields for old pipeline logs
+  issues?: ReviewIssue[];
+  summary?: string;
 }
 
 export interface ReviewSuggestion {
@@ -165,7 +169,7 @@ export class ClaudeService {
 
   private buildCharacterSpec(characters?: CharacterRequest): string {
     return `PERSONALISIERUNG:
-${characters?.hero ? `Der HELD heißt "${characters.hero.name}"${characters.hero.age ? ` und ist ${characters.hero.age} Jahre alt` : ''}. Das Kind IST der Held.` : 'Erfinde einen passenden Helden.'}
+${characters?.hero ? `Die Hauptfigur heißt "${characters.hero.name}"${characters.hero.age ? ` und ist ${characters.hero.age} Jahre alt` : ''}.` : 'Erfinde eine passende Hauptfigur.'}
 ${characters?.sideCharacters?.length ? `Folgende Personen sollen auch vorkommen:\n${characters.sideCharacters.map(c => `- ${c.role}: "${c.name}"`).join('\n')}` : ''}`;
   }
 
@@ -179,9 +183,9 @@ ${characters?.sideCharacters?.length ? `Folgende Personen sollen auch vorkommen:
 
 WICHTIG zu emotion:
 - Jede Sprechzeile MUSS ein "emotion"-Feld haben
-- Die Emotion wird automatisch als Audio-Tag vorangestellt — KEINE Emotions-Tags im Text wiederholen!
-- Im Text NUR Performance-Tags: [chuckles], [laughs], [sighs], [gasps], [whispering], [shouting], [sobbing] etc.
 - JEDE Figur (außer Erzähler) MUSS eine passende Emotion haben — "neutral" ist fast nie richtig
+- KEINE Audio-Tags oder Performance-Tags im Text (kein [chuckles], [whispering] etc.) — das macht der TTS-Agent später
+- Schreibe NUR den gesprochenen Text, natürlich und sauber
 
 WICHTIG zu Charakteren:
 - type: "human" oder "creature"
@@ -208,6 +212,7 @@ WICHTIG zu Charakteren:
 
     if (opts.thinking) {
       body.thinking = { type: 'enabled', budget_tokens: opts.thinking.budget };
+      body.temperature = 1; // required when thinking is enabled
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -260,14 +265,20 @@ WICHTIG zu Charakteren:
     pipeline.totalTokens.output += step.tokens.output;
   }
 
-  private async runReview(script: Script, age: number, cs: any): Promise<{ review: ReviewResult; step: PipelineStep }> {
+  private async runReview(script: Script, age: number, cs: any, userPrompt?: string): Promise<{ review: ReviewResult; step: PipelineStep }> {
     const reviewerPrompt = loadPromptFile('agent-reviewer.txt');
     const start = Date.now();
+
+    let userMessage = `Prüfe dieses Kinderhörspiel (Zielalter: ${age} Jahre):\n\n`;
+    if (userPrompt) {
+      userMessage += `NUTZER-PROMPT (das war die Vorgabe des Nutzers — bewerte die Umsetzung, nicht den Prompt selbst):\n${userPrompt}\n\n`;
+    }
+    userMessage += JSON.stringify(script, null, 2);
 
     const result = await this.callClaude({
       model: cs.reviewerModel || cs.model,
       systemPrompt: reviewerPrompt,
-      userMessage: `Prüfe dieses Kinderhörspiel (Zielalter: ${age} Jahre):\n\n${JSON.stringify(script, null, 2)}`,
+      userMessage,
       maxTokens: 4096,
       temperature: 0.3,
     });
@@ -277,12 +288,10 @@ WICHTIG zu Charakteren:
       review = this.parseJson(result.text) as ReviewResult;
     } catch {
       console.warn('⚠️ Could not parse review result');
-      review = { approved: true, issues: [], summary: 'Review parse error' };
+      review = { approved: true, feedback: 'Review parse error' };
     }
 
-    const criticalCount = review.issues.filter(i => i.severity === 'critical').length;
-    const majorCount = review.issues.filter(i => i.severity === 'major').length;
-    console.log(`  Review: ${review.approved ? 'APPROVED' : 'REJECTED'} (${criticalCount}C ${majorCount}M ${review.issues.length} total, ${Date.now() - start}ms)`);
+    console.log(`  Review: ${review.approved ? 'APPROVED' : 'REJECTED'} (${review.severity || 'n/a'}, ${Date.now() - start}ms)`);
 
     return {
       review,
@@ -304,7 +313,7 @@ WICHTIG zu Charakteren:
     age: number = 6,
     characters?: CharacterRequest,
     systemPromptOverride?: string,
-    onProgress?: (step: string) => void,
+    onProgress?: (step: string, pipeline?: PipelineLog, scriptSnapshot?: Script) => void,
   ): Promise<GeneratedScript> {
     const cs = loadClaudeSettings();
     const pipeline: PipelineLog = { steps: [], totalTokens: { input: 0, output: 0 } };
@@ -315,13 +324,11 @@ WICHTIG zu Charakteren:
     const authorStart = Date.now();
 
     const authorPrompt = loadPromptFile('agent-author.txt') || loadPromptFile('system-prompt.txt');
-    const sfxPrompt = cs.sfxEnabled ? this.buildSfxPrompt() : '';
     
     const fullAuthorPrompt = [
       systemPromptOverride ? `${authorPrompt}\n\n--- Zusätzliche Anweisungen ---\n${systemPromptOverride}` : authorPrompt,
       `\nZIELALTER: ${age} Jahre.\n${this.buildAgeRules(age)}`,
       this.buildCharacterSpec(characters),
-      sfxPrompt,
       this.JSON_FORMAT,
     ].join('\n\n');
 
@@ -340,33 +347,30 @@ WICHTIG zu Charakteren:
       model: cs.model,
       durationMs: Date.now() - authorStart,
       tokens: { input: authorResult.usage.input_tokens, output: authorResult.usage.output_tokens },
+      scriptSnapshot: JSON.parse(JSON.stringify(script)),
     });
     console.log(`✅ Author: "${script.title}" (${script.scenes?.length} scenes, ${Date.now() - authorStart}ms)`);
+    onProgress?.('Lektor prüft Story...', pipeline, script);
 
     // === STEP 2: Review ===
     const reviewerPrompt = loadPromptFile('agent-reviewer.txt');
     if (reviewerPrompt) {
-      console.log('🔍 Step 2: Review...');
-      onProgress?.('Lektor prüft Story...');
 
-      const { review, step } = await this.runReview(script, age, cs);
+      const { review, step } = await this.runReview(script, age, cs, prompt);
       this.addStep(pipeline, step);
+      onProgress?.('Autor überarbeitet Story...', pipeline, script);
 
       // === STEP 3: Revision if needed ===
-      if (!review.approved && review.issues.length > 0) {
+      if (!review.approved) {
         console.log('✏️ Step 3: Revision...');
-        onProgress?.('Autor überarbeitet Story...');
         const revisionStart = Date.now();
 
-        const issueList = review.issues
-          .filter(i => i.severity !== 'minor')
-          .map(i => `- [${i.severity}] Szene ${i.scene}, Zeile ${i.line}: ${i.description} → ${i.suggestion}`)
-          .join('\n');
+        const revisionPrompt = loadPromptFile('agent-revision.txt') || 'Du überarbeitest ein Kinderhörspiel-Skript basierend auf Lektor-Feedback. Gib das KOMPLETTE überarbeitete Skript als JSON zurück.';
 
         const revisionResult = await this.callClaude({
           model: cs.model,
-          systemPrompt: 'Du bist Autor eines Kinderhörspiels. Ein Lektor hat Probleme in deinem Skript gefunden. Behebe ALLE genannten Probleme und gib das KOMPLETTE überarbeitete Skript als JSON zurück. Verändere nur was nötig ist, behalte den Rest bei.',
-          userMessage: `Dein Skript:\n\n${JSON.stringify(script, null, 2)}\n\nLektor-Feedback:\n\n${issueList}\n\nZusammenfassung: ${review.summary}\n\nGib das korrigierte Skript als JSON zurück.`,
+          systemPrompt: `${revisionPrompt}\n\n${this.JSON_FORMAT}`,
+          userMessage: `Skript:\n\n${JSON.stringify(script, null, 2)}\n\nLektor-Feedback:\n\n${review.feedback}`,
           maxTokens: cs.max_tokens,
           temperature: 0.7,
           thinking: { budget: cs.thinking_budget },
@@ -385,18 +389,47 @@ WICHTIG zu Charakteren:
           model: cs.model,
           durationMs: Date.now() - revisionStart,
           tokens: { input: revisionResult.usage.input_tokens, output: revisionResult.usage.output_tokens },
+          scriptSnapshot: JSON.parse(JSON.stringify(script)),
         });
+        onProgress?.('Lektor prüft Überarbeitung...', pipeline, script);
 
         // === STEP 4: Second review ===
         console.log('🔍 Step 4: Second review...');
-        onProgress?.('Lektor prüft Überarbeitung...');
 
-        const { review: review2, step: step2 } = await this.runReview(script, age, cs);
+        const { review: review2, step: step2 } = await this.runReview(script, age, cs, prompt);
         step2.agent = 'reviewer2';
         this.addStep(pipeline, step2);
+        onProgress?.('Autor überarbeitet nochmal...', pipeline, script);
 
         if (!review2.approved) {
-          console.log(`⚠️ Second review still has issues (${review2.issues.filter(i => i.severity !== 'minor').length} non-minor) — proceeding anyway`);
+          console.log('✏️ Step 5: Second revision...');
+          const revision2Start = Date.now();
+
+          const revision2Result = await this.callClaude({
+            model: cs.model,
+            systemPrompt: `${revisionPrompt}\n\n${this.JSON_FORMAT}`,
+            userMessage: `Skript:\n\n${JSON.stringify(script, null, 2)}\n\nLektor-Feedback (ZWEITE RUNDE — diese Kritik MUSS behoben werden):\n\n${review2.feedback}`,
+            maxTokens: cs.max_tokens,
+            temperature: 1,
+            thinking: { budget: cs.thinking_budget },
+          });
+
+          try {
+            const revised2 = this.parseJson(revision2Result.text) as Script;
+            script = revised2;
+            console.log(`✅ Second revision done (${Date.now() - revision2Start}ms)`);
+          } catch (e) {
+            console.warn('⚠️ Second revision parse failed, keeping previous version');
+          }
+
+          this.addStep(pipeline, {
+            agent: 'revision2',
+            model: cs.model,
+            durationMs: Date.now() - revision2Start,
+            tokens: { input: revision2Result.usage.input_tokens, output: revision2Result.usage.output_tokens },
+            scriptSnapshot: JSON.parse(JSON.stringify(script)),
+          });
+          onProgress?.('TTS-Optimierung...', pipeline, script);
         }
       } else {
         console.log('⏭️ Reviewer approved — skipping revision');
@@ -410,9 +443,11 @@ WICHTIG zu Charakteren:
       onProgress?.('TTS-Optimierung...');
       const ttsStart = Date.now();
 
+      const sfxPrompt = cs.sfxEnabled ? this.buildSfxPrompt() : '';
+
       const ttsResult = await this.callClaude({
         model: cs.ttsModel || cs.model,
-        systemPrompt: ttsPrompt,
+        systemPrompt: sfxPrompt ? `${ttsPrompt}\n\n${sfxPrompt}` : ttsPrompt,
         userMessage: `Optimiere dieses Hörspiel-Skript für TTS. Gib das KOMPLETTE Skript als JSON zurück:\n\n${JSON.stringify(script, null, 2)}`,
         maxTokens: cs.max_tokens,
         temperature: 0.3,
@@ -431,6 +466,7 @@ WICHTIG zu Charakteren:
         model: cs.ttsModel || cs.model,
         durationMs: Date.now() - ttsStart,
         tokens: { input: ttsResult.usage.input_tokens, output: ttsResult.usage.output_tokens },
+        scriptSnapshot: JSON.parse(JSON.stringify(script)),
       });
     }
 

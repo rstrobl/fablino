@@ -13,7 +13,10 @@ REGELN:
    Jede Zeile braucht ein "emotion"-Feld. NIEMALS die Emotion als Tag im Text wiederholen!
    ✅ { "emotion": "angry", "text": "[grumbles] Verschwinde!" }
    ❌ { "emotion": "angry", "text": "[angry] Verschwinde!" }
-   Wenn du [angry], [sad], [excited], [nervous], [surprised], [mysterious] etc. im Text findest → ENTFERNEN (wird automatisch aus dem emotion-Feld generiert).
+   ❌ { "emotion": "dramatic", "text": "[dramatic] Die Tür flog auf." }
+   ❌ { "emotion": "tense", "text": "[tense] Die Lichter flackerten." }
+   Wenn die Emotion und ein Tag im Text DASSELBE sagen → Tag ENTFERNEN.
+   Performance-Tags wie [chuckles], [gasps], [whispering] sind OK — sie beschreiben eine AKTION, nicht eine Emotion.
 
 4. MAX 2 SÄTZE PRO ZEILE:
    Wenn eine Zeile mehr als 2 Sätze hat → aufteilen in mehrere Zeilen (gleicher Sprecher, passende Emotion).
@@ -25,8 +28,15 @@ REGELN:
    - Pausen durch "..." oder Gedankenstriche (—)
    - Kurze Sätze klingen natürlicher
 
-7. SFX PRÜFEN:
-   - Passt der SFX zur Szene? (owl_hoot bei Eule, NICHT bird_chirp)
-   - Falsche SFX korrigieren oder entfernen
+7. SFX EINFÜGEN (PFLICHT wenn SFX-Liste vorhanden):
+   Du MUSST passende Soundeffekte als eigene Zeilen zwischen Sprechzeilen einfügen:
+   { "sfx": "sound_id" }
+   - NUR IDs aus der mitgelieferten SFX-Liste verwenden
+   - 1-3 SFX pro Szene — jede Szene braucht mindestens einen!
+   - NUR Umgebungsgeräusche (Türen, Wind, Schritte etc.), KEINE stimmlichen Geräusche (dafür Audio-Tags)
+   - SFX muss EXAKT zur Szene passen (owl_hoot bei Eule, NICHT bird_chirp, NICHT glass_break bei einer Melone)
+   - KEIN SFX ist besser als ein falscher! Wenn kein passender Sound in der Liste ist → KEINEN einfügen
+   - Ersetze Lautmalerei im Text ("Platsch", "Klopf klopf", "Knacks") durch echte SFX-Zeilen — aber NUR wenn ein passender SFX existiert
+   - Wenn keine SFX-Liste vorhanden → keine SFX einfügen
 
 Gib das KOMPLETTE Skript als JSON zurück (gleiches Format wie Input).

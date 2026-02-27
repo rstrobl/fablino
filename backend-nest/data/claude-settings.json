@@ -4,6 +4,6 @@
   "ttsModel": "claude-sonnet-4-20250514",
   "max_tokens": 16000,
   "temperature": 1,
-  "thinking_budget": 15000,
+  "thinking_budget": 10000,
   "sfxEnabled": true
 }

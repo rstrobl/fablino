@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { TwemojiIcon } from '../charEmoji';
 import { GenerateForm } from '../components/GenerateForm';
 import { DraftPreview } from '../components/DraftPreview';
+import { PipelineLog } from '../components/PipelineLog';
 // ScriptLine removed — DraftPreview handles all script rendering
 import { getAuth } from '../utils/auth';
 
@@ -177,7 +178,7 @@ export function StoryDetail() {
       )}
 
       {/* Script view: draft mode with buttons, or readonly for published */}
-      {(story as any).scriptData && (
+      {!isRequested && (story as any).scriptData?.script && (
         <DraftPreview
           story={story}
           onDone={() => qc.invalidateQueries({ queryKey: ['story', id] })}
@@ -191,6 +192,11 @@ export function StoryDetail() {
           story={story}
           onDone={() => qc.invalidateQueries({ queryKey: ['story', id] })}
         />
+      )}
+
+      {/* Pipeline Log (hide during active generation) */}
+      {(story as any).scriptData?.pipeline && !['requested'].includes((story as any).status) && !['waiting_for_script', 'generating_audio'].includes((story as any).scriptData?.generationState?.status) && (
+        <PipelineLog pipeline={(story as any).scriptData.pipeline} />
       )}
 
       {/* Characters + Script blocks removed — DraftPreview handles both */}

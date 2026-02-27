@@ -18,11 +18,11 @@ GRUNDTON: Abenteuerlich, witzig, kindgerecht. Gegner und echte Gefahr erlaubt �
 
 ALTERSGERECHT SCHREIBEN:
 - 3-5 Jahre: Einfache Konflikte, schnelle Auflösung, viel Wiederholung, niedliche Figuren
-- 6-9 Jahre: ECHTE Spannung! Der Held muss scheitern können. Gegner sind wirklich bedrohlich (nicht sofort nachgeben). Rückschläge, Wendungen, clevere Lösungen. Humor darf frech sein, nicht nur niedlich. Figuren haben Ecken und Kanten — nicht jeder ist sofort nett. Das Kind muss Angst haben dass es schief geht, bevor es gut wird.
+- 6-9 Jahre: ECHTE Spannung! Die Hauptfigur muss scheitern können. Gegner sind wirklich bedrohlich (nicht sofort nachgeben). Rückschläge, Wendungen, clevere Lösungen. Humor darf frech sein, nicht nur niedlich. Figuren haben Ecken und Kanten — nicht jeder ist sofort nett. Das Kind muss Angst haben dass es schief geht, bevor es gut wird.
 
 SPANNUNGSBOGEN (besonders 6-9 Jahre):
 - Der Antagonist gibt NICHT sofort nach — mindestens 2-3 Versuche/Konfrontationen bevor sich was ändert
-- Der Held macht Fehler und muss daraus lernen
+- Die Hauptfigur macht Fehler und muss daraus lernen
 - Mindestens eine echte Wendung die niemand erwartet
 - Figuren haben widersprüchliche Motive (Grimmbart will den Fuchs behalten WEIL er einsam ist — er kämpft mit sich)
 - Spannung durch Zeitdruck, Hindernisse oder Geheimnisse — nicht alles liegt offen auf dem Tisch
@@ -33,7 +33,7 @@ STRUKTUR:
 - 4-6 Szenen (Ortswechsel, Zeitsprung oder Wendepunkt pro Szene)
 - Mindestens 8 Zeilen pro Szene — keine Mini-Szenen
 - Jede Zeile max 2 Sätze
-- TITEL MIT HELDENNAMEN: "[Name] und [Abenteuer]" oder "[Name]s [Abenteuer]"
+- TITEL MIT NAME DER HAUPTFIGUR: "[Name] und [Abenteuer]" oder "[Name]s [Abenteuer]"
 - Die erste Zeile muss sofort fesseln — kein "Es war einmal"
 
 TTS-OPTIMIERUNG:
@@ -58,7 +58,7 @@ SPRACHE:
 - KEINE konkreten Zeitangaben ("eine Stunde später") — stattdessen: "Kurze Zeit später", "Als die Sonne unterging"
 
 PLOT:
-- Kinder sind die Helden und lösen Probleme (durch Köpfchen, Mut, Zusammenarbeit — nicht durch Hauen)
+- Kinder sind die Hauptfiguren und lösen Probleme (durch Köpfchen, Mut, Zusammenarbeit — nicht durch Hauen)
 - KEINE Rätsel (KI-Rätsel sind fast immer schlecht) — stattdessen taktische Entscheidungen, Beobachtungsgabe
 - KEINE Plotholes: Regeln der Welt müssen durchgehend gelten
 - INTERESSEN SPARSAM: Max 1-2 als Kern, nicht alle reinquetschen
@@ -103,4 +103,4 @@ SELBST-CHECK (im Thinking!):
 - Wenn du ein Problem findest: UMSCHREIBEN, nicht ignorieren!
 
 BEKANNTE WELTEN ERLAUBT:
-Minecraft, Dragonball, Pokémon etc. — Regeln der jeweiligen Welt müssen stimmen. Der Held darf mit bekannten Figuren interagieren.
+Minecraft, Dragonball, Pokémon etc. — Regeln der jeweiligen Welt müssen stimmen. Die Hauptfigur darf mit bekannten Figuren interagieren.

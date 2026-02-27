@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { fetchVoices, updateStoryStatus } from '../api';
 import { TwemojiIcon } from '../charEmoji';
 import { VoicePicker } from './VoicePicker';
+import { PipelineLog } from './PipelineLog';
 import { getAuth } from '../utils/auth';
 
 export function GenerateForm({ story, onDone }: { story: any; onDone: () => void }) {
@@ -20,6 +21,8 @@ export function GenerateForm({ story, onDone }: { story: any; onDone: () => void
   const [script, setScript] = useState<any>(null);
   const [voiceMap, setVoiceMap] = useState<any>(null);
   const [progress, setProgress] = useState('');
+  const [pipelineSteps, setPipelineSteps] = useState<any[]>([]);
+  const [activeStep, setActiveStep] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [allVoices, setAllVoices] = useState<any[]>([]);
   const [pickerChar, setPickerChar] = useState<string | null>(null);
@@ -91,6 +94,8 @@ export function GenerateForm({ story, onDone }: { story: any; onDone: () => void
           setPhase('error');
         } else {
           setProgress(data.progress || 'Arbeite...');
+          if (data.pipelineSteps) setPipelineSteps(data.pipelineSteps);
+          if (data.activeStep !== undefined) setActiveStep(data.activeStep);
         }
       } catch {
         // retry
@@ -98,7 +103,24 @@ export function GenerateForm({ story, onDone }: { story: any; onDone: () => void
     }, 2000);
   };
 
+  // Resume polling if story is actively generating (e.g. after page refresh)
   useEffect(() => {
+    if (story?.status === 'requested') {
+      // Check if generation is active
+      fetch(`/api/generate/status/${story.id}`, { headers: { Authorization: getAuth() } })
+        .then(r => r.json())
+        .then(data => {
+          if (data.status === 'waiting_for_script' || data.status === 'generating_audio') {
+            setPhase('generating');
+            setProgress(data.progress || 'Generierung läuft...');
+            if (data.pipelineSteps) setPipelineSteps(data.pipelineSteps);
+            if (data.activeStep !== undefined) setActiveStep(data.activeStep);
+            setJobId(story.id);
+            pollStatus(story.id);
+          }
+        })
+        .catch(() => {});
+    }
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
 
@@ -247,10 +269,15 @@ export function GenerateForm({ story, onDone }: { story: any; onDone: () => void
 
   if (phase === 'generating' || phase === 'producing') {
     return (
-      <div className="bg-surface border border-border rounded-xl p-8 text-center space-y-3">
-        <Loader2 size={32} className="animate-spin text-brand mx-auto" />
-        <p className="text-sm">{progress}</p>
-        <p className="text-xs text-text-muted">{phase === 'generating' ? 'Claude schreibt das Skript...' : 'ElevenLabs generiert Audio...'}</p>
+      <div className="space-y-4">
+        <div className="bg-surface border border-border rounded-xl p-8 text-center space-y-3">
+          <Loader2 size={32} className="animate-spin text-brand mx-auto" />
+          <p className="text-sm font-medium">{progress}</p>
+          <p className="text-xs text-text-muted">{phase === 'generating' ? 'Claude schreibt das Skript...' : 'ElevenLabs generiert Audio...'}</p>
+        </div>
+        {(pipelineSteps.length > 0 || activeStep) && (
+          <PipelineLog pipeline={{ steps: pipelineSteps, totalTokens: pipelineSteps.reduce((t: any, s: any) => ({ input: t.input + (s.tokens?.input || 0), output: t.output + (s.tokens?.output || 0) }), { input: 0, output: 0 }) }} activeStep={activeStep} />
+        )}
       </div>
     );
   }

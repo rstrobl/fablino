@@ -31,6 +31,9 @@ export interface Job {
   completedAt?: number;
   startedAt?: number;
   story?: any;
+  pipelineSteps?: any[];
+  currentScript?: any;
+  activeStep?: string;
 }
 
 @Injectable()
@@ -103,14 +106,19 @@ export class GenerationService {
 
   private async generateScriptAsync(id: string, prompt: string, age: number, characters: any, systemPromptOverride?: string) {
     try {
-      await this.updateGenerationState(id, { progress: 'Autor schreibt Story...' });
+      await this.updateGenerationState(id, { progress: 'Autor schreibt Story...', activeStep: 'Autor schreibt Story...', pipelineSteps: [] });
 
       const { script, systemPrompt, pipeline, usage } = await this.claudeService.generateScript(
         prompt,
         age,
         characters,
         systemPromptOverride,
-        (step) => this.updateGenerationState(id, { progress: step }).catch(() => {}),
+        (step, pipelineLog, scriptSnapshot) => this.updateGenerationState(id, {
+          progress: step,
+          ...(pipelineLog ? { pipelineSteps: pipelineLog.steps } : {}),
+          ...(scriptSnapshot ? { currentScript: scriptSnapshot } : {}),
+          activeStep: step,
+        }).catch(() => {}),
       );
 
       // Track Claude cost for each pipeline step
@@ -505,6 +513,9 @@ export class GenerationService {
         status: 'waiting_for_script',
         progress: genState.progress || 'Skript wird geschrieben...',
         startedAt: genState.startedAt,
+        pipelineSteps: (genState as any).pipelineSteps || [],
+        currentScript: (genState as any).currentScript || null,
+        activeStep: (genState as any).activeStep || null,
       };
     }
 

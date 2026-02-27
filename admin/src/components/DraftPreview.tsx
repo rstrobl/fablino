@@ -3,6 +3,7 @@ import { Loader2, Check, Volume2 } from 'lucide-react';
 import { fetchVoices } from '../api';
 import { TwemojiIcon } from '../charEmoji';
 import { VoicePicker } from './VoicePicker';
+import { PipelineLog } from './PipelineLog';
 import { getAuth } from '../utils/auth';
 
 interface ReviewSuggestion {
@@ -24,6 +25,8 @@ interface ReviewResult {
 export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; onDone: () => void; mode?: 'draft' | 'readonly' }) {
   const [phase, setPhase] = useState<'preview' | 'reviewing' | 'reviewed' | 'producing' | 'done' | 'error'>('preview');
   const [progress, setProgress] = useState('');
+  const [livePipelineSteps, setLivePipelineSteps] = useState<any[]>([]);
+  const [activeStep, setActiveStep] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [review, setReview] = useState<ReviewResult | null>(null);
   const [accepted, setAccepted] = useState<Set<number>>(new Set());
@@ -224,9 +227,14 @@ export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; on
 
   if (phase === 'producing') {
     return (
-      <div className="bg-surface border border-brand/30 rounded-xl p-8 text-center space-y-3">
-        <Loader2 size={24} className="animate-spin mx-auto text-brand" />
-        <p className="text-sm">{progress}</p>
+      <div className="space-y-4">
+        <div className="bg-surface border border-brand/30 rounded-xl p-8 text-center space-y-3">
+          <Loader2 size={24} className="animate-spin mx-auto text-brand" />
+          <p className="text-sm font-medium">{progress}</p>
+        </div>
+        {(livePipelineSteps.length > 0 || activeStep) && (
+          <PipelineLog pipeline={{ steps: livePipelineSteps, totalTokens: livePipelineSteps.reduce((t: any, s: any) => ({ input: t.input + (s.tokens?.input || 0), output: t.output + (s.tokens?.output || 0) }), { input: 0, output: 0 }) }} activeStep={activeStep} />
+        )}
       </div>
     );
   }
@@ -398,6 +406,7 @@ export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; on
                   setShowRegenModal(false);
                   setPhase('producing');
                   setProgress('Skript wird neu generiert...');
+                  setLivePipelineSteps([]);
                   try {
                     const res = await fetch(`/api/generate/${story.id}/regenerate`, {
                       method: 'POST',
@@ -410,12 +419,15 @@ export function DraftPreview({ story, onDone, mode = 'draft' }: { story: any; on
                       }),
                     });
                     if (!res.ok) throw new Error('Neu-Generierung fehlgeschlagen');
+                    onDone(); // invalidate story query to hide old pipeline
                     for (;;) {
                       await new Promise(r => setTimeout(r, 2000));
                       const s = await fetch(`/api/generate/status/${story.id}`, { headers: { Authorization: getAuth() } });
                       const data = await s.json();
                       if (data.progress) setProgress(data.progress);
-                      if (data.status === 'preview') { onDone(); setPhase('preview'); break; }
+                      if (data.pipelineSteps) setLivePipelineSteps(data.pipelineSteps);
+                      if (data.activeStep !== undefined) setActiveStep(data.activeStep);
+                      if (data.status === 'preview') { setLivePipelineSteps([]); onDone(); setPhase('preview'); break; }
                       if (data.status === 'error') throw new Error(data.error || 'Fehler bei der Generierung');
                     }
                   } catch (err: any) {
