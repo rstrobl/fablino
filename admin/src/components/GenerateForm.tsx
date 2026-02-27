@@ -166,8 +166,21 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
         fullPrompt = `Charaktere: ${charDesc}. ${prompt}`;
       }
 
+      // If no story ID, reserve one first
+      let storyId = story.id;
+      if (!storyId) {
+        const reserveRes = await fetch('/api/reserve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: getAuth() },
+          body: JSON.stringify({ heroName: heroChar?.name, heroAge: targetAge, prompt: fullPrompt }),
+        });
+        if (!reserveRes.ok) throw new Error('Story konnte nicht erstellt werden');
+        const reserveData = await reserveRes.json();
+        storyId = reserveData.storyId;
+      }
+
       const body: any = {
-        storyId: story.id,
+        storyId,
         prompt: fullPrompt,
         age: parseFloat(targetAge) || 6,
         mode,

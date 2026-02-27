@@ -57,22 +57,10 @@ export function Stories() {
   const [showCreate, setShowCreate] = useState(false);
   const [createStory, setCreateStory] = useState<any>(null);
 
-  const reserveMut = useMutation({
-    mutationFn: async () => {
-      const res = await fetch('/api/reserve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: getAuth() },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) throw new Error('Fehler');
-      return res.json();
-    },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ['stories'] });
-      setCreateStory({ id: data.storyId, status: 'requested', heroName: '', age: '', prompt: '', title: '' });
-      setShowCreate(true);
-    },
-  });
+  const openCreateModal = () => {
+    setCreateStory({ id: null, status: 'requested', heroName: '', age: '', prompt: '', title: '' });
+    setShowCreate(true);
+  };
 
   const delMut = useMutation({
     mutationFn: deleteStory,
@@ -145,8 +133,7 @@ export function Stories() {
           />
         </div>
         <button
-          onClick={() => reserveMut.mutate()}
-          disabled={reserveMut.isPending}
+          onClick={openCreateModal}
           className="flex items-center justify-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors text-sm font-medium whitespace-nowrap"
         >
           <Plus size={16} /> Neue Story
