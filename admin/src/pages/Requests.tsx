@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStories, deleteStory } from '../api';
-import { Search, Plus, Trash2, User, X, Wand2 } from 'lucide-react';
+import { Search, Plus, Trash2, User, X, Wand2, ArrowLeft, Mail, Calendar, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { GenerateForm } from '../components/GenerateForm';
 
@@ -31,6 +31,7 @@ export function Requests() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [selectedStory, setSelectedStory] = useState<any | null>(null);
+  const [showGenerateForm, setShowGenerateForm] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
   const { data: stories = [], isLoading } = useQuery({
@@ -54,8 +55,9 @@ export function Requests() {
     .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const handleDone = () => {
-    setSelectedStory(null);
+    setShowGenerateForm(false);
     setShowCreate(false);
+    setSelectedStory(null);
     qc.invalidateQueries({ queryKey: ['stories'] });
   };
 
@@ -66,7 +68,6 @@ export function Requests() {
     }
   };
 
-  // Create a blank story object for "Neue Story"
   const blankStory = {
     id: null,
     status: 'requested',
@@ -77,8 +78,94 @@ export function Requests() {
     title: '',
   };
 
-  const modalStory = showCreate ? blankStory : selectedStory;
+  const generateStory = showCreate ? blankStory : selectedStory;
 
+  // Detail view for a selected request
+  if (selectedStory && !showGenerateForm) {
+    const s = selectedStory;
+    return (
+      <div className="p-4 md:p-6 space-y-4 max-w-2xl">
+        <button onClick={() => setSelectedStory(null)} className="flex items-center gap-1 text-text-muted hover:text-text text-sm">
+          <ArrowLeft size={16} /> Zurück
+        </button>
+
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-xl font-bold">
+                {s.heroName || s.title?.replace(/s Hörspiel$/, '') || s.title || '(Ohne Titel)'}
+              </h2>
+              {s.age && <span className="text-sm text-text-muted">{s.age} Jahre</span>}
+            </div>
+            <SourceBadge source={s.requesterSource} />
+          </div>
+
+          {/* Contact info */}
+          {(s.requesterName || s.requesterEmail || s.requesterPhone) && (
+            <div className="bg-gray-900/50 rounded-lg p-4 space-y-2">
+              <h3 className="text-sm font-medium text-text-muted mb-2">Kontakt</h3>
+              {s.requesterName && (
+                <div className="flex items-center gap-2 text-sm">
+                  <User size={14} className="text-text-muted" />
+                  <span>{s.requesterName}</span>
+                </div>
+              )}
+              {s.requesterEmail && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail size={14} className="text-text-muted" />
+                  <a href={`mailto:${s.requesterEmail}`} className="text-brand hover:underline">{s.requesterEmail}</a>
+                </div>
+              )}
+              {s.requesterPhone && (
+                <div className="flex items-center gap-2 text-sm">
+                  <MessageSquare size={14} className="text-text-muted" />
+                  <span>{s.requesterPhone}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Story details */}
+          {(s.prompt || s.interests) && (
+            <div>
+              <h3 className="text-sm font-medium text-text-muted mb-1">Beschreibung / Interessen</h3>
+              <p className="text-sm whitespace-pre-wrap">{s.prompt || s.interests}</p>
+            </div>
+          )}
+
+          {s.heroName && (
+            <div>
+              <h3 className="text-sm font-medium text-text-muted mb-1">Held</h3>
+              <p className="text-sm">{s.heroName}</p>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 text-xs text-text-muted">
+            <Calendar size={12} />
+            <span>Erstellt: {new Date(s.createdAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-2 border-t border-border">
+            <button
+              onClick={() => setShowGenerateForm(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <Wand2 size={16} /> Story erstellen
+            </button>
+            <button
+              onClick={() => handleDelete(s.id)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-red-900/30 border border-red-800/50 rounded-lg text-sm text-red-400 hover:bg-red-900/50 transition-colors"
+            >
+              <Trash2 size={16} /> Löschen
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // List view
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -157,23 +244,23 @@ export function Requests() {
         </div>
       )}
 
-      {/* GenerateForm Modal */}
-      {modalStory && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setSelectedStory(null); setShowCreate(false); }}>
+      {/* GenerateForm Modal — either from request detail or "Neue Story" */}
+      {(showGenerateForm || showCreate) && generateStory && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setShowGenerateForm(false); setShowCreate(false); }}>
           <div className="bg-surface border border-border rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-surface border-b border-border px-6 py-4 flex items-center justify-between z-10">
               <h3 className="text-lg font-bold">
-                {showCreate ? 'Neue Story erstellen' : `Story: ${modalStory.heroName || modalStory.title || '(Ohne Titel)'}`}
+                {showCreate ? 'Neue Story erstellen' : `Story: ${generateStory.heroName || generateStory.title || '(Ohne Titel)'}`}
               </h3>
-              <button onClick={() => { setSelectedStory(null); setShowCreate(false); }} className="text-text-muted hover:text-text">
+              <button onClick={() => { setShowGenerateForm(false); setShowCreate(false); }} className="text-text-muted hover:text-text">
                 <X size={20} />
               </button>
             </div>
             <div className="p-6">
               <GenerateForm
-                story={modalStory}
+                story={generateStory}
                 onDone={handleDone}
-                onDelete={modalStory.id ? () => handleDelete(modalStory.id) : undefined}
+                onDelete={generateStory.id ? () => handleDelete(generateStory.id) : undefined}
               />
             </div>
           </div>
