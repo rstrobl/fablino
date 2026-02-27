@@ -192,7 +192,7 @@
     "name": "Splash",
     "category": "other",
     "file": "splash.mp3",
-    "active": false,
+    "active": true,
     "prompt": "Splash of water, something falling into a pond",
     "duration": 3
   },
@@ -374,5 +374,37 @@
     "active": true,
     "prompt": "Large bird flapping its wings, whooshing feathers taking flight",
     "duration": 5
+  },
+  {
+    "id": "stomach_growl",
+    "name": "Magenknurren",
+    "category": "body",
+    "file": "stomach_growl.mp3",
+    "active": true,
+    "prompt": "Loud funny stomach growling and rumbling, comedic hunger sound"
+  },
+  {
+    "id": "bubbling_pot",
+    "name": "Topf brodeln",
+    "category": "environment",
+    "file": "bubbling_pot.mp3",
+    "active": true,
+    "prompt": "Pot of porridge bubbling and cooking on stove, liquid boiling sounds"
+  },
+  {
+    "id": "overflowing",
+    "name": "Überlaufen",
+    "category": "environment",
+    "file": "overflowing.mp3",
+    "active": true,
+    "prompt": "Thick liquid overflowing and spilling from a pot, sloshing and splashing onto floor"
+  },
+  {
+    "id": "happy_ending",
+    "name": "Fröhliches Ende",
+    "category": "music",
+    "file": "happy_ending.mp3",
+    "active": true,
+    "prompt": "Short happy cheerful ending jingle, fairy tale style, warm and cozy, 5 seconds"
   }
 ]
