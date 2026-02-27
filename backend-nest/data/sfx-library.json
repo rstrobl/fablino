@@ -414,14 +414,17 @@
     "name": "Klospülung",
     "category": "environment",
     "file": "toilet_flush.mp3",
-    "active": true
+    "active": true,
+    "duration": 5
   },
   {
     "id": "fart",
     "name": "Furz",
     "category": "body",
     "file": "fart.mp3",
-    "active": true
+    "active": true,
+    "prompt": "fart",
+    "duration": 3
   },
   {
     "id": "pipe_gurgle",
@@ -442,6 +445,7 @@
     "name": "Ekel/Würgen",
     "category": "body",
     "file": "disgust.mp3",
-    "active": true
+    "active": true,
+    "duration": 3
   }
 ]

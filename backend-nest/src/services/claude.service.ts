@@ -57,7 +57,7 @@ export interface SfxLine {
 export type ScriptLine = Line | SfxLine;
 
 export function isSfxLine(line: any): line is SfxLine {
-  return 'sfx' in line && !('speaker' in line);
+  return !!line.sfx && (!line.speaker || !line.text);
 }
 
 export interface Scene {
