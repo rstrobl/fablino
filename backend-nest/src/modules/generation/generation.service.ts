@@ -64,10 +64,14 @@ export class GenerationService {
   }
 
   async generateStory(dto: GenerateStoryDto) {
-    const { prompt, age = 6, characters, systemPromptOverride, storyId } = dto;
+    const { prompt, age = 6, characters, systemPromptOverride, storyId, mode = 'prompt', storyText } = dto;
 
     if (!prompt) {
       throw new HttpException('Prompt ist erforderlich', HttpStatus.BAD_REQUEST);
+    }
+
+    if (mode === 'story' && !storyText) {
+      throw new HttpException('storyText ist erforderlich im story-Modus', HttpStatus.BAD_REQUEST);
     }
 
     const id = storyId || uuidv4();
@@ -99,12 +103,12 @@ export class GenerationService {
     }
 
     // Start generation async
-    this.generateScriptAsync(id, prompt, age, characters, systemPromptOverride);
+    this.generateScriptAsync(id, prompt, age, characters, systemPromptOverride, mode, storyText);
 
     return { id, status: 'accepted' };
   }
 
-  private async generateScriptAsync(id: string, prompt: string, age: number, characters: any, systemPromptOverride?: string) {
+  private async generateScriptAsync(id: string, prompt: string, age: number, characters: any, systemPromptOverride?: string, mode: 'prompt' | 'story' = 'prompt', storyText?: string) {
     try {
       await this.updateGenerationState(id, { progress: 'Autor schreibt Story...', activeStep: 'Autor schreibt Story...', pipelineSteps: [] });
 
@@ -119,6 +123,8 @@ export class GenerationService {
           ...(scriptSnapshot ? { currentScript: scriptSnapshot } : {}),
           activeStep: step,
         }).catch(() => {}),
+        mode,
+        storyText,
       );
 
       // Track Claude cost for each pipeline step
@@ -590,5 +596,123 @@ export class GenerationService {
       storyId,
       characters: hasChars ? charData : undefined,
     });
+  }
+
+  async runLectorReview(storyId: string) {
+    const story = await this.prisma.story.findUnique({ where: { id: storyId } });
+    if (!story) throw new NotFoundException('Story not found');
+    if (story.status !== 'draft') throw new HttpException('Nur Entwürfe können lektoriert werden', HttpStatus.BAD_REQUEST);
+
+    const scriptData = story.scriptData as unknown as ScriptData;
+    if (!scriptData?.script) {
+      throw new HttpException('Kein Skript vorhanden', HttpStatus.BAD_REQUEST);
+    }
+
+    const age = Number(story.age) || 6;
+    const { review, step } = await this.claudeService.runLectorReview(
+      scriptData.script, 
+      age, 
+      story.prompt || undefined
+    );
+
+    // Track cost for lector step
+    await this.costTracking.trackClaude(
+      storyId,
+      'lector_review',
+      { input_tokens: step.tokens.input, output_tokens: step.tokens.output },
+      0,
+    ).catch(() => {});
+
+    // Save review in script_data.lectorReview
+    const updatedScriptData = {
+      ...scriptData,
+      lectorReview: review,
+      pipeline: scriptData.pipeline ? {
+        ...scriptData.pipeline,
+        steps: [...scriptData.pipeline.steps, step],
+        totalTokens: {
+          input: scriptData.pipeline.totalTokens.input + step.tokens.input,
+          output: scriptData.pipeline.totalTokens.output + step.tokens.output,
+        },
+      } : {
+        steps: [step],
+        totalTokens: { input: step.tokens.input, output: step.tokens.output },
+      },
+    };
+
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
+      JSON.stringify(updatedScriptData),
+      storyId,
+    );
+
+    console.log(`📝 Lector review for ${storyId}: ${review.approved ? 'APPROVED' : 'REJECTED'}`);
+
+    return {
+      review,
+      step,
+    };
+  }
+
+  async runLectorRevision(storyId: string, instructions: string) {
+    const story = await this.prisma.story.findUnique({ where: { id: storyId } });
+    if (!story) throw new NotFoundException('Story not found');
+    if (story.status !== 'draft') throw new HttpException('Nur Entwürfe können überarbeitet werden', HttpStatus.BAD_REQUEST);
+
+    const scriptData = story.scriptData as unknown as ScriptData;
+    if (!scriptData?.script) {
+      throw new HttpException('Kein Skript vorhanden', HttpStatus.BAD_REQUEST);
+    }
+
+    if (!scriptData.lectorReview) {
+      throw new HttpException('Erst Lektorat durchführen', HttpStatus.BAD_REQUEST);
+    }
+
+    const age = Number(story.age) || 6;
+    const { script: revisedScript, step } = await this.claudeService.runLectorRevision(
+      scriptData.script,
+      scriptData.lectorReview,
+      instructions,
+      age
+    );
+
+    // Track cost for revision step
+    await this.costTracking.trackClaude(
+      storyId,
+      'lector_revision',
+      { input_tokens: step.tokens.input, output_tokens: step.tokens.output },
+      0,
+    ).catch(() => {});
+
+    // Update script in DB and add revision step to pipeline
+    const updatedScriptData = {
+      ...scriptData,
+      script: revisedScript,
+      lectorReview: null, // Clear review after revision
+      pipeline: scriptData.pipeline ? {
+        ...scriptData.pipeline,
+        steps: [...scriptData.pipeline.steps, step],
+        totalTokens: {
+          input: scriptData.pipeline.totalTokens.input + step.tokens.input,
+          output: scriptData.pipeline.totalTokens.output + step.tokens.output,
+        },
+      } : {
+        steps: [step],
+        totalTokens: { input: step.tokens.input, output: step.tokens.output },
+      },
+    };
+
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
+      JSON.stringify(updatedScriptData),
+      storyId,
+    );
+
+    console.log(`✏️ Lector revision for ${storyId} completed`);
+
+    return {
+      script: revisedScript,
+      step,
+    };
   }
 }

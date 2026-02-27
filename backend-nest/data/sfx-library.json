@@ -389,8 +389,9 @@
     "name": "Topf brodeln",
     "category": "environment",
     "file": "bubbling_pot.mp3",
-    "active": false,
-    "prompt": "Pot of porridge bubbling and cooking on stove, liquid boiling sounds"
+    "active": true,
+    "prompt": "Bubbling thick liquid",
+    "duration": 5
   },
   {
     "id": "overflowing",

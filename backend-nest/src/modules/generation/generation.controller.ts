@@ -27,4 +27,20 @@ export class GenerationController {
   async regenerateScript(@Param('id') id: string, @Body() body?: { prompt?: string; characters?: any }) {
     return this.generationService.regenerateScript(id, body?.prompt, body?.characters);
   }
+
+  @Post(':id/lector')
+  @UseGuards(BasicAuthGuard)
+  async runLectorReview(@Param('id') id: string) {
+    return this.generationService.runLectorReview(id);
+  }
+
+  @Post(':id/lector-revise')
+  @UseGuards(BasicAuthGuard)
+  async runLectorRevision(@Param('id') id: string, @Body() body: { instructions: string }) {
+    const { instructions } = body;
+    if (!instructions || !instructions.trim()) {
+      throw new HttpException('instructions are required', HttpStatus.BAD_REQUEST);
+    }
+    return this.generationService.runLectorRevision(id, instructions);
+  }
 }

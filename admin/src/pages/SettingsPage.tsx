@@ -23,6 +23,7 @@ const MODEL_OPTIONS = [
 
 const TABS = [
   { id: 'author', label: 'Autor', icon: PenTool },
+  { id: 'adapter', label: 'Adapter', icon: PenTool },
   { id: 'reviewer', label: 'Lektor', icon: Search },
   { id: 'tts', label: 'TTS', icon: Mic },
   { id: 'audio', label: 'Audio', icon: Volume2 },
@@ -116,7 +117,7 @@ export function SettingsPage() {
       .then(r => r.json()).then(d => { setSfxPrompt(d.prompt || ''); setOriginalSfxPrompt(d.prompt || ''); }).catch(() => {});
 
     // Load agent prompts
-    for (const name of ['author', 'reviewer', 'tts']) {
+    for (const name of ['author', 'adapter', 'reviewer', 'tts']) {
       fetch(`/api/settings/agent/${name}`, { headers: { Authorization: AUTH() } })
         .then(r => r.json())
         .then(d => {
@@ -171,7 +172,8 @@ export function SettingsPage() {
 
   const agentChanged = (name: string) =>
     (agentPrompts[name] || '') !== (originalAgentPrompts[name] || '') ||
-    (name === 'author' && claudeChanged);
+    (name === 'author' && claudeChanged) ||
+    (name === 'adapter' && claude?.adapterModel !== originalClaude?.adapterModel);
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-3xl">
@@ -235,6 +237,63 @@ export function SettingsPage() {
               <textarea
                 value={agentPrompts.author || ''}
                 onChange={e => setAgentPrompts(prev => ({ ...prev, author: e.target.value }))}
+                rows={18}
+                className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm font-mono focus:outline-none focus:border-brand leading-relaxed"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== ADAPTER TAB ===== */}
+      {tab === 'adapter' && claude && (
+        <div className="space-y-4">
+          <div className="bg-surface border border-border rounded-xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Adapter-Agent</h3>
+              <SaveBar
+                changed={agentChanged('adapter')}
+                saving={savingAgent === 'adapter'}
+                onSave={async () => {
+                  setSavingAgent('adapter');
+                  try {
+                    await fetch('/api/settings/agent/adapter', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json', Authorization: AUTH() },
+                      body: JSON.stringify({ prompt: agentPrompts.adapter }),
+                    });
+                    setOriginalAgentPrompts(prev => ({ ...prev, adapter: agentPrompts.adapter }));
+                    if (claude.adapterModel !== originalClaude?.adapterModel) {
+                      await fetch('/api/settings/claude', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', Authorization: AUTH() },
+                        body: JSON.stringify(claude),
+                      });
+                      setOriginalClaude({ ...claude });
+                    }
+                    toast.success('Gespeichert');
+                  } catch { toast.error('Fehler'); }
+                  finally { setSavingAgent(null); }
+                }}
+                onReset={() => {
+                  setAgentPrompts(prev => ({ ...prev, adapter: originalAgentPrompts.adapter || '' }));
+                  setClaude(prev => ({ ...prev, adapterModel: originalClaude?.adapterModel }));
+                }}
+              />
+            </div>
+            <p className="text-xs text-text-muted">
+              Konvertiert vorgeschriebene Geschichten in Hörspiel-Format. Analysiert Text und erstellt Dialog, Charaktere und Atmosphäre.
+            </p>
+
+            <ModelSelect value={claude.adapterModel || claude.model} onChange={v => setClaude({ ...claude, adapterModel: v })}
+              label="Modell" desc="Empfehlung: Opus für beste Adaptierungsqualität" />
+
+            <div className="pt-4 border-t border-border">
+              <label className="text-sm font-medium">Prompt</label>
+              <p className="text-xs text-text-muted mb-2">Anweisungen für die Geschichte-zu-Hörspiel Konvertierung</p>
+              <textarea
+                value={agentPrompts.adapter || ''}
+                onChange={e => setAgentPrompts(prev => ({ ...prev, adapter: e.target.value }))}
                 rows={18}
                 className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm font-mono focus:outline-none focus:border-brand leading-relaxed"
               />

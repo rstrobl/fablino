@@ -36,9 +36,18 @@ export interface GenerationState {
   currentScript?: any;
 }
 
+export interface ReviewResult {
+  approved: boolean;
+  feedback: string;
+  severity?: 'critical' | 'major' | 'minor';
+}
+
 export interface ScriptData {
   script: Script;
   voiceMap: Record<string, string>;
   systemPrompt: string;
   generationState?: GenerationState;
+  lectorReview?: ReviewResult;
+  pipeline?: any;
+  userCharacters?: any;
 }

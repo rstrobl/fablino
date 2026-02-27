@@ -51,6 +51,14 @@ export class GenerateStoryDto {
   @ValidateNested()
   @Type(() => CharacterRequestDto)
   characters?: CharacterRequestDto;
+
+  @IsOptional()
+  @IsString()
+  mode?: 'prompt' | 'story';
+
+  @IsOptional()
+  @IsString()
+  storyText?: string;
 }
 
 export class PreviewLineDto {

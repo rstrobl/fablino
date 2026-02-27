@@ -8,9 +8,11 @@ import { PipelineLog } from './PipelineLog';
 import { getAuth } from '../utils/auth';
 
 export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: () => void; onDelete?: () => void }) {
+  const [mode, setMode] = useState<'prompt' | 'story'>('prompt');
   const [heroName] = useState((story as any).heroName || story.title?.replace(/(s|es) Hörspiel$/, '') || '');
   const [targetAge, setTargetAge] = useState(story.age || '6');
   const [prompt, setPrompt] = useState(story.prompt || '');
+  const [storyText, setStoryText] = useState('');
   const [characters, setCharacters] = useState<{ name: string; role: string; age: string }[]>(
     heroName ? [{ name: heroName, role: 'Hauptfigur', age: '' }] : []
   );
@@ -139,13 +141,25 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
     setPhase('generating');
     setProgress('Skript wird geschrieben...');
     try {
+      if (mode === 'story' && !storyText.trim()) {
+        setError('Bitte geben Sie eine Geschichte ein.');
+        setPhase('error');
+        return;
+      }
+
+      if (mode === 'prompt' && !prompt.trim()) {
+        setError('Bitte geben Sie einen Prompt ein.');
+        setPhase('error');
+        return;
+      }
+
       const namedChars = characters.filter(c => c.name.trim());
       const heroChar = namedChars.find(c => c.role === 'Hauptfigur') || namedChars[0];
       const otherChars = namedChars.filter(c => c !== heroChar);
       
-      // Build prompt with character info
-      let fullPrompt = prompt;
-      if (namedChars.length > 0) {
+      // Build prompt with character info for prompt mode
+      let fullPrompt = mode === 'story' ? 'Geschichte adaptieren' : prompt;
+      if (mode === 'prompt' && namedChars.length > 0) {
         const charDesc = namedChars.map(c => 
           `${c.name}${c.role ? ` (${c.role})` : ''}${c.age ? `, ${c.age} Jahre` : ''}`
         ).join('; ');
@@ -156,6 +170,8 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
         storyId: story.id,
         prompt: fullPrompt,
         age: parseFloat(targetAge) || 6,
+        mode,
+        ...(mode === 'story' && { storyText }),
         ...(systemPrompt.trim() && defaultPromptLoaded && { systemPromptOverride: systemPrompt.trim() }),
         characters: {
           ...(heroChar && { hero: { name: heroChar.name, age: heroChar.age || undefined } }),
@@ -200,6 +216,26 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
       <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
         <h3 className="text-lg font-semibold flex items-center gap-2"><Wand2 size={18} /> Hörspiel generieren</h3>
         
+        {/* Mode Tabs */}
+        <div className="flex gap-1 bg-gray-900 border border-border rounded-lg p-1">
+          <button
+            onClick={() => setMode('prompt')}
+            className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              mode === 'prompt' ? 'bg-brand text-white' : 'text-text-muted hover:text-text'
+            }`}
+          >
+            📝 Prompt
+          </button>
+          <button
+            onClick={() => setMode('story')}
+            className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              mode === 'story' ? 'bg-brand text-white' : 'text-text-muted hover:text-text'
+            }`}
+          >
+            📖 Geschichte
+          </button>
+        </div>
+
         <div>
           <label className="block text-sm text-text-muted mb-1">Zielalter (Zuhörer)</label>
           <div className="flex items-center gap-3">
@@ -213,16 +249,65 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm text-text-muted mb-1">Prompt</label>
-          <textarea
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            rows={4}
-            placeholder="Beschreibe die Geschichte frei — Thema, Setting, Stimmung, was passieren soll..."
-            className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
-          />
-        </div>
+        {/* Conditional content based on mode */}
+        {mode === 'prompt' ? (
+          <>
+            <div>
+              <label className="block text-sm text-text-muted mb-1">Prompt</label>
+              <textarea
+                value={prompt}
+                onChange={e => setPrompt(e.target.value)}
+                rows={4}
+                placeholder="Beschreibe die Geschichte frei — Thema, Setting, Stimmung, was passieren soll..."
+                className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm text-text-muted">Charaktere (optional)</label>
+                <button onClick={addCharacter} className="text-xs text-brand hover:text-brand-light">+ Hinzufügen</button>
+              </div>
+              {characters.map((c, i) => (
+                <div key={i} className="flex gap-2 mb-2">
+                  <input
+                    placeholder="Name"
+                    value={c.name}
+                    onChange={e => updateCharacter(i, 'name', e.target.value)}
+                    className="flex-[2] px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+                  />
+                  <input
+                    placeholder="Rolle (z.B. Hauptfigur, Schwester)"
+                    value={c.role}
+                    onChange={e => updateCharacter(i, 'role', e.target.value)}
+                    className="flex-[2] px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+                  />
+                  <input
+                    placeholder="Alter"
+                    value={c.age}
+                    onChange={e => updateCharacter(i, 'age', e.target.value)}
+                    className="w-20 px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+                  />
+                  <button onClick={() => removeCharacter(i)} className="text-red-400 hover:text-red-300 px-2">✕</button>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div>
+            <label className="block text-sm text-text-muted mb-1">Geschichte</label>
+            <textarea
+              value={storyText}
+              onChange={e => setStoryText(e.target.value)}
+              rows={8}
+              placeholder="Fügen Sie hier die komplette Geschichte ein, die in ein Hörspiel adaptiert werden soll..."
+              className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+            />
+            <p className="text-xs text-text-muted mt-1">
+              Der Adapter-Agent analysiert die Geschichte und konvertiert sie in Hörspiel-Format mit Dialog und Charakteren.
+            </p>
+          </div>
+        )}
 
         {story.requesterName && (
           <div className="text-xs text-text-muted">
@@ -230,36 +315,6 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
             {story.requesterSource && <span> ({story.requesterSource})</span>}
           </div>
         )}
-
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm text-text-muted">Charaktere (optional)</label>
-            <button onClick={addCharacter} className="text-xs text-brand hover:text-brand-light">+ Hinzufügen</button>
-          </div>
-          {characters.map((c, i) => (
-            <div key={i} className="flex gap-2 mb-2">
-              <input
-                placeholder="Name"
-                value={c.name}
-                onChange={e => updateCharacter(i, 'name', e.target.value)}
-                className="flex-[2] px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
-              />
-              <input
-                placeholder="Rolle (z.B. Hauptfigur, Schwester)"
-                value={c.role}
-                onChange={e => updateCharacter(i, 'role', e.target.value)}
-                className="flex-[2] px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
-              />
-              <input
-                placeholder="Alter"
-                value={c.age}
-                onChange={e => updateCharacter(i, 'age', e.target.value)}
-                className="w-20 px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
-              />
-              <button onClick={() => removeCharacter(i)} className="text-red-400 hover:text-red-300 px-2">✕</button>
-            </div>
-          ))}
-        </div>
 
         <div>
           <button
@@ -285,7 +340,7 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
             onClick={handleGenerate}
             className="flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
-            <Wand2 size={16} /> Skript generieren
+            <Wand2 size={16} /> {mode === 'story' ? 'Geschichte adaptieren' : 'Skript generieren'}
           </button>
           {onDelete && (
             <button

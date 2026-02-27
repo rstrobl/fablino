@@ -9,6 +9,7 @@ const DEFAULT_CLAUDE_SETTINGS = {
   model: 'claude-opus-4-20250514',
   reviewerModel: 'claude-sonnet-4-20250514',
   ttsModel: 'claude-sonnet-4-20250514',
+  adapterModel: 'claude-opus-4-20250514',
   max_tokens: 16000,
   temperature: 1.0,
   thinking_budget: 10000,
@@ -83,7 +84,7 @@ export interface PipelineLog {
 }
 
 export interface PipelineStep {
-  agent: 'author' | 'reviewer' | 'revision' | 'reviewer2' | 'revision2' | 'tts';
+  agent: 'author' | 'adapter' | 'reviewer' | 'lector' | 'revision' | 'reviewer2' | 'revision2' | 'tts';
   model: string;
   durationMs: number;
   tokens: { input: number; output: number };
@@ -306,7 +307,10 @@ WICHTIG zu Charakteren:
   }
 
   /**
-   * Multi-agent pipeline: Author → Reviewer → Revision → Reviewer2 → TTS
+   * New two-mode pipeline: 
+   * Mode "prompt": Author → TTS → STOP at Preview
+   * Mode "story": Adapter → TTS → STOP at Preview
+   * Manual lector can be triggered separately
    */
   async generateScript(
     prompt: string,
@@ -314,132 +318,94 @@ WICHTIG zu Charakteren:
     characters?: CharacterRequest,
     systemPromptOverride?: string,
     onProgress?: (step: string, pipeline?: PipelineLog, scriptSnapshot?: Script) => void,
+    mode: 'prompt' | 'story' = 'prompt',
+    storyText?: string,
   ): Promise<GeneratedScript> {
     const cs = loadClaudeSettings();
     const pipeline: PipelineLog = { steps: [], totalTokens: { input: 0, output: 0 } };
 
-    // === STEP 1: Author writes the story ===
-    console.log('🖊️ Step 1: Author...');
-    onProgress?.('Autor schreibt Story...');
-    const authorStart = Date.now();
+    let script: Script;
+    let fullSystemPrompt: string;
 
-    const authorPrompt = loadPromptFile('agent-author.txt') || loadPromptFile('system-prompt.txt');
-    
-    const fullAuthorPrompt = [
-      systemPromptOverride ? `${authorPrompt}\n\n--- Zusätzliche Anweisungen ---\n${systemPromptOverride}` : authorPrompt,
-      `\nZIELALTER: ${age} Jahre.\n${this.buildAgeRules(age)}`,
-      this.buildCharacterSpec(characters),
-      this.JSON_FORMAT,
-    ].join('\n\n');
+    if (mode === 'story') {
+      // === MODE "story": Adapter agent converts story to radio play format ===
+      console.log('📖 Mode: Story - Adapter agent...');
+      onProgress?.('Adapter konvertiert Geschichte...');
+      const adapterStart = Date.now();
 
-    const authorResult = await this.callClaude({
-      model: cs.model,
-      systemPrompt: fullAuthorPrompt,
-      userMessage: `Schreibe ein Hörspiel basierend auf diesem Prompt:\n\n${prompt}\n\nDenke zuerst gründlich nach. Dann schreibe das finale JSON.`,
-      maxTokens: cs.max_tokens,
-      temperature: cs.temperature,
-      thinking: { budget: cs.thinking_budget },
-    });
-
-    let script = this.parseJson(authorResult.text) as Script;
-    this.addStep(pipeline, {
-      agent: 'author',
-      model: cs.model,
-      durationMs: Date.now() - authorStart,
-      tokens: { input: authorResult.usage.input_tokens, output: authorResult.usage.output_tokens },
-      scriptSnapshot: JSON.parse(JSON.stringify(script)),
-    });
-    console.log(`✅ Author: "${script.title}" (${script.scenes?.length} scenes, ${Date.now() - authorStart}ms)`);
-    onProgress?.('Lektor prüft Story...', pipeline, script);
-
-    // === STEP 2: Review ===
-    const reviewerPrompt = loadPromptFile('agent-reviewer.txt');
-    if (reviewerPrompt) {
-
-      const { review, step } = await this.runReview(script, age, cs, prompt);
-      this.addStep(pipeline, step);
-      onProgress?.('Autor überarbeitet Story...', pipeline, script);
-
-      // === STEP 3: Revision if needed ===
-      if (!review.approved) {
-        console.log('✏️ Step 3: Revision...');
-        const revisionStart = Date.now();
-
-        const revisionPrompt = loadPromptFile('agent-revision.txt') || 'Du überarbeitest ein Kinderhörspiel-Skript basierend auf Lektor-Feedback. Gib das KOMPLETTE überarbeitete Skript als JSON zurück.';
-
-        const revisionResult = await this.callClaude({
-          model: cs.model,
-          systemPrompt: `${revisionPrompt}\n\n${this.JSON_FORMAT}`,
-          userMessage: `Skript:\n\n${JSON.stringify(script, null, 2)}\n\nLektor-Feedback:\n\n${review.feedback}`,
-          maxTokens: cs.max_tokens,
-          temperature: 0.7,
-          thinking: { budget: cs.thinking_budget },
-        });
-
-        try {
-          const revised = this.parseJson(revisionResult.text) as Script;
-          script = revised;
-          console.log(`✅ Revision done (${Date.now() - revisionStart}ms)`);
-        } catch (e) {
-          console.warn('⚠️ Revision parse failed, keeping reviewed version');
-        }
-
-        this.addStep(pipeline, {
-          agent: 'revision',
-          model: cs.model,
-          durationMs: Date.now() - revisionStart,
-          tokens: { input: revisionResult.usage.input_tokens, output: revisionResult.usage.output_tokens },
-          scriptSnapshot: JSON.parse(JSON.stringify(script)),
-        });
-        onProgress?.('Lektor prüft Überarbeitung...', pipeline, script);
-
-        // === STEP 4: Second review ===
-        console.log('🔍 Step 4: Second review...');
-
-        const { review: review2, step: step2 } = await this.runReview(script, age, cs, prompt);
-        step2.agent = 'reviewer2';
-        this.addStep(pipeline, step2);
-        onProgress?.('Autor überarbeitet nochmal...', pipeline, script);
-
-        if (!review2.approved) {
-          console.log('✏️ Step 5: Second revision...');
-          const revision2Start = Date.now();
-
-          const revision2Result = await this.callClaude({
-            model: cs.model,
-            systemPrompt: `${revisionPrompt}\n\n${this.JSON_FORMAT}`,
-            userMessage: `Skript:\n\n${JSON.stringify(script, null, 2)}\n\nLektor-Feedback (ZWEITE RUNDE — diese Kritik MUSS behoben werden):\n\n${review2.feedback}`,
-            maxTokens: cs.max_tokens,
-            temperature: 1,
-            thinking: { budget: cs.thinking_budget },
-          });
-
-          try {
-            const revised2 = this.parseJson(revision2Result.text) as Script;
-            script = revised2;
-            console.log(`✅ Second revision done (${Date.now() - revision2Start}ms)`);
-          } catch (e) {
-            console.warn('⚠️ Second revision parse failed, keeping previous version');
-          }
-
-          this.addStep(pipeline, {
-            agent: 'revision2',
-            model: cs.model,
-            durationMs: Date.now() - revision2Start,
-            tokens: { input: revision2Result.usage.input_tokens, output: revision2Result.usage.output_tokens },
-            scriptSnapshot: JSON.parse(JSON.stringify(script)),
-          });
-          onProgress?.('TTS-Optimierung...', pipeline, script);
-        }
-      } else {
-        console.log('⏭️ Reviewer approved — skipping revision');
+      const adapterPrompt = loadPromptFile('agent-adapter.txt');
+      if (!adapterPrompt) {
+        throw new Error('agent-adapter.txt prompt file not found');
       }
+
+      fullSystemPrompt = [
+        adapterPrompt,
+        systemPromptOverride ? `\n\n--- Zusätzliche Anweisungen ---\n${systemPromptOverride}` : '',
+        `\nZIELALTER: ${age} Jahre.\n${this.buildAgeRules(age)}`,
+        this.buildCharacterSpec(characters),
+        this.JSON_FORMAT,
+      ].join('\n\n');
+
+      const adapterResult = await this.callClaude({
+        model: cs.adapterModel || cs.model,
+        systemPrompt: fullSystemPrompt,
+        userMessage: `Konvertiere diese Geschichte in ein Hörspiel (Zielalter: ${age} Jahre):\n\n${storyText}\n\nDenke zuerst gründlich nach. Dann schreibe das finale JSON.`,
+        maxTokens: cs.max_tokens,
+        temperature: cs.temperature,
+        thinking: { budget: cs.thinking_budget },
+      });
+
+      script = this.parseJson(adapterResult.text) as Script;
+      this.addStep(pipeline, {
+        agent: 'adapter',
+        model: cs.adapterModel || cs.model,
+        durationMs: Date.now() - adapterStart,
+        tokens: { input: adapterResult.usage.input_tokens, output: adapterResult.usage.output_tokens },
+        scriptSnapshot: JSON.parse(JSON.stringify(script)),
+      });
+      console.log(`✅ Adapter: "${script.title}" (${script.scenes?.length} scenes, ${Date.now() - adapterStart}ms)`);
+      onProgress?.('TTS-Optimierung...', pipeline, script);
+
+    } else {
+      // === MODE "prompt": Author agent creates original story ===
+      console.log('🖊️ Mode: Prompt - Author agent...');
+      onProgress?.('Autor schreibt Story...');
+      const authorStart = Date.now();
+
+      const authorPrompt = loadPromptFile('agent-author.txt') || loadPromptFile('system-prompt.txt');
+      
+      fullSystemPrompt = [
+        systemPromptOverride ? `${authorPrompt}\n\n--- Zusätzliche Anweisungen ---\n${systemPromptOverride}` : authorPrompt,
+        `\nZIELALTER: ${age} Jahre.\n${this.buildAgeRules(age)}`,
+        this.buildCharacterSpec(characters),
+        this.JSON_FORMAT,
+      ].join('\n\n');
+
+      const authorResult = await this.callClaude({
+        model: cs.model,
+        systemPrompt: fullSystemPrompt,
+        userMessage: `Schreibe ein Hörspiel basierend auf diesem Prompt:\n\n${prompt}\n\nDenke zuerst gründlich nach. Dann schreibe das finale JSON.`,
+        maxTokens: cs.max_tokens,
+        temperature: cs.temperature,
+        thinking: { budget: cs.thinking_budget },
+      });
+
+      script = this.parseJson(authorResult.text) as Script;
+      this.addStep(pipeline, {
+        agent: 'author',
+        model: cs.model,
+        durationMs: Date.now() - authorStart,
+        tokens: { input: authorResult.usage.input_tokens, output: authorResult.usage.output_tokens },
+        scriptSnapshot: JSON.parse(JSON.stringify(script)),
+      });
+      console.log(`✅ Author: "${script.title}" (${script.scenes?.length} scenes, ${Date.now() - authorStart}ms)`);
+      onProgress?.('TTS-Optimierung...', pipeline, script);
     }
 
-    // === STEP 5: TTS optimization ===
+    // === TTS optimization (same for both modes) ===
     const ttsPrompt = loadPromptFile('agent-tts.txt');
     if (ttsPrompt) {
-      console.log('🎙️ Step 5: TTS...');
+      console.log('🎙️ TTS optimization...');
       onProgress?.('TTS-Optimierung...');
       const ttsStart = Date.now();
 
@@ -470,12 +436,13 @@ WICHTIG zu Charakteren:
       });
     }
 
+    // === STOP HERE for preview - no automatic review anymore ===
     const totalDuration = pipeline.steps.reduce((t, s) => t + s.durationMs, 0);
     console.log(`🏁 Pipeline: ${pipeline.steps.length} steps, ${pipeline.totalTokens.input + pipeline.totalTokens.output} tokens, ${Math.round(totalDuration / 1000)}s`);
 
     return {
       script,
-      systemPrompt: fullAuthorPrompt,
+      systemPrompt: fullSystemPrompt,
       pipeline,
     };
   }
@@ -492,6 +459,108 @@ WICHTIG zu Charakteren:
     } catch {
       return '';
     }
+  }
+
+  /**
+   * Manual lector review - returns structured review result
+   */
+  async runLectorReview(script: Script, age: number, userPrompt?: string): Promise<{ review: ReviewResult; step: PipelineStep }> {
+    const cs = loadClaudeSettings();
+    const reviewerPrompt = loadPromptFile('agent-reviewer.txt');
+    const start = Date.now();
+
+    let userMessage = `Prüfe dieses Kinderhörspiel (Zielalter: ${age} Jahre):\n\n`;
+    if (userPrompt) {
+      userMessage += `NUTZER-PROMPT (das war die Vorgabe des Nutzers — bewerte die Umsetzung, nicht den Prompt selbst):\n${userPrompt}\n\n`;
+    }
+    userMessage += JSON.stringify(script, null, 2);
+
+    const result = await this.callClaude({
+      model: cs.reviewerModel || cs.model,
+      systemPrompt: reviewerPrompt,
+      userMessage,
+      maxTokens: 4096,
+      temperature: 0.3,
+    });
+
+    let review: ReviewResult;
+    try {
+      review = this.parseJson(result.text) as ReviewResult;
+    } catch {
+      console.warn('⚠️ Could not parse lector review result');
+      review = { approved: true, feedback: 'Review parse error' };
+    }
+
+    console.log(`  Lector Review: ${review.approved ? 'APPROVED' : 'REJECTED'} (${review.severity || 'n/a'}, ${Date.now() - start}ms)`);
+
+    return {
+      review,
+      step: {
+        agent: 'lector',
+        model: cs.reviewerModel || cs.model,
+        durationMs: Date.now() - start,
+        tokens: { input: result.usage.input_tokens, output: result.usage.output_tokens },
+        reviewResult: review,
+      },
+    };
+  }
+
+  /**
+   * Manual lector revision with custom admin instructions
+   */
+  async runLectorRevision(
+    script: Script, 
+    lectorReview: ReviewResult, 
+    adminInstructions: string,
+    age: number
+  ): Promise<{ script: Script; step: PipelineStep }> {
+    const cs = loadClaudeSettings();
+    const revisionPrompt = loadPromptFile('agent-revision.txt') || 'Du überarbeitest ein Kinderhörspiel-Skript basierend auf Lektor-Feedback und Admin-Anweisungen. Gib das KOMPLETTE überarbeitete Skript als JSON zurück.';
+    const start = Date.now();
+
+    const userMessage = [
+      'AKTUELLES SKRIPT:',
+      JSON.stringify(script, null, 2),
+      '',
+      'LEKTOR-REVIEW:',
+      `Status: ${lectorReview.approved ? 'APPROVED' : 'REJECTED'}`,
+      `Feedback: ${lectorReview.feedback}`,
+      lectorReview.severity ? `Severity: ${lectorReview.severity}` : '',
+      '',
+      'ADMIN-ANWEISUNGEN:',
+      adminInstructions,
+      '',
+      `Überarbeite das Skript entsprechend dem Lektorat und den Admin-Anweisungen. Zielalter: ${age} Jahre.`,
+    ].filter(line => line !== '').join('\n');
+
+    const revisionResult = await this.callClaude({
+      model: cs.model,
+      systemPrompt: `${revisionPrompt}\n\n${this.JSON_FORMAT}`,
+      userMessage,
+      maxTokens: cs.max_tokens,
+      temperature: 0.7,
+      thinking: { budget: cs.thinking_budget },
+    });
+
+    let revisedScript: Script;
+    try {
+      revisedScript = this.parseJson(revisionResult.text) as Script;
+      console.log(`✅ Lector Revision done (${Date.now() - start}ms)`);
+    } catch (e) {
+      console.warn('⚠️ Lector revision parse failed, keeping original version');
+      revisedScript = script;
+    }
+
+    return {
+      script: revisedScript,
+      step: {
+        agent: 'revision',
+        model: cs.model,
+        durationMs: Date.now() - start,
+        tokens: { input: revisionResult.usage.input_tokens, output: revisionResult.usage.output_tokens },
+        scriptSnapshot: JSON.parse(JSON.stringify(revisedScript)),
+      },
+    };
   }
 
   /**

@@ -23,13 +23,15 @@ interface ReviewResult {
 }
 
 export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { story: any; onDone: () => void; mode?: 'draft' | 'readonly'; onDelete?: () => void }) {
-  const [phase, setPhase] = useState<'preview' | 'reviewing' | 'reviewed' | 'producing' | 'done' | 'error'>('preview');
+  const [phase, setPhase] = useState<'preview' | 'reviewing' | 'reviewed' | 'producing' | 'done' | 'error' | 'lector' | 'lector-result' | 'lector-revising'>('preview');
   const [progress, setProgress] = useState('');
   const [livePipelineSteps, setLivePipelineSteps] = useState<any[]>([]);
   const [activeStep, setActiveStep] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [review, setReview] = useState<ReviewResult | null>(null);
   const [accepted, setAccepted] = useState<Set<number>>(new Set());
+  const [lectorReview, setLectorReview] = useState<any>(null);
+  const [lectorInstructions, setLectorInstructions] = useState('');
   const { script, voiceMap } = (story as any).scriptData || {};
   const [allVoices, setAllVoices] = useState<any[]>([]);
   const [pickerChar, setPickerChar] = useState<string | null>(null);
@@ -119,6 +121,51 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
     }
   };
 
+  const handleLectorReview = async () => {
+    setPhase('lector');
+    setProgress('Claude führt Lektorat durch...');
+    try {
+      const res = await fetch(`/api/generate/${story.id}/lector`, { 
+        method: 'POST', 
+        headers: { Authorization: getAuth() } 
+      });
+      if (!res.ok) throw new Error('Lektorat fehlgeschlagen');
+      const data = await res.json();
+      setLectorReview(data.review);
+      setPhase('lector-result');
+    } catch (err: any) {
+      setError(err.message);
+      setPhase('error');
+    }
+  };
+
+  const handleLectorRevision = async () => {
+    if (!lectorInstructions.trim()) {
+      setError('Bitte geben Sie Anweisungen für die Überarbeitung ein.');
+      return;
+    }
+    setPhase('lector-revising');
+    setProgress('Skript wird überarbeitet...');
+    try {
+      const res = await fetch(`/api/generate/${story.id}/lector-revise`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: getAuth() 
+        },
+        body: JSON.stringify({ instructions: lectorInstructions }),
+      });
+      if (!res.ok) throw new Error('Überarbeitung fehlgeschlagen');
+      setLectorReview(null);
+      setLectorInstructions('');
+      setPhase('preview');
+      onDone(); // Refresh to show updated script
+    } catch (err: any) {
+      setError(err.message);
+      setPhase('error');
+    }
+  };
+
   const handleConfirm = async () => {
     setPhase('producing');
     setProgress('Wird vertont...');
@@ -141,6 +188,82 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
       return next;
     });
   };
+
+  if (phase === 'lector') {
+    return (
+      <div className="bg-surface border border-blue-500/30 rounded-xl p-8 text-center space-y-3">
+        <Loader2 size={24} className="animate-spin mx-auto text-blue-400" />
+        <p className="text-sm">📝 Claude führt Lektorat durch...</p>
+        <p className="text-xs text-text-muted">Das kann 15-30 Sekunden dauern</p>
+      </div>
+    );
+  }
+
+  if (phase === 'lector-revising') {
+    return (
+      <div className="bg-surface border border-blue-500/30 rounded-xl p-8 text-center space-y-3">
+        <Loader2 size={24} className="animate-spin mx-auto text-blue-400" />
+        <p className="text-sm">✏️ Skript wird überarbeitet...</p>
+        <p className="text-xs text-text-muted">Das kann 30-60 Sekunden dauern</p>
+      </div>
+    );
+  }
+
+  if (phase === 'lector-result' && lectorReview) {
+    const ratingColors: Record<string, string> = {
+      'true': 'bg-green-500/20 text-green-400 border-green-500/30',
+      'false': 'bg-red-500/20 text-red-400 border-red-500/30',
+    };
+
+    return (
+      <div className="bg-surface border border-blue-500/30 rounded-xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold flex items-center gap-2">📝 Lektorat-Ergebnis</h3>
+          <span className={`text-xs px-3 py-1.5 rounded-full border font-medium ${ratingColors[String(lectorReview.approved)] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+            {lectorReview.approved ? '✅ Freigegeben' : '❌ Überarbeitung empfohlen'}
+          </span>
+        </div>
+
+        {lectorReview.severity && (
+          <div className={`text-xs px-2 py-1 rounded ${lectorReview.severity === 'critical' ? 'bg-red-500/20 text-red-400' : lectorReview.severity === 'major' ? 'bg-orange-500/20 text-orange-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+            Schweregrad: {lectorReview.severity}
+          </div>
+        )}
+
+        <div className="bg-gray-900/50 rounded-lg p-4 max-h-96 overflow-y-auto">
+          <h4 className="text-sm font-medium mb-2">Feedback:</h4>
+          <p className="text-sm whitespace-pre-wrap">{lectorReview.feedback}</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Anweisungen für die Überarbeitung:</label>
+          <textarea
+            value={lectorInstructions}
+            onChange={(e) => setLectorInstructions(e.target.value)}
+            rows={4}
+            placeholder="z.B. 'Mache die Geschichte lustiger' oder 'Füge mehr Dialog hinzu' oder 'Behebe die im Feedback genannten Probleme'"
+            className="w-full px-3 py-2 bg-gray-900 border border-border rounded-lg text-sm focus:outline-none focus:border-brand"
+          />
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={handleLectorRevision}
+            disabled={!lectorInstructions.trim()}
+            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            ✏️ Überarbeiten
+          </button>
+          <button
+            onClick={() => { setPhase('preview'); setLectorReview(null); setLectorInstructions(''); }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border rounded-lg text-sm hover:bg-surface-hover transition-colors"
+          >
+            Zurück
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (phase === 'reviewing') {
     return (
@@ -454,6 +577,12 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
             className="flex items-center gap-2 px-5 py-2.5 bg-surface border border-border hover:bg-surface-hover rounded-lg text-sm font-medium transition-colors"
           >
             🔄 Neu generieren
+          </button>
+          <button
+            onClick={handleLectorReview}
+            className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            📝 Lektorat
           </button>
           <button
             onClick={handleConfirm}
