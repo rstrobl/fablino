@@ -127,7 +127,7 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
 
   // Resume polling if story is actively generating (e.g. after page refresh)
   useEffect(() => {
-    if (story?.status === 'requested') {
+    if (story?.status === 'draft' || story?.status === 'requested') {
       // Check if generation is active
       fetch(`/api/generate/status/${story.id}`, { headers: { Authorization: getAuth() } })
         .then(r => r.json())
