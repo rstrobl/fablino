@@ -604,7 +604,7 @@ function App() {
                           <img src={s.coverUrl.replace('/covers/', '/covers/thumb/')} alt={s.title} className="featured-cover" loading="lazy" />
                         )}
                         <h3>{s.title}</h3>
-                        {s.heroName ? <span className="story-hero">Für {s.heroName}{s.age ? `, ${Math.round(s.age)} Jahre` : ''}</span> : s.age ? <span className="story-hero">Ab {Math.round(s.age) <= 5 ? '3' : Math.round(s.age) <= 8 ? '6' : Math.round(s.age) <= 10 ? '8' : '10'}</span> : null}
+                        {s.heroName ? <span className="story-hero">Für {s.heroName}{s.age ? `, ${Math.round(s.age)} Jahre` : ''}</span> : s.age ? <span className="story-hero">Ab {Math.round(s.age) <= 5 ? '3' : Math.round(s.age) <= 8 ? '6' : Math.round(s.age) <= 10 ? '8' : '10'} Jahren</span> : null}
                         {dur && <span className="story-meta"><Clock size={12} /> {fmt(dur)}</span>}
                       </div>
                       {s.audioUrl && (
