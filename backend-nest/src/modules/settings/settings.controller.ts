@@ -11,6 +11,7 @@ const CLAUDE_SETTINGS_PATH = path.join(DATA_DIR, 'claude-settings.json');
 
 const AGENT_FILES: Record<string, string> = {
   author: path.join(DATA_DIR, 'agent-author.txt'),
+  adapter: path.join(DATA_DIR, 'agent-adapter.txt'),
   reviewer: path.join(DATA_DIR, 'agent-reviewer.txt'),
   tts: path.join(DATA_DIR, 'agent-tts.txt'),
 };
@@ -19,6 +20,7 @@ const DEFAULT_CLAUDE_SETTINGS = {
   model: 'claude-opus-4-20250514',
   reviewerModel: 'claude-sonnet-4-20250514',
   ttsModel: 'claude-sonnet-4-20250514',
+  adapterModel: 'claude-opus-4-20250514',
   max_tokens: 16000,
   temperature: 1.0,
   thinking_budget: 10000,
