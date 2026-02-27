@@ -408,5 +408,40 @@
     "file": "happy_ending.mp3",
     "active": false,
     "prompt": "Short happy cheerful ending jingle, fairy tale style, warm and cozy, 5 seconds"
+  },
+  {
+    "id": "toilet_flush",
+    "name": "Klospülung",
+    "category": "environment",
+    "file": "toilet_flush.mp3",
+    "active": true
+  },
+  {
+    "id": "fart",
+    "name": "Furz",
+    "category": "body",
+    "file": "fart.mp3",
+    "active": true
+  },
+  {
+    "id": "pipe_gurgle",
+    "name": "Blubbern/Rohre",
+    "category": "environment",
+    "file": "pipe_gurgle.mp3",
+    "active": true
+  },
+  {
+    "id": "fanfare",
+    "name": "Fanfare",
+    "category": "music",
+    "file": "fanfare.mp3",
+    "active": true
+  },
+  {
+    "id": "disgust",
+    "name": "Ekel/Würgen",
+    "category": "body",
+    "file": "disgust.mp3",
+    "active": true
   }
 ]
