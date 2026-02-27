@@ -83,8 +83,12 @@ export class GenerationService {
         where: { id },
         data: {
           status: 'draft',
+          prompt,
+          age: age || existing.age || null,
           scriptData: {
+            ...(existing.scriptData as any || {}),
             generationState: { status: 'waiting_for_script', progress: 'Skript wird geschrieben...', startedAt: Date.now() },
+            userCharacters: characters || (existing.scriptData as any)?.userCharacters || null,
           } as any,
         },
       });

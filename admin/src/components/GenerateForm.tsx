@@ -13,9 +13,18 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
   const [targetAge, setTargetAge] = useState(story.age || '6');
   const [prompt, setPrompt] = useState(story.prompt || '');
   const [storyText, setStoryText] = useState('');
-  const [characters, setCharacters] = useState<{ name: string; role: string; age: string }[]>(
-    heroName ? [{ name: heroName, role: 'Hauptfigur', age: '' }] : []
-  );
+  const [characters, setCharacters] = useState<{ name: string; role: string; age: string }[]>(() => {
+    if (heroName) return [{ name: heroName, role: 'Hauptfigur', age: '' }];
+    // Restore from userCharacters if available
+    const uc = (story as any).scriptData?.userCharacters;
+    if (uc) {
+      const chars: { name: string; role: string; age: string }[] = [];
+      if (uc.hero?.name) chars.push({ name: uc.hero.name, role: 'Hauptfigur', age: uc.hero.age || '' });
+      if (uc.sideCharacters) chars.push(...uc.sideCharacters.map((c: any) => ({ name: c.name, role: c.role || '', age: '' })));
+      if (chars.length) return chars;
+    }
+    return [];
+  });
   const [useHeroName, setUseHeroName] = useState(true);
   const [sideChars, setSideChars] = useState<{ name: string; role: string }[]>([]);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
