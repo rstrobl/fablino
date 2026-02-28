@@ -209,6 +209,8 @@ export class StoriesService {
       where: { id },
       data: {
         status: 'draft',
+        title: 'Neues Hörspiel',
+        summary: null,
         scriptData: {
           userCharacters: scriptData.userCharacters || null,
           pipeline: scriptData.pipeline || null,
