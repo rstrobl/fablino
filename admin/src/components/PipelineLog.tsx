@@ -99,7 +99,7 @@ function ScriptPreview({ script }: { script: any }) {
 
 const STEP_LABELS: Record<string, { agent: string; label: string }> = {
   'Autor schreibt Story...': { agent: 'author', label: '🖊️ Autor' },
-  'Lektor prüft Story...': { agent: 'reviewer', label: '🔍 Lektor' },
+  'Lektor prüft Story...': { agent: 'lector', label: '📝 Lektorat' },
   'Autor überarbeitet Story...': { agent: 'revision', label: '✏️ Überarbeitung' },
   'Lektor prüft Überarbeitung...': { agent: 'reviewer2', label: '🔍 Zweiter Review' },
   'Autor überarbeitet nochmal...': { agent: 'revision2', label: '✏️ Zweite Überarbeitung' },

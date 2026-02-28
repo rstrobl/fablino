@@ -420,7 +420,16 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
 
       {/* Pipeline Log — ALWAYS visible */}
       {(story as any).scriptData?.pipeline && (
-        <PipelineLog pipeline={(story as any).scriptData.pipeline} />
+        <PipelineLog 
+          pipeline={(story as any).scriptData.pipeline} 
+          activeStep={
+            phase === 'lector' ? 'Lektor prüft Story...' :
+            phase === 'lector-revising' ? 'Autor überarbeitet Story...' :
+            phase === 'tts-optimizing' ? 'TTS-Optimierung...' :
+            phase === 'producing' ? progress :
+            null
+          }
+        />
       )}
     </div>
   );
