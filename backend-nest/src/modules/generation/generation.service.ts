@@ -700,6 +700,9 @@ export class GenerationService {
       0,
     ).catch(() => {});
 
+    // Save user instructions on the step for pipeline log display
+    (step as any).instructions = instructions;
+
     // Update script in DB and add revision step to pipeline
     const updatedScriptData = {
       ...scriptData,

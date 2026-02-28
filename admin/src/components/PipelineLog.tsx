@@ -7,6 +7,7 @@ interface PipelineStep {
   durationMs: number;
   tokens: { input: number; output: number };
   timestamp?: string;
+  instructions?: string;
   reviewResult?: {
     approved: boolean;
     feedback?: string;
@@ -130,7 +131,8 @@ export function PipelineLog({ pipeline, activeStep }: Props) {
         {pipeline.steps.map((step, i) => {
           const hasReview = !!step.reviewResult;
           const hasScript = !!step.scriptSnapshot;
-          const _expandable = hasReview || hasScript;
+          const hasInstructions = !!step.instructions;
+          const _expandable = hasReview || hasScript || hasInstructions;
           const expandedSection = expanded[i];
 
           return (
@@ -216,6 +218,13 @@ export function PipelineLog({ pipeline, activeStep }: Props) {
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* User instructions (always visible for revision steps) */}
+              {hasInstructions && (
+                <div className="px-4 pb-2">
+                  <p className="text-xs text-text-muted italic">💬 „{step.instructions}"</p>
                 </div>
               )}
 
