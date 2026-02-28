@@ -427,13 +427,10 @@ export function GenerateForm({ story, onDone, onDelete }: { story: any; onDone: 
     );
   }
 
+  // 'done' phase: just reload — no success screen
   if (phase === 'done') {
-    return (
-      <div className="bg-surface border border-green-500/30 rounded-xl p-8 text-center space-y-3">
-        <Check size={32} className="text-green-500 mx-auto" />
-        <p className="font-medium">Hörbuch erfolgreich generiert!</p>
-      </div>
-    );
+    onDone();
+    return null;
   }
 
   if (phase === 'error') {

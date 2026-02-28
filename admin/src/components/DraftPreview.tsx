@@ -217,13 +217,7 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
         </div>
       )}
 
-      {/* Done Message */}
-      {phase === 'done' && (
-        <div className="bg-surface border border-green-500/30 rounded-xl p-6 text-center space-y-2">
-          <Check size={32} className="text-green-500 mx-auto" />
-          <p className="font-medium">Hörbuch erfolgreich vertont!</p>
-        </div>
-      )}
+      {/* Done: just reload, no success screen */}
 
       {/* Error Message */}
       {phase === 'error' && (
