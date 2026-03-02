@@ -335,9 +335,9 @@ export function Voices() {
   const qc = useQueryClient();
   const { data: voices = [], isLoading } = useQuery<VoiceData[]>({ queryKey: ['voices'], queryFn: fetchVoices as any });
   const [filter, setFilter] = useState('');
-  const [langFilter, setLangFilter] = useState('');
+  const [langFilter, setLangFilter] = useState('de');
 
-  const langFiltered = langFilter ? voices.filter(v => v.language === langFilter) : voices;
+  const langFiltered = voices.filter(v => v.language === langFilter);
   const groups = GROUP_ORDER.filter(g => langFiltered.some(v => voiceGroup(v) === g));
   const filtered = filter ? langFiltered.filter(v => voiceGroup(v) === filter) : langFiltered;
   const grouped: Record<string, VoiceData[]> = {};
@@ -354,17 +354,15 @@ export function Voices() {
 
       <AddVoiceForm onAdded={refresh} />
 
-      <div className="flex gap-2 flex-wrap">
-        <button onClick={() => setLangFilter('')}
-          className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${!langFilter ? 'bg-brand/15 border-brand text-brand' : 'bg-surface border-border text-text-muted hover:bg-surface-hover'}`}>
-          🌐 Alle ({voices.length})
-        </button>
-        {[...new Set(voices.map(v => v.language))].sort().map(lang => (
-          <button key={lang} onClick={() => setLangFilter(lang)}
-            className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${langFilter === lang ? 'bg-brand/15 border-brand text-brand' : 'bg-surface border-border text-text-muted hover:bg-surface-hover'}`}>
-            {LANG_FLAG[lang] || '🌐'} {LANGUAGE_OPTIONS.find(l => l.value === lang)?.label || lang} ({voices.filter(v => v.language === lang).length})
-          </button>
-        ))}
+      <div className="flex gap-2 flex-wrap items-center">
+        <select value={langFilter} onChange={e => { setLangFilter(e.target.value); setFilter(''); }}
+          className="px-3 py-1.5 rounded-lg text-sm border border-border bg-surface text-text-muted">
+          {[...new Set(voices.map(v => v.language))].sort().map(lang => (
+            <option key={lang} value={lang}>
+              {LANG_FLAG[lang] || '🌐'} {LANGUAGE_OPTIONS.find(l => l.value === lang)?.label || lang} ({voices.filter(v => v.language === lang).length})
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="flex gap-2 flex-wrap">
