@@ -1,0 +1,120 @@
+{
+  "title": "Matheo und das Geheimnis des rosa Wasserdrachens",
+  "summary": "Matheo entdeckt im Zoo eine freche Krähe namens Karl, die ihm ein magisches Portal zum Axolotl-Becken zeigt. Er wird nach Xochimilco in Mexiko transportiert, wo er den Axolotl Axel trifft und gemeinsam mit seinen neuen Freunden gegen Wasserverschmutzung kämpfen muss, bevor das Portal sich für immer schließt.",
+  "characters": [
+    {"name": "Erzähler", "age": 35, "type": "human", "emoji": "📖", "gender": "male", "species": "human", "description": "Ein warmer, ruhiger Erzähler, der die Geschichte begleitet und die Zuhörer sanft durch das Abenteuer führt.", "voice_character": "kind"},
+    {"name": "Matheo", "age": 8, "type": "human", "emoji": "👦", "gender": "male", "species": "human", "description": "Ein neugieriger, mutiger Junge von acht Jahren, der Tiere über alles liebt und bereit ist, für sie Angst zu überwinden.", "voice_character": "kind"},
+    {"name": "Axel", "age": 3, "type": "creature", "emoji": "🦎", "gender": "male", "species": "axolotl", "description": "Ein rosa Axolotl mit buschigen Kiemen und einem großen Herz. Er lebt in den Kanälen von Xochimilco und kennt jede Ecke unter Wasser.", "voice_character": "funny"},
+    {"name": "Krähe Karl", "age": 10, "type": "creature", "emoji": "🐦‍⬛", "gender": "male", "species": "crow", "description": "Eine freche, sarkastische Krähe, die draußen auf den Ästen vor dem Aquarienhaus sitzt. Unter der rauen Schale steckt ein treuer Freund.", "voice_character": "funny"}
+  ],
+  "scenes": [
+    {
+      "lines": [
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Es war ein warmer Nachmittag im Zoo, und Matheo stand vor dem großen Aquarienhaus. Hinter der Glasscheibe schwammen bunte Fische, und ganz hinten, in einem Becken mit sanftem Licht, saß ein rosa Axolotl und lächelte ihn an. Jedenfalls sah es so aus."},
+        {"speaker": "Matheo", "emotion": "amazed", "text": "Wow, der sieht ja aus wie ein kleiner Drache! Mit diesen lustigen Fransen am Kopf!"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Da hörte Matheo plötzlich eine krächzende Stimme. Sie kam von draußen, durch ein offenes Fenster."},
+        {"speaker": "Krähe Karl", "emotion": "mischievous", "text": "Hey! Hey, du da drin! Ja genau, du mit den großen Augen! Komm mal raus hier!"},
+        {"speaker": "Matheo", "emotion": "confused", "text": "Hä? Wer redet denn da?"},
+        {"speaker": "Krähe Karl", "emotion": "smug", "text": "Hier draußen, auf dem Ast! Na, siehst du mich? Schwarzes Gefieder, unglaublich gut aussehend?"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Matheo ging nach draußen und sah eine große Krähe auf einem Ast direkt vor dem Aquarienhaus sitzen."},
+        {"speaker": "Matheo", "emotion": "surprised", "text": "Eine sprechende Krähe?!"},
+        {"speaker": "Krähe Karl", "emotion": "sarcastic", "text": "Nein, ein sprechender Briefkasten. Natürlich eine Krähe! Ich bin Karl. Und du bist genau der Richtige, Schlaukopf."},
+        {"speaker": "Matheo", "emotion": "curious", "text": "Der Richtige? Wofür denn?"},
+        {"speaker": "Krähe Karl", "emotion": "excited", "text": "Siehst du die Scheibe vom Axolotl-Becken von außen? Klopf dreimal dagegen. Vertrau mir."},
+        {"speaker": "Matheo", "emotion": "hesitant", "text": "Einfach so? Und was passiert dann?"},
+        {"speaker": "Krähe Karl", "emotion": "mysterious", "text": "Dann passiert etwas, das du nie vergessen wirst. Dreimal klopfen. Los, trau dich!"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Matheo zögerte einen Moment. Dann hob er die Hand und klopfte dreimal gegen die Außenscheibe des Axolotl-Beckens. Tock. Tock. Tock."}
+      ]
+    },
+    {
+      "lines": [
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Die Scheibe begann türkis zu leuchten. Ein Wirbel aus Wasser und Licht umhüllte Matheo, und ehe er blinzeln konnte, stand er knietief in warmem, klarem Wasser. Um ihn herum schimmerten grüne schwimmende Gärten auf einem weiten See."},
+        {"speaker": "Matheo", "emotion": "amazed", "text": "Whoa! Wo bin ich denn hier gelandet? Das ist ja wunderschön!"},
+        {"speaker": "Krähe Karl", "emotion": "proud", "text": "Willkommen in Xochimilco, Schlaukopf! Mexiko! Die Heimat der Axolotl. Und dieser schwimmenden Gärten — die heißen Chinampas."},
+        {"speaker": "Matheo", "emotion": "excited", "text": "Chi-nam-pas? Das sind richtige Gärten, die auf dem Wasser schwimmen?"},
+        {"speaker": "Krähe Karl", "emotion": "smug", "text": "Sag ich doch. Hier wachsen sogar Blumen und Gemüse drauf. Schick, oder?"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Plötzlich schoss etwas Rosa durchs Wasser, direkt auf Matheo zu. Ein kleiner Axolotl, nicht größer als Matheos Unterarm, mit weit aufgerissenen Augen."},
+        {"speaker": "Axel", "emotion": "panicked", "text": "Hilfe! Hilfe, hilfe, hilfe! Der ist hinter mir her! Versteck mich, schnell!"},
+        {"speaker": "Matheo", "emotion": "alarmed", "text": "Was? Wer ist hinter dir her?"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Ein großer grauer Tilapia-Fisch tauchte auf, doppelt so groß wie der kleine Axolotl, und schnappte wild nach ihm."},
+        {"speaker": "Matheo", "emotion": "determined", "text": "Hey! Lass ihn in Ruhe!"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Matheo trat ins Wasser und versuchte den Tilapia zu verscheuchen. Aber der Fisch wich nur kurz aus und kam sofort zurück, noch aggressiver als zuvor."},
+        {"speaker": "Krähe Karl", "emotion": "worried", "text": "Treten bringt nichts! Der ist hartnäckiger als Kaugummi am Schuh!"},
+        {"speaker": "Matheo", "emotion": "thinking", "text": "Warte mal… der jagt Axel, weil er ihn sehen kann, oder? Was wenn — Karl, kannst du Schlamm vom Boden aufwirbeln?"},
+        {"speaker": "Krähe Karl", "emotion": "skeptical", "text": "Schlamm? Ich soll meine wunderschönen Federn — ach, na gut!"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Karl stieß ins Wasser und wirbelte mit den Flügeln eine dicke Schlammwolke auf. Matheo zog den kleinen Axolotl schnell hinter eine Chinampa, und der Tilapia schwamm verwirrt in die falsche Richtung davon."},
+        {"speaker": "Axel", "emotion": "relieved", "text": "Puuuh! Das war knapp! Ich bin Axel, und ihr habt mir gerade das Leben gerettet!"}
+      ]
+    },
+    {
+      "lines": [
+        {"speaker": "Matheo", "emotion": "curious", "text": "Axel, warum hat der Fisch dich so gejagt? Tilapias fressen doch keine Axolotl — oder?"},
+        {"speaker": "Axel", "emotion": "sad", "text": "Doch, leider schon. Die Tilapias gehören eigentlich gar nicht hierher. Menschen haben sie in unseren See gesetzt, und jetzt fressen sie unsere Eier und jagen die Kleinen von uns."},
+        {"speaker": "Krähe Karl", "emotion": "serious", "text": "Invasive Arten nennt man das. Die zerstören alles."},
+        {"speaker": "Axel", "emotion": "worried", "text": "Und das ist noch nicht alles. Das Wasser wird immer schmutziger. Wir Axolotl brauchen sauberes, kühles Süßwasser — so zwischen vierzehn und zwanzig Grad. Aber es wird wärmer und dreckiger."},
+        {"speaker": "Matheo", "emotion": "concerned", "text": "Moment mal — mir fällt auf, das Wasser hier war doch gerade noch klar! Jetzt ist es richtig trüb!"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Matheo hatte recht. Eine braune Wolke breitete sich langsam durch den Kanal aus. Und am Horizont, wo vorhin ein türkises Leuchten am Himmel gestanden hatte, flackerte das Licht des Portals — schwächer und schwächer."},
+        {"speaker": "Krähe Karl", "emotion": "alarmed", "text": "Äh, Schlaukopf? Siehst du das Leuchten da oben? Das ist dein Ticket nach Hause. Und es wird kleiner."},
+        {"speaker": "Matheo", "emotion": "scared", "text": "Was?! Heißt das, wenn das Wasser zu dreckig wird… komme ich nicht mehr zurück?"},
+        {"speaker": "Axel", "emotion": "anxious", "text": "Das Portal braucht sauberes Wasser. Es ist mit dem See verbunden. Wenn der See stirbt, stirbt auch die Magie."},
+        {"speaker": "Matheo", "emotion": "fearful", "text": "Dann müssen wir rausfinden, woher der Dreck kommt! Sofort!"}
+      ]
+    },
+    {
+      "lines": [
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Die braune Wolke im Wasser wurde dichter. Matheo konnte seine eigenen Füße nicht mehr sehen. Das Portal-Leuchten am Himmel war nur noch ein schwaches Flimmern."},
+        {"speaker": "Krähe Karl", "emotion": "determined", "text": "Ich fliege hoch und suche von oben! Irgendwo muss der Dreck herkommen!"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Karl stieg in die Luft und kreiste über den Kanälen. Nach einer Minute kam er zurückgeschossen."},
+        {"speaker": "Krähe Karl", "emotion": "urgent", "text": "Da hinten, hinter der großen Chinampa! Ein riesiges Rohr ragt aus dem Ufer und pumpt braunen Schlamm in den See!"},
+        {"speaker": "Axel", "emotion": "determined", "text": "Ich tauche hin und schau mir das genauer an!"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Axel verschwand im trüben Wasser. Matheo watete hinterher, aber mit jedem Schritt wurde es tiefer und dunkler. Er konnte nichts mehr sehen unter der Oberfläche."},
+        {"speaker": "Matheo", "emotion": "scared", "text": "Ich kann nichts sehen! Gar nichts! Was, wenn da unten noch mehr Tilapias sind? Oder was Schlimmeres?"},
+        {"speaker": "Krähe Karl", "emotion": "encouraging", "text": "Du schaffst das, Matheo. Ich bin hier oben und pass auf!"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Matheo schluckte schwer und ging weiter, Schritt für Schritt, das Wasser reichte ihm schon fast bis zur Brust. Dann spürte er es — ein kaltes, dickes Rohr unter seinen Händen, aus dem brauner Schlamm strömte."},
+        {"speaker": "Matheo", "emotion": "desperate", "text": "Ich hab das Rohr! Aber das ist riesig! Das ist so dick wie… wie ein Baumstamm! Das kann ich niemals alleine zustopfen!"},
+        {"speaker": "Axel", "emotion": "devastated", "text": "Er hat recht. Es ist viel zu groß. Das schaffen wir nicht."},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Das Portal-Leuchten am Himmel zitterte. Es war kaum noch zu sehen. Matheo spürte, wie ihm die Tränen kamen. Er war weit weg von zu Hause, stand bis zur Brust im dreckigen Wasser, und die Zeit lief ab."},
+        {"speaker": "Matheo", "emotion": "tearful", "text": "Es ist zu groß. Ich schaff das nicht… ich schaff das einfach nicht."}
+      ]
+    },
+    {
+      "lines": [
+        {"speaker": "Krähe Karl", "emotion": "firm", "text": "Hey! Hör mir mal zu, Schlaukopf. Du alleine vielleicht nicht. Aber du bist nicht alleine!"},
+        {"speaker": "Axel", "emotion": "hopeful", "text": "Karl hat recht! Wartet — ich kenne jeden Axolotl in diesen Kanälen. Gebt mir eine Minute!"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Axel tauchte ab und stieß einen tiefen, summenden Laut aus, der durchs ganze Wasser vibrierte. Und dann kamen sie — fünf, zehn, fünfzehn Axolotl, rosa und braun und golden, aus allen Richtungen."},
+        {"speaker": "Matheo", "emotion": "amazed", "text": "So viele! Axel, die helfen uns?"},
+        {"speaker": "Axel", "emotion": "proud", "text": "Wir Axolotl halten zusammen! Sag uns, was wir tun sollen!"},
+        {"speaker": "Matheo", "emotion": "determined", "text": "Okay, ich hab einen Plan! Karl — du sammelst Äste und Zweige von den Chinampas! Axel, deine Freunde sollen Schlamm und Steine vom Grund hochholen! Ich baue daraus einen Damm vor dem Rohr!"},
+        {"speaker": "Krähe Karl", "emotion": "excited", "text": "Endlich ein Plan! Krähe Karl, Ast-Lieferant, im Einsatz!"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Alle arbeiteten zusammen. Karl flog hin und her und warf Äste ins Wasser. Die Axolotl schoben Steine und Schlamm zum Rohr. Und Matheo stapelte, drückte und baute, bis ihm die Arme wehtaten."},
+        {"speaker": "Matheo", "emotion": "strained", "text": "Noch ein Ast! Und noch mehr Schlamm in die Lücken! Es darf kein Tropfen mehr durchkommen!"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Langsam, ganz langsam, wurde der Strom aus dem Rohr dünner. Und dann — Stille. Der Damm hielt. Kein Schlamm floss mehr in den See."},
+        {"speaker": "Axel", "emotion": "joyful", "text": "Es funktioniert! Schaut mal — das Wasser wird wieder klar!"},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Und tatsächlich: die braune Wolke löste sich auf. Das Wasser wurde Stück für Stück wieder durchsichtig. Und am Himmel flammte das türkise Leuchten des Portals wieder auf, hell und strahlend."},
+        {"speaker": "Matheo", "emotion": "overjoyed", "text": "Das Portal! Es leuchtet wieder! Wir haben es geschafft!"},
+        {"speaker": "Krähe Karl", "emotion": "relieved", "text": "Na also. Hab ich doch gesagt, dass du der Richtige bist, Schlaukopf."}
+      ]
+    },
+    {
+      "lines": [
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Das Wasser in den Kanälen von Xochimilco war wieder klar. Die Axolotl schwammen friedlich zwischen den Chinampas, und das Portal leuchtete geduldig am Himmel."},
+        {"speaker": "Axel", "emotion": "grateful", "text": "Matheo, ich weiß gar nicht, wie ich dir danken soll. Du hast nicht nur mich gerettet, sondern uns alle."},
+        {"speaker": "Matheo", "emotion": "curious", "text": "Axel, stimmt es eigentlich, dass ihr nachwachsen könnt? Also, Körperteile?"},
+        {"speaker": "Axel", "emotion": "proud", "text": "Und ob! Wenn ich ein Bein verliere, wächst ein komplett neues nach. Sogar Teile von meinem Herz und meinem Gehirn können sich regenerieren!"},
+        {"speaker": "Matheo", "emotion": "amazed", "text": "Das ist das Coolste, was ich je gehört habe!"},
+        {"speaker": "Axel", "emotion": "sad", "text": "Trotzdem sind wir vom Aussterben bedroht. Wir gelten als stark gefährdet. Es gibt uns nur noch hier, in diesen Kanälen. Nirgendwo sonst auf der ganzen Welt in freier Wildbahn."},
+        {"speaker": "Matheo", "emotion": "serious", "text": "Ich verspreche dir, ich erzähle allen davon. Jeder soll wissen, dass es euch gibt und dass ihr Hilfe braucht!"},
+        {"speaker": "Axel", "emotion": "touched", "text": "Das bedeutet mir sehr viel, Matheo. Vergiss uns nicht."},
+        {"speaker": "Krähe Karl", "emotion": "soft", "text": "So, Schlaukopf. Zeit nach Hause zu gehen. Das Portal wartet nicht ewig."},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Matheo umarmte das Wasser um Axel herum so vorsichtig er konnte, winkte den anderen Axolotl zu, und watete auf das leuchtende Portal zu. Ein Wirbel aus Licht und Wärme umhüllte ihn."},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Als Matheo die Augen öffnete, stand er wieder vor dem Aquarienhaus im Zoo. Seine Schuhe waren trocken, als wäre nichts passiert. Er ging hinein und stellte sich vor das Axolotl-Becken."},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Der rosa Axolotl im Becken drehte sich langsam zu ihm um. Und dann — ganz langsam — zwinkerte er."},
+        {"speaker": "Matheo", "emotion": "happy", "text": "Bis bald, Axel."},
+        {"speaker": "Krähe Karl", "emotion": "mischievous", "text": "Hey, Schlaukopf! Warst du schon mal im Chamäleon-Haus? Da drüben, hinter den Flamingos? Da soll es auch eine ganz besondere Scheibe geben…"},
+        {"speaker": "Matheo", "emotion": "excited", "text": "Karl! Nicht schon wieder!"},
+        {"speaker": "Krähe Karl", "emotion": "teasing", "text": "Was denn? Ich sag ja nur… aber das ist eine andere Geschichte."},
+        {"speaker": "Erzähler", "emotion": "neutral", "text": "Matheo lachte und schaute noch einmal zum Axolotl-Becken. Der kleine rosa Wasserdrache lächelte. Und Matheo wusste: das war erst der Anfang."}
+      ]
+    }
+  ]
+}
