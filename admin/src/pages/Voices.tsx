@@ -120,7 +120,7 @@ function VoiceCard({ voice, onSaved }: { voice: VoiceData; onSaved: () => void }
             {voice.gender === 'female' ? '♀' : '♂'}
           </div>
           <div>
-            <p className="font-medium text-sm">{LANG_FLAG[voice.language] || '🌐'} {voice.name}</p>
+            <p className="font-medium text-sm">{voice.name}</p>
             <p className="text-xs text-text-muted">
               {voice.age_min}–{voice.age_max} Jahre
             </p>
@@ -359,7 +359,7 @@ export function Voices() {
           className="px-3 py-1.5 rounded-lg text-sm border border-border bg-surface text-text-muted">
           {[...new Set(voices.map(v => v.language))].sort().map(lang => (
             <option key={lang} value={lang}>
-              {LANG_FLAG[lang] || '🌐'} {LANGUAGE_OPTIONS.find(l => l.value === lang)?.label || lang} ({voices.filter(v => v.language === lang).length})
+              {LANGUAGE_OPTIONS.find(l => l.value === lang)?.label || lang} ({voices.filter(v => v.language === lang).length})
             </option>
           ))}
         </select>
