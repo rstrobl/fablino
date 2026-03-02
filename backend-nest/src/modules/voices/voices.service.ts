@@ -9,10 +9,19 @@ export class VoicesService {
     private configService: ConfigService,
   ) {}
 
-  async getAll() {
+  async getAll(language?: string) {
+    if (language) {
+      const voices = await this.prisma.$queryRaw`
+        SELECT voice_id, name, gender, age_min, age_max, types,
+               voice_character, is_narrator, active, preview_url, language
+        FROM voices WHERE language = ${language}
+        ORDER BY name
+      ` as any[];
+      return voices;
+    }
     const voices = await this.prisma.$queryRaw`
       SELECT voice_id, name, gender, age_min, age_max, types,
-             voice_character, is_narrator, active, preview_url
+             voice_character, is_narrator, active, preview_url, language
       FROM voices 
       ORDER BY name
     ` as any[];
@@ -22,7 +31,7 @@ export class VoicesService {
   async getOne(voiceId: string) {
     const rows = await this.prisma.$queryRaw`
       SELECT voice_id, name, gender, age_min, age_max, types,
-             voice_character, is_narrator, active, preview_url
+             voice_character, is_narrator, active, preview_url, language
       FROM voices WHERE voice_id = ${voiceId}
     ` as any[];
     if (!rows.length) throw new NotFoundException('Voice not found');
@@ -30,7 +39,7 @@ export class VoicesService {
   }
 
   async update(voiceId: string, body: any) {
-    const { name, gender, age_min, age_max, types, voice_character, is_narrator, active } = body;
+    const { name, gender, age_min, age_max, types, voice_character, is_narrator, active, language } = body;
     await this.prisma.$executeRaw`
       UPDATE voices SET 
         name = COALESCE(${name}, name),
@@ -40,18 +49,19 @@ export class VoicesService {
         types = COALESCE(${types || null}::text[], types),
         voice_character = COALESCE(${voice_character}, voice_character),
         is_narrator = COALESCE(${is_narrator !== undefined ? is_narrator : null}::boolean, is_narrator),
-        active = COALESCE(${active !== undefined ? active : null}::boolean, active)
+        active = COALESCE(${active !== undefined ? active : null}::boolean, active),
+        language = COALESCE(${language}, language)
       WHERE voice_id = ${voiceId}
     `;
     return this.getOne(voiceId);
   }
 
   async create(body: any) {
-    const { voice_id, name, gender, age_min, age_max, types, voice_character, is_narrator } = body;
+    const { voice_id, name, gender, age_min, age_max, types, voice_character, is_narrator, language } = body;
     await this.prisma.$executeRaw`
-      INSERT INTO voices (voice_id, name, gender, age_min, age_max, types, voice_character, is_narrator)
-      VALUES (${voice_id}, ${name}, ${gender || 'male'}, ${age_min || 18}, ${age_max || 59},
-              ${types || ['human']}::text[], ${voice_character || 'kind'}, ${is_narrator || false})
+      INSERT INTO voices (voice_id, name, category, gender, age_min, age_max, types, voice_character, is_narrator, language)
+      VALUES (${voice_id}, ${name}, 'adult_m', ${gender || 'male'}, ${age_min || 18}, ${age_max || 59},
+              ${types || ['human']}::text[], ${voice_character || 'kind'}, ${is_narrator || false}, ${language || 'de'})
     `;
     return this.getOne(voice_id);
   }

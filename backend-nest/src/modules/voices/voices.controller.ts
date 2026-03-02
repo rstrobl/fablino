@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Param, Body, Post, Delete, Res } from '@nestjs/common';
+import { Controller, Get, Put, Param, Body, Post, Delete, Res, Query } from '@nestjs/common';
 import { Response } from 'express';
 import { VoicesService } from './voices.service';
 
@@ -7,8 +7,8 @@ export class VoicesController {
   constructor(private voicesService: VoicesService) {}
 
   @Get()
-  async getAll() {
-    return this.voicesService.getAll();
+  async getAll(@Query('language') language?: string) {
+    return this.voicesService.getAll(language);
   }
 
   @Get(':voiceId')

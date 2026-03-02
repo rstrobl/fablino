@@ -15,10 +15,26 @@ interface VoiceData {
   is_narrator: boolean;
   active: boolean;
   preview_url?: string;
+  language: string;
 }
 
 const TYPE_OPTIONS = ['human', 'creature'];
 const VOICE_CHARACTER_OPTIONS = ['kind', 'funny', 'evil', 'wise'];
+const LANGUAGE_OPTIONS = [
+  { value: 'de', label: '🇩🇪 Deutsch' },
+  { value: 'fr', label: '🇫🇷 Français' },
+  { value: 'en', label: '🇬🇧 English' },
+  { value: 'es', label: '🇪🇸 Español' },
+  { value: 'it', label: '🇮🇹 Italiano' },
+];
+const LANG_FLAG: Record<string, string> = { de: '🇩🇪', fr: '🇫🇷', en: '🇬🇧', es: '🇪🇸', it: '🇮🇹' };
+const PREVIEW_TEXTS: Record<string, string> = {
+  de: 'Oh nein, mein Schläger! Und in zwei Stunden ist das große Turnier!',
+  fr: 'Oh non, ma raquette ! Et dans deux heures c\'est le grand tournoi !',
+  en: 'Oh no, my racket! And the big tournament is in two hours!',
+  es: '¡Oh no, mi raqueta! ¡Y el gran torneo es en dos horas!',
+  it: 'Oh no, la mia racchetta! E il grande torneo è tra due ore!',
+};
 const VC_LABELS: Record<string, string> = { kind: '😊 Kind', funny: '😄 Funny', evil: '😈 Evil', wise: '🦉 Wise' };
 
 const GROUP_LABELS: Record<string, string> = {
@@ -34,14 +50,14 @@ function voiceGroup(v: VoiceData): string {
   return v.gender || 'male';
 }
 
-const PREVIEW_TEXT = 'Oh nein, mein Schläger! Und in zwei Stunden ist das große Turnier!';
+const PREVIEW_TEXT = 'Oh nein, mein Schläger! Und in zwei Stunden ist das große Turnier!'; // fallback
 
 function VoiceCard({ voice, onSaved }: { voice: VoiceData; onSaved: () => void }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...voice });
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [previewText, setPreviewText] = useState(PREVIEW_TEXT);
+  const [previewText, setPreviewText] = useState(PREVIEW_TEXTS[voice.language] || PREVIEW_TEXT);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const saveMut = useMutation({
@@ -104,7 +120,7 @@ function VoiceCard({ voice, onSaved }: { voice: VoiceData; onSaved: () => void }
             {voice.gender === 'female' ? '♀' : '♂'}
           </div>
           <div>
-            <p className="font-medium text-sm">{voice.name}</p>
+            <p className="font-medium text-sm">{LANG_FLAG[voice.language] || '🌐'} {voice.name}</p>
             <p className="text-xs text-text-muted">
               {voice.age_min}–{voice.age_max} Jahre
             </p>
@@ -150,6 +166,10 @@ function VoiceCard({ voice, onSaved }: { voice: VoiceData; onSaved: () => void }
               <input type="number" value={form.age_max} onChange={e => setForm({ ...form, age_max: +e.target.value })}
                 className="w-14 text-xs bg-gray-900 border border-border rounded px-2 py-1.5 text-center" />
             </div>
+            <select value={form.language} onChange={e => setForm({ ...form, language: e.target.value })}
+              className="text-xs bg-gray-900 border border-border rounded px-2 py-1.5">
+              {LANGUAGE_OPTIONS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+            </select>
             <label className="flex items-center gap-1 text-xs text-text-muted ml-auto">
               <input type="checkbox" checked={form.active} onChange={e => setForm({ ...form, active: e.target.checked })} />
               Aktiv
@@ -218,7 +238,7 @@ function AddVoiceForm({ onAdded }: { onAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     voice_id: '', name: '', gender: 'female' as string,
-    age_min: 5, age_max: 12, types: ['human'] as string[], voice_character: 'kind', is_narrator: false,
+    age_min: 5, age_max: 12, types: ['human'] as string[], voice_character: 'kind', is_narrator: false, language: 'de',
   });
 
   const addMut = useMutation({
@@ -233,7 +253,7 @@ function AddVoiceForm({ onAdded }: { onAdded: () => void }) {
     onSuccess: () => {
       toast.success('Voice hinzugefügt');
       setOpen(false);
-      setForm({ voice_id: '', name: '', gender: 'female', age_min: 5, age_max: 12, types: ['human'], voice_character: 'kind', is_narrator: false });
+      setForm({ voice_id: '', name: '', gender: 'female', age_min: 5, age_max: 12, types: ['human'], voice_character: 'kind', is_narrator: false, language: 'de' });
       onAdded();
     },
     onError: () => toast.error('Fehler'),
@@ -258,6 +278,10 @@ function AddVoiceForm({ onAdded }: { onAdded: () => void }) {
           className="text-xs bg-gray-900 border border-border rounded px-2 py-1.5">
           <option value="male">♂ Männlich</option>
           <option value="female">♀ Weiblich</option>
+        </select>
+        <select value={form.language} onChange={e => setForm({ ...form, language: e.target.value })}
+          className="text-xs bg-gray-900 border border-border rounded px-2 py-1.5">
+          {LANGUAGE_OPTIONS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
         </select>
         <div className="flex gap-1 items-center">
           <input type="number" value={form.age_min} onChange={e => setForm({ ...form, age_min: +e.target.value })}
@@ -311,9 +335,11 @@ export function Voices() {
   const qc = useQueryClient();
   const { data: voices = [], isLoading } = useQuery<VoiceData[]>({ queryKey: ['voices'], queryFn: fetchVoices as any });
   const [filter, setFilter] = useState('');
+  const [langFilter, setLangFilter] = useState('');
 
-  const groups = GROUP_ORDER.filter(g => voices.some(v => voiceGroup(v) === g));
-  const filtered = filter ? voices.filter(v => voiceGroup(v) === filter) : voices;
+  const langFiltered = langFilter ? voices.filter(v => v.language === langFilter) : voices;
+  const groups = GROUP_ORDER.filter(g => langFiltered.some(v => voiceGroup(v) === g));
+  const filtered = filter ? langFiltered.filter(v => voiceGroup(v) === filter) : langFiltered;
   const grouped: Record<string, VoiceData[]> = {};
   filtered.forEach(v => { (grouped[voiceGroup(v)] ??= []).push(v); });
 
@@ -329,9 +355,22 @@ export function Voices() {
       <AddVoiceForm onAdded={refresh} />
 
       <div className="flex gap-2 flex-wrap">
+        <button onClick={() => setLangFilter('')}
+          className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${!langFilter ? 'bg-brand/15 border-brand text-brand' : 'bg-surface border-border text-text-muted hover:bg-surface-hover'}`}>
+          🌐 Alle ({voices.length})
+        </button>
+        {[...new Set(voices.map(v => v.language))].sort().map(lang => (
+          <button key={lang} onClick={() => setLangFilter(lang)}
+            className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${langFilter === lang ? 'bg-brand/15 border-brand text-brand' : 'bg-surface border-border text-text-muted hover:bg-surface-hover'}`}>
+            {LANG_FLAG[lang] || '🌐'} {LANGUAGE_OPTIONS.find(l => l.value === lang)?.label || lang} ({voices.filter(v => v.language === lang).length})
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-2 flex-wrap">
         <button onClick={() => setFilter('')}
           className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${!filter ? 'bg-brand/15 border-brand text-brand' : 'bg-surface border-border text-text-muted hover:bg-surface-hover'}`}>
-          Alle ({voices.length})
+          Alle ({langFiltered.length})
         </button>
         {groups.map(g => (
           <button key={g} onClick={() => setFilter(g)}

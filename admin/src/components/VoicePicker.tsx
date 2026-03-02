@@ -7,6 +7,7 @@ interface Voice {
   category: string;
   preview_url?: string;
   traits?: string[];
+  language?: string;
 }
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
   currentVoiceId: string;
   category: string; // gender/category to filter
   voices: Voice[];
+  language?: string; // filter voices by language
   onSelect: (voiceId: string) => void;
   onClose: () => void;
 }
@@ -31,14 +33,25 @@ const CATEGORY_MAP: Record<string, string[]> = {
   creature: ['creature_m', 'creature_f'],
 };
 
-export function VoicePicker({ characterName, currentVoiceId, category, voices, onSelect, onClose }: Props) {
+const LANG_PREVIEW_TEXTS: Record<string, string> = {
+  de: 'Hallo! Ich bin {name}. Ich erzähle dir eine Geschichte!',
+  fr: 'Bonjour ! Je suis {name}. Je vais te raconter une histoire !',
+  en: 'Hello! I am {name}. Let me tell you a story!',
+  es: '¡Hola! Soy {name}. ¡Te voy a contar una historia!',
+  it: 'Ciao! Sono {name}. Ti racconto una storia!',
+};
+
+export function VoicePicker({ characterName, currentVoiceId, category, voices, language, onSelect, onClose }: Props) {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Filter by language first if provided
+  const langVoices = language ? voices.filter(v => v.language === language) : voices;
+
   // Show matching category first, then all others
   const matchingCategories = CATEGORY_MAP[category] || [category];
-  const matching = voices.filter(v => matchingCategories.includes(v.category));
-  const others = voices.filter(v => !matchingCategories.includes(v.category));
+  const matching = langVoices.filter(v => matchingCategories.includes(v.category));
+  const others = langVoices.filter(v => !matchingCategories.includes(v.category));
   const filtered = [...matching, ...others];
   const matchingCount = matching.length;
 
@@ -48,10 +61,12 @@ export function VoicePicker({ characterName, currentVoiceId, category, voices, o
     setPlayingId(voice.voice_id);
     try {
       // Use backend preview endpoint (generates on-demand via ElevenLabs)
+      const previewTemplate = LANG_PREVIEW_TEXTS[language || voice.language || 'de'] || LANG_PREVIEW_TEXTS['de'];
+      const previewText = previewTemplate.replace('{name}', voice.name);
       const res = await fetch(`/api/voices/${voice.voice_id}/preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: sessionStorage.getItem('fablino_auth') || '' },
-        body: JSON.stringify({ text: `Hallo! Ich bin ${voice.name}. Ich erzähle dir eine Geschichte!` }),
+        body: JSON.stringify({ text: previewText }),
       });
       if (!res.ok) throw new Error('Preview failed');
       const blob = await res.blob();
