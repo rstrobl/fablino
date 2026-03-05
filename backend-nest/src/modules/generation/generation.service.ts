@@ -427,10 +427,6 @@ export class GenerationService {
     durationSeconds?: number | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
-      const hasHeroName = /^Name:/.test(prompt);
-      const hasSideChars = script.characters.length > 2;
-      const testGroup = hasHeroName ? (hasSideChars ? 'A' : 'B') : 'C';
-
       // Strip title/summary from script blob (stored in DB columns)
       const { title: _t, summary: _s, ...scriptWithoutMeta } = script as any;
       const storyData = {
@@ -441,7 +437,6 @@ export class GenerationService {
         audioPath: `audio/${storyId}.mp3`,
         systemPrompt: systemPrompt || null,
         ...(coverUrl !== undefined ? { coverUrl } : {}),
-        testGroup,
         status: 'produced',
         ...(durationSeconds ? { durationSeconds } : {}),
         scriptData: { script: scriptWithoutMeta, voiceMap, systemPrompt } as any,

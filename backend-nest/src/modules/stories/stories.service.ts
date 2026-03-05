@@ -75,7 +75,6 @@ export class StoriesService {
         requesterSource: story.requesterSource || null,
         requesterContact: story.requesterContact || null,
         heroName: story.heroName || null,
-        testGroup: story.testGroup || null,
         durationSeconds: story.durationSeconds || null,
       };
     });
@@ -138,7 +137,6 @@ export class StoriesService {
       requesterContact: story.requesterContact || null,
         heroName: story.heroName || null,
       featured: story.featured,
-      testGroup: story.testGroup || null,
       scriptData: story.scriptData || null,
       durationSeconds: story.durationSeconds || null,
       lines: story.lines,

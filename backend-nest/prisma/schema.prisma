@@ -16,7 +16,6 @@ model Story {
   featured         Boolean     @default(false)
   summary          String?
   coverUrl         String?     @map("cover_url")
-  voiceSettings    Json?       @map("voice_settings")
   systemPrompt     String?     @map("system_prompt")
   status           String?     @default("requested") @db.VarChar(20)
   requesterName    String?     @map("requester_name") @db.VarChar(255)
@@ -24,7 +23,6 @@ model Story {
   requesterContact String?     @map("requester_contact") @db.VarChar(255)
   interests        String?
   age              Decimal?    @db.Decimal(3, 1)
-  testGroup        String?     @map("test_group") @db.VarChar(1)
   scriptData       Json?       @map("script_data")
   heroName         String?     @map("hero_name") @db.VarChar(100)
   updatedAt        DateTime?   @default(now()) @map("updated_at") @db.Timestamptz(6)
