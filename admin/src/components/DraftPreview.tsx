@@ -15,6 +15,14 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
   const [lectorReview, setLectorReview] = useState<any>(null);
   const [lectorInstructions, setLectorInstructions] = useState('');
   const { script, voiceMap, scriptConfirmed } = (story as any).scriptData || {};
+
+  // Emoji lookup: prefer DB characters (story.characters) over scriptData
+  const getEmoji = (name: string): string => {
+    const dbChar = story.characters?.find((c: any) => c.name === name);
+    if (dbChar?.emoji) return dbChar.emoji;
+    const scriptChar = script?.characters?.find((c: any) => c.name === name);
+    return scriptChar?.emoji || '✨';
+  };
   const [allVoices, setAllVoices] = useState<any[]>([]);
   const [pickerChar, setPickerChar] = useState<string | null>(null);
   const [ttsIncludeSfx, setTtsIncludeSfx] = useState<boolean>(true);
@@ -298,7 +306,7 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
                   onClick={() => isDraft && setPickerChar(c.name)}
                   className={`px-3 py-1.5 bg-gray-800 border border-border rounded-full text-xs flex items-center gap-1.5 transition-colors ${isDraft ? 'hover:border-brand/50 cursor-pointer' : 'cursor-default'}`}
                 >
-                  <TwemojiIcon emoji={c.emoji || '✨'} size={16} />
+                  <TwemojiIcon emoji={getEmoji(c.name)} size={16} />
                   <span>{c.name}</span>
                   {getVoiceName(c.name) && <span className="text-text-muted">({getVoiceName(c.name)})</span>}
                   <Volume2 size={12} className="text-text-muted" />
@@ -355,7 +363,7 @@ export function DraftPreview({ story, onDone, mode = 'draft', onDelete }: { stor
                   ) : (
                     <div key={li} className="mb-1">
                       <span className="text-brand font-medium text-sm">
-                        <TwemojiIcon emoji={script.characters?.find((c: any) => c.name === line.speaker)?.emoji || '✨'} size={14} /> {line.speaker}:
+                        <TwemojiIcon emoji={getEmoji(line.speaker)} size={14} /> {line.speaker}:
                       </span>{' '}
                       {line.emotion && line.emotion !== 'neutral' && (
                         <span className="text-[10px] bg-purple-500/20 text-purple-300 rounded px-1 py-0.5 mr-1">{line.emotion}</span>
