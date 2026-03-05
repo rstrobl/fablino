@@ -18,6 +18,17 @@ import { ScriptData, GenerationState } from '../../types/script-data';
 import * as fs from 'fs';
 import * as path from 'path';
 
+/** Reconstruct full script from DB columns + scriptData (title/summary live in DB columns) */
+function resolveFullScript(story: any): any {
+  const scriptData = story.scriptData as any;
+  if (!scriptData?.script) return null;
+  return {
+    ...scriptData.script,
+    title: scriptData.script.title || story.title,
+    summary: scriptData.script.summary || story.summary,
+  };
+}
+
 export interface Job {
   status: 'waiting_for_script' | 'preview' | 'generating_audio' | 'done' | 'error';
   progress?: string;
@@ -184,7 +195,8 @@ export class GenerationService {
       // Preview mode: stop here and let user confirm
       const voiceMap = await this.ttsService.assignVoices(script.characters);
 
-      // Persist draft to DB
+      // Persist draft to DB — title/summary in DB columns, not in scriptData
+      const { title: _t, summary: _s, ...scriptScenesOnly } = script as any;
       await this.prisma.story.update({
         where: { id },
         data: {
@@ -193,7 +205,7 @@ export class GenerationService {
           prompt,
           summary: script.summary || null,
           scriptData: {
-            script,
+            script: scriptScenesOnly,
             voiceMap,
             systemPrompt,
             pipeline: pipeline || null,
@@ -234,7 +246,8 @@ export class GenerationService {
     }
 
     const scriptData = story.scriptData as unknown as ScriptData;
-    const { script, voiceMap, systemPrompt } = scriptData;
+    const script = resolveFullScript(story);
+    const { voiceMap, systemPrompt } = scriptData;
 
     // Update state to generating_audio
     (scriptData as any).generationState = { status: 'generating_audio', progress: 'Wird vertont...' };
@@ -418,6 +431,8 @@ export class GenerationService {
       const hasSideChars = script.characters.length > 2;
       const testGroup = hasHeroName ? (hasSideChars ? 'A' : 'B') : 'C';
 
+      // Strip title/summary from script blob (stored in DB columns)
+      const { title: _t, summary: _s, ...scriptWithoutMeta } = script as any;
       const storyData = {
         title: script.title,
         prompt: prompt,
@@ -429,7 +444,7 @@ export class GenerationService {
         testGroup,
         status: 'produced',
         ...(durationSeconds ? { durationSeconds } : {}),
-        scriptData: { script, voiceMap, systemPrompt } as any,
+        scriptData: { script: scriptWithoutMeta, voiceMap, systemPrompt } as any,
       };
       const story = await tx.story.upsert({
         where: { id: storyId },
@@ -499,7 +514,7 @@ export class GenerationService {
           title: story.title,
           status: story.status,
           audioUrl: `/api/audio/${id}`,
-          characters: scriptData?.script?.characters?.map((c: any) => ({ name: c.name, gender: c.gender })),
+          characters: (resolveFullScript(story))?.characters?.map((c: any) => ({ name: c.name, gender: c.gender })),
           voiceMap: scriptData?.voiceMap,
         },
       };
@@ -509,7 +524,7 @@ export class GenerationService {
     if (story.status === 'draft' && (!genState.status || genState.status === 'preview')) {
       return {
         status: 'preview',
-        script: scriptData?.script,
+        script: resolveFullScript(story) || scriptData?.script,
         voiceMap: scriptData?.voiceMap,
         prompt: story.prompt,
         age: Number(story.age) || 6,
@@ -545,7 +560,7 @@ export class GenerationService {
       return {
         status: 'generating_audio',
         progress: genState.progress || 'Wird vertont...',
-        title: scriptData?.script?.title,
+        title: story.title || scriptData?.script?.title,
       };
     }
 
@@ -620,13 +635,14 @@ export class GenerationService {
     if (story.status !== 'draft') throw new HttpException('Nur Entwürfe können lektoriert werden', HttpStatus.BAD_REQUEST);
 
     const scriptData = story.scriptData as unknown as ScriptData;
-    if (!scriptData?.script) {
+    const fullScript = resolveFullScript(story);
+    if (!fullScript) {
       throw new HttpException('Kein Skript vorhanden', HttpStatus.BAD_REQUEST);
     }
 
     const age = Number(story.age) || 6;
     const { review, step } = await this.claudeService.runLectorReview(
-      scriptData.script, 
+      fullScript, 
       age, 
       story.prompt || undefined
     );
@@ -676,7 +692,8 @@ export class GenerationService {
     if (story.status !== 'draft') throw new HttpException('Nur Entwürfe können überarbeitet werden', HttpStatus.BAD_REQUEST);
 
     const scriptData = story.scriptData as unknown as ScriptData;
-    if (!scriptData?.script) {
+    const fullScript = resolveFullScript(story);
+    if (!fullScript) {
       throw new HttpException('Kein Skript vorhanden', HttpStatus.BAD_REQUEST);
     }
 
@@ -686,7 +703,7 @@ export class GenerationService {
 
     const age = Number(story.age) || 6;
     const { script: revisedScript, step } = await this.claudeService.runLectorRevision(
-      scriptData.script,
+      fullScript,
       scriptData.lectorReview,
       instructions,
       age
@@ -741,11 +758,12 @@ export class GenerationService {
     if (story.status !== 'draft') throw new HttpException('Nur Entwürfe können TTS-optimiert werden', HttpStatus.BAD_REQUEST);
 
     const scriptData = story.scriptData as unknown as ScriptData;
-    if (!scriptData?.script) {
+    const fullScript = resolveFullScript(story);
+    if (!fullScript) {
       throw new HttpException('Kein Skript vorhanden', HttpStatus.BAD_REQUEST);
     }
 
-    const { script: optimizedScript, step } = await this.claudeService.runTtsOptimization(scriptData.script, includeSfx);
+    const { script: optimizedScript, step } = await this.claudeService.runTtsOptimization(fullScript, includeSfx);
 
     // Track cost for TTS step
     await this.costTracking.trackClaude(
