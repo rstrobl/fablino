@@ -448,7 +448,7 @@ export class GenerationService {
       });
 
       await tx.character.deleteMany({ where: { storyId } });
-      await tx.line.deleteMany({ where: { storyId } });
+
 
       for (const char of script.characters) {
         await tx.character.create({
@@ -463,25 +463,7 @@ export class GenerationService {
         });
       }
 
-      let globalIdx = 0;
-      for (let si = 0; si < script.scenes.length; si++) {
-        for (let li = 0; li < script.scenes[si].lines.length; li++) {
-          const line = script.scenes[si].lines[li];
-          if (isSfxLine(line)) continue; // SFX lines are not stored in DB
-          const audioPath = `audio/lines/${storyId}/line_${globalIdx}.mp3`;
-          await tx.line.create({
-            data: {
-              storyId: storyId,
-              sceneIdx: si,
-              lineIdx: li,
-              speaker: (line as any).speaker,
-              text: (line as any).text,
-              audioPath: audioPath,
-            },
-          });
-          globalIdx++;
-        }
-      }
+      // Lines live in script_data.script.scenes (blob), no separate table
 
       return story;
     });

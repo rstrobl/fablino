@@ -25,7 +25,6 @@ model Story {
   durationSeconds Int?        @map("duration_seconds")
   characters      Character[]
   costs           Cost[]
-  lines           Line[]
   plays           Play[]
   requests        Request[]
 
@@ -75,21 +74,6 @@ model Character {
 
   @@index([storyId])
   @@map("characters")
-}
-
-model Line {
-  id        Int     @id @default(autoincrement())
-  storyId   String  @map("story_id") @db.Uuid
-  sceneIdx  Int?    @map("scene_idx")
-  lineIdx   Int?    @map("line_idx")
-  speaker   String?
-  text      String?
-  sfx       String?
-  audioPath String? @map("audio_path")
-  story     Story   @relation(fields: [storyId], references: [id], onDelete: Cascade)
-
-  @@index([storyId])
-  @@map("lines")
 }
 
 model Request {

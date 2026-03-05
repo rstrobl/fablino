@@ -91,12 +91,7 @@ export class StoriesService {
             emoji: true,
           },
         },
-        lines: {
-          orderBy: [
-            { sceneIdx: 'asc' },
-            { lineIdx: 'asc' },
-          ],
-        },
+
       },
     });
 
@@ -133,7 +128,7 @@ export class StoriesService {
       featured: story.featured,
       scriptData: story.scriptData || null,
       durationSeconds: story.durationSeconds || null,
-      lines: story.lines,
+
     };
   }
 
