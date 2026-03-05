@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,72 +8,78 @@ datasource db {
 }
 
 model Story {
-  id            String     @id @default(uuid()) @db.Uuid
-  title         String?
-  prompt        String?
-  age           Decimal?   @db.Decimal(3, 1)
-  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime   @default(now()) @map("updated_at") @db.Timestamptz
-  audioPath     String?    @map("audio_path")
-  featured      Boolean    @default(false)
-  summary       String?
-  coverUrl      String?    @map("cover_url")
-  voiceSettings Json?      @map("voice_settings")
-  systemPrompt  String?    @map("system_prompt")
-  status          String     @default("draft")
-  requesterName   String?    @map("requester_name")
-  requesterSource String?    @map("requester_source")
-  requesterContact String?   @map("requester_contact")
-  interests       String?
-  heroName        String?    @map("hero_name") @db.VarChar(100)
-  testGroup       String?    @map("test_group") @db.VarChar(1)
-  scriptData      Json?      @map("script_data")
-  durationSeconds Int?       @map("duration_seconds")
-  characters      Character[]
-  lines         Line[]
-  plays         Play[]
-  costs         Cost[]
+  id               String      @id @default(uuid()) @db.Uuid
+  title            String?
+  prompt           String?
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  audioPath        String?     @map("audio_path")
+  featured         Boolean     @default(false)
+  summary          String?
+  coverUrl         String?     @map("cover_url")
+  voiceSettings    Json?       @map("voice_settings")
+  systemPrompt     String?     @map("system_prompt")
+  status           String?     @default("requested") @db.VarChar(20)
+  requesterName    String?     @map("requester_name") @db.VarChar(255)
+  requesterSource  String?     @map("requester_source") @db.VarChar(255)
+  requesterContact String?     @map("requester_contact") @db.VarChar(255)
+  interests        String?
+  age              Decimal?    @db.Decimal(3, 1)
+  testGroup        String?     @map("test_group") @db.VarChar(1)
+  scriptData       Json?       @map("script_data")
+  heroName         String?     @map("hero_name") @db.VarChar(100)
+  updatedAt        DateTime?   @default(now()) @map("updated_at") @db.Timestamptz(6)
+  durationSeconds  Int?        @map("duration_seconds")
+  voice_map        Json?
+  script_confirmed Boolean?    @default(false)
+  generation_state Json?
+  pipeline_steps   Json?
+  user_characters  Json?
+  characters       Character[]
+  costs            Cost[]
+  lines            Line[]
+  plays            Play[]
+  requests         Request[]
 
   @@map("stories")
 }
 
 model Cost {
-  id             Int      @id @default(autoincrement())
-  storyId        String?  @map("story_id") @db.Uuid
-  service        String   @db.VarChar(20)
-  operation      String   @db.VarChar(30)
-  inputTokens    Int?     @map("input_tokens")
-  outputTokens   Int?     @map("output_tokens")
-  thinkingTokens Int?     @map("thinking_tokens")
+  id             Int       @id @default(autoincrement())
+  storyId        String?   @map("story_id") @db.Uuid
+  service        String    @db.VarChar(20)
+  operation      String    @db.VarChar(30)
+  inputTokens    Int?      @map("input_tokens")
+  outputTokens   Int?      @map("output_tokens")
+  thinkingTokens Int?      @map("thinking_tokens")
   characters     Int?
-  costUsd        Decimal? @map("cost_usd") @db.Decimal(10, 6)
+  costUsd        Decimal?  @map("cost_usd") @db.Decimal(10, 6)
   metadata       Json?
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
-  story          Story?   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  story          Story?    @relation(fields: [storyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([storyId])
+  @@index([storyId], map: "idx_costs_story_id")
   @@map("costs")
 }
 
 model Play {
-  id        Int      @id @default(autoincrement())
-  storyId   String   @map("story_id") @db.Uuid
-  playedAt  DateTime @default(now()) @map("played_at") @db.Timestamptz
-  userAgent String?  @map("user_agent")
+  id        Int       @id @default(autoincrement())
+  storyId   String    @map("story_id") @db.Uuid
+  playedAt  DateTime? @default(now()) @map("played_at") @db.Timestamptz(6)
+  userAgent String?   @map("user_agent")
   ip        String?
-  completed Boolean  @default(false)
-  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  completed Boolean   @default(false)
+  story     Story     @relation(fields: [storyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([storyId])
+  @@index([storyId], map: "idx_plays_story_id")
   @@map("plays")
 }
 
 model Character {
-  id      Int     @id @default(autoincrement())
-  storyId String  @map("story_id") @db.Uuid
-  name    String?
-  gender  String?
-  voiceId String? @map("voice_id")
+  id          Int     @id @default(autoincrement())
+  storyId     String  @map("story_id") @db.Uuid
+  name        String?
+  gender      String?
+  voiceId     String? @map("voice_id")
   emoji       String?
   description String?
   story       Story   @relation(fields: [storyId], references: [id], onDelete: Cascade)
@@ -101,20 +104,46 @@ model Line {
 }
 
 model Request {
-  id               String   @id @default(uuid()) @db.Uuid
-  heroName         String?  @map("hero_name") @db.VarChar(100)
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  heroName         String?   @map("hero_name") @db.VarChar(100)
   age              Float?
   prompt           String?
   interests        String?
-  requesterName    String?  @map("requester_name")
-  requesterSource  String?  @map("requester_source")
-  requesterContact String?  @map("requester_contact")
-  status           String   @default("open") @db.VarChar(20)
-  storyId          String?  @map("story_id") @db.Uuid
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamptz
+  requesterName    String?   @map("requester_name")
+  requesterSource  String?   @map("requester_source")
+  requesterContact String?   @map("requester_contact")
+  status           String?   @default("open") @db.VarChar(20)
+  storyId          String?   @map("story_id") @db.Uuid
+  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+  stories          Story?    @relation(fields: [storyId], references: [id], onUpdate: NoAction)
 
   @@map("requests")
 }
 
-// waitlist table removed
+model audio_settings {
+  key   String  @id
+  value Decimal @db.Decimal
+}
+
+model voices {
+  voice_id          String    @id
+  name              String
+  category          String
+  stability         Decimal?  @default(0.35) @db.Decimal(3, 2)
+  similarity_boost  Decimal?  @default(0.75) @db.Decimal(3, 2)
+  style             Decimal?  @default(0.60) @db.Decimal(3, 2)
+  use_speaker_boost Boolean?  @default(false)
+  traits            String[]  @default([])
+  active            Boolean?  @default(true)
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  preview_url       String?
+  gender            String?   @default("male")
+  age_min           Int?      @default(18)
+  age_max           Int?      @default(59)
+  species           String[]  @default(["human"])
+  types             String[]  @default(["human"])
+  voice_character   String?   @default("kind")
+  is_narrator       Boolean?  @default(false)
+  language          String    @default("de")
+}

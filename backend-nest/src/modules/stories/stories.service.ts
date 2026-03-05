@@ -120,11 +120,24 @@ export class StoriesService {
       if (c.name) voiceMap[c.name] = c.voiceId;
     }
 
+    // Build normalized scriptData from both new columns and old script_data for backward compatibility
+    const scriptData = story.scriptData as any;
+    const normalizedScriptData = {
+      script: scriptData?.script || null,
+      voiceMap: story.voice_map || scriptData?.voiceMap || voiceMap,
+      scriptConfirmed: story.script_confirmed ?? scriptData?.scriptConfirmed ?? false,
+      generationState: story.generation_state || scriptData?.generationState || null,
+      pipeline: story.pipeline_steps || scriptData?.pipeline || null,
+      userCharacters: story.user_characters || scriptData?.userCharacters || null,
+      systemPrompt: scriptData?.systemPrompt || null,
+      lectorReview: scriptData?.lectorReview || null,
+    };
+
     return {
       id: story.id,
       title: story.title,
       characters,
-      voiceMap,
+      voiceMap: normalizedScriptData.voiceMap,
       prompt: story.prompt,
       summary: story.summary,
       age: story.age,
@@ -139,7 +152,7 @@ export class StoriesService {
         heroName: story.heroName || null,
       featured: story.featured,
       testGroup: story.testGroup || null,
-      scriptData: story.scriptData || null,
+      scriptData: normalizedScriptData,
       durationSeconds: story.durationSeconds || null,
       lines: story.lines,
     };
@@ -178,12 +191,11 @@ export class StoriesService {
   async updateVoiceMap(id: string, voiceMap: Record<string, string>) {
     const story = await this.prisma.story.findUnique({ where: { id } });
     if (!story) throw new NotFoundException('Story not found');
-    const scriptData = (story as any).scriptData as any;
-    if (!scriptData) throw new HttpException('No script data', HttpStatus.BAD_REQUEST);
-    scriptData.voiceMap = voiceMap;
+    
+    // Update the new voice_map column
     await this.prisma.story.update({
       where: { id },
-      data: { scriptData: scriptData as any },
+      data: { voice_map: voiceMap as any },
     });
     return { status: 'ok', voiceMap };
   }
@@ -191,11 +203,11 @@ export class StoriesService {
   async setScriptConfirmed(id: string, confirmed: boolean) {
     const story = await this.prisma.story.findUnique({ where: { id } });
     if (!story) throw new NotFoundException('Story not found');
-    const scriptData = (story as any).scriptData as any || {};
-    scriptData.scriptConfirmed = confirmed;
+    
+    // Update the new script_confirmed column
     await this.prisma.story.update({
       where: { id },
-      data: { scriptData: scriptData as any },
+      data: { script_confirmed: confirmed },
     });
     return { status: 'ok', scriptConfirmed: confirmed };
   }
@@ -204,16 +216,23 @@ export class StoriesService {
     const story = await this.prisma.story.findUnique({ where: { id } });
     if (!story) throw new NotFoundException('Story not found');
     const scriptData = (story as any).scriptData as any || {};
-    // Preserve userCharacters and pipeline log, clear script
+    
+    // Clear script but preserve user characters and pipeline in both old and new columns
     await this.prisma.story.update({
       where: { id },
       data: {
         status: 'draft',
         title: 'Neues Hörspiel',
         summary: null,
+        voice_map: null,
+        script_confirmed: false,
+        generation_state: { status: 'draft' } as any,
+        // Keep pipeline_steps and user_characters from existing data
+        pipeline_steps: story.pipeline_steps || (scriptData.pipeline ? [scriptData.pipeline] : null),
+        user_characters: story.user_characters || scriptData.userCharacters || null,
         scriptData: {
-          userCharacters: scriptData.userCharacters || null,
-          pipeline: scriptData.pipeline || null,
+          userCharacters: story.user_characters || scriptData.userCharacters || null,
+          pipeline: story.pipeline_steps || scriptData.pipeline || null,
           generationState: { status: 'draft' },
         } as any,
       },
