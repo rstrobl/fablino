@@ -1,9 +1,12 @@
-import { Controller, Get, Post, Delete, Patch, Param, Query, Body, HttpCode, HttpStatus, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Param, Query, Body, HttpCode, HttpStatus, NotFoundException, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { StoriesService } from './stories.service';
 import { ToggleFeaturedDto } from '../../dto/stories.dto';
 import { CostTrackingService } from '../../services/cost-tracking.service';
 import { ReplicateService } from '../../services/replicate.service';
 import * as path from 'path';
+import * as fs from 'fs';
+import { execSync } from 'child_process';
 
 @Controller('api/stories')
 export class StoriesController {
@@ -86,6 +89,51 @@ export class StoriesController {
       await this.storiesService.updateCoverUrl(id, coverUrl);
       await this.costTracking.trackReplicate(id, 'cover', 1).catch(() => {});
     }
+
+    return { coverUrl };
+  }
+
+  @Post(':id/upload-cover')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadCover(@Param('id') id: string, @UploadedFile() file: any) {
+    const story = await this.storiesService.getStory(id);
+    if (!story) throw new NotFoundException('Story not found');
+    if (!file) throw new NotFoundException('No file uploaded');
+
+    const ext = file.originalname?.split('.').pop() || 'jpg';
+    const coverFilename = `${id}.${ext}`;
+    const coverPath = path.join(this.COVERS_DIR, coverFilename);
+
+    // Save original
+    fs.mkdirSync(this.COVERS_DIR, { recursive: true });
+    fs.writeFileSync(coverPath, file.buffer);
+
+    // Generate OG thumbnail (600x600)
+    try {
+      const ogDir = path.join(this.COVERS_DIR, 'og');
+      fs.mkdirSync(ogDir, { recursive: true });
+      execSync(`convert "${coverPath}" -resize 600x600 -quality 80 "${path.join(ogDir, `${id}_og.jpg`)}"`);
+    } catch (e) { console.error('OG thumb error:', e.message); }
+
+    // Generate list thumbnail (300x300)
+    try {
+      const thumbDir = path.join(this.COVERS_DIR, 'thumb');
+      fs.mkdirSync(thumbDir, { recursive: true });
+      execSync(`convert "${coverPath}" -resize 300x300 -quality 80 "${path.join(thumbDir, coverFilename)}"`);
+    } catch (e) { console.error('Thumb error:', e.message); }
+
+    // Copy to public dir
+    try {
+      const pubDir = path.resolve('./public/covers');
+      fs.mkdirSync(pubDir, { recursive: true });
+      fs.mkdirSync(path.join(pubDir, 'thumb'), { recursive: true });
+      fs.copyFileSync(coverPath, path.join(pubDir, coverFilename));
+      const thumbSrc = path.join(this.COVERS_DIR, 'thumb', coverFilename);
+      if (fs.existsSync(thumbSrc)) fs.copyFileSync(thumbSrc, path.join(pubDir, 'thumb', coverFilename));
+    } catch (e) { console.error('Public copy error:', e.message); }
+
+    const coverUrl = `/covers/${coverFilename}?v=${Date.now()}`;
+    await this.storiesService.updateCoverUrl(id, coverUrl);
 
     return { coverUrl };
   }
