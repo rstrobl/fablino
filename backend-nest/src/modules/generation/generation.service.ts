@@ -53,16 +53,11 @@ export class GenerationService {
 
   private async updateGenerationState(id: string, state: Partial<GenerationState>) {
     const story = await this.prisma.story.findUnique({ where: { id } });
-    const existingState = story?.generation_state as any || {};
-    const newState = { ...existingState, ...state };
-    
-    // Update both new column and legacy script_data for backward compatibility
     const scriptData = (story?.scriptData as unknown as ScriptData) || {} as any;
-    scriptData.generationState = newState;
-    
+    const existing = scriptData.generationState || {};
+    scriptData.generationState = { ...existing, ...state };
     await this.prisma.$executeRawUnsafe(
-      `UPDATE stories SET generation_state = $1::jsonb, script_data = $2::jsonb WHERE id = $3::uuid`,
-      JSON.stringify(newState),
+      `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
       JSON.stringify(scriptData),
       id,
     );
@@ -83,22 +78,17 @@ export class GenerationService {
 
     // Ensure story row exists
     const existing = await this.prisma.story.findUnique({ where: { id } });
-    const generationState = { status: 'waiting_for_script', progress: 'Skript wird geschrieben...', startedAt: Date.now() };
-    
     if (existing) {
-      const userCharacters = characters || existing.user_characters || (existing.scriptData as any)?.userCharacters || null;
       await this.prisma.story.update({
         where: { id },
         data: {
           status: 'draft',
           prompt,
           age: age || existing.age || null,
-          generation_state: generationState as any,
-          user_characters: userCharacters as any,
           scriptData: {
             ...(existing.scriptData as any || {}),
-            generationState,
-            userCharacters,
+            generationState: { status: 'waiting_for_script', progress: 'Skript wird geschrieben...', startedAt: Date.now() },
+            userCharacters: characters || (existing.scriptData as any)?.userCharacters || null,
           } as any,
         },
       });
@@ -109,9 +99,8 @@ export class GenerationService {
           status: 'draft',
           prompt,
           age: age || null,
-          generation_state: generationState as any,
           scriptData: {
-            generationState,
+            generationState: { status: 'waiting_for_script', progress: 'Skript wird geschrieben...', startedAt: Date.now() },
           } as any,
         },
       });
@@ -195,7 +184,7 @@ export class GenerationService {
       // Preview mode: stop here and let user confirm
       const voiceMap = await this.ttsService.assignVoices(script.characters);
 
-      // Persist draft to DB - update both new columns and legacy scriptData
+      // Persist draft to DB
       await this.prisma.story.update({
         where: { id },
         data: {
@@ -203,10 +192,6 @@ export class GenerationService {
           title: script.title,
           prompt,
           summary: script.summary || null,
-          voice_map: voiceMap as any,
-          generation_state: { status: 'preview' } as any,
-          pipeline_steps: pipeline ? (pipeline as any) : null,
-          user_characters: characters as any,
           scriptData: {
             script,
             voiceMap,
@@ -249,26 +234,18 @@ export class GenerationService {
     }
 
     const scriptData = story.scriptData as unknown as ScriptData;
-    const { script, systemPrompt } = scriptData;
-    const voiceMap = (story.voice_map as any) || scriptData.voiceMap;
+    const { script, voiceMap, systemPrompt } = scriptData;
 
-    // Update state to generating_audio and set script confirmed
-    const generationState = { status: 'generating_audio', progress: 'Wird vertont...' };
-    (scriptData as any).generationState = generationState;
-    
+    // Update state to generating_audio
+    (scriptData as any).generationState = { status: 'generating_audio', progress: 'Wird vertont...' };
     await this.prisma.$executeRawUnsafe(
-      `UPDATE stories SET 
-        script_confirmed = true, 
-        generation_state = $1::jsonb, 
-        script_data = $2::jsonb 
-       WHERE id = $3::uuid`,
-      JSON.stringify(generationState),
+      `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
       JSON.stringify(scriptData),
       id,
     );
 
     // Start audio generation async
-    this.generateAudioAsync(id, script, voiceMap as any, story.prompt, Number(story.age) || 6, systemPrompt);
+    this.generateAudioAsync(id, script, voiceMap, story.prompt, Number(story.age) || 6, systemPrompt);
 
     return { status: 'confirmed' };
   }
@@ -409,7 +386,7 @@ export class GenerationService {
       } catch {}
 
       // Save to database (updates status to 'produced') — cover generated manually via admin
-      const story = await this.insertStory(id, script, voiceMap as any, prompt, age, systemPrompt, undefined, durationSeconds);
+      const story = await this.insertStory(id, script, voiceMap, prompt, age, systemPrompt, undefined, durationSeconds);
 
       // Update generationState to done (insertStory overwrites scriptData, so update after)
       await this.updateGenerationState(id, {
@@ -452,9 +429,6 @@ export class GenerationService {
         testGroup,
         status: 'produced',
         ...(durationSeconds ? { durationSeconds } : {}),
-        voice_map: voiceMap as any,
-        script_confirmed: true,
-        generation_state: null,
         scriptData: { script, voiceMap, systemPrompt } as any,
       };
       const story = await tx.story.upsert({
@@ -513,8 +487,7 @@ export class GenerationService {
     if (!story) return { status: 'not_found' as const };
 
     const scriptData = story.scriptData as unknown as unknown as ScriptData | null;
-    const genState: Partial<GenerationState> = story.generation_state as any || scriptData?.generationState || {};
-    const voiceMap = story.voice_map || scriptData?.voiceMap;
+    const genState: Partial<GenerationState> = scriptData?.generationState || {};
 
     // If story is produced/sent and no active generation state, return done
     if (['produced', 'published', 'feedback'].includes(story.status) && (!genState.status || genState.status === 'done')) {
@@ -527,7 +500,7 @@ export class GenerationService {
           status: story.status,
           audioUrl: `/api/audio/${id}`,
           characters: scriptData?.script?.characters?.map((c: any) => ({ name: c.name, gender: c.gender })),
-          voiceMap,
+          voiceMap: scriptData?.voiceMap,
         },
       };
     }
@@ -537,7 +510,7 @@ export class GenerationService {
       return {
         status: 'preview',
         script: scriptData?.script,
-        voiceMap: voiceMap as any,
+        voiceMap: scriptData?.voiceMap,
         prompt: story.prompt,
         age: Number(story.age) || 6,
         systemPrompt: scriptData?.systemPrompt,
@@ -552,7 +525,7 @@ export class GenerationService {
         return {
           status: 'preview',
           script: resolvedScript,
-          voiceMap: voiceMap as any,
+          voiceMap: scriptData?.voiceMap,
           prompt: story.prompt,
           age: Number(story.age) || 6,
           systemPrompt: scriptData?.systemPrompt,
@@ -589,7 +562,7 @@ export class GenerationService {
       return {
         status: 'preview',
         script: scriptData.script,
-        voiceMap: voiceMap as any,
+        voiceMap: scriptData.voiceMap,
         prompt: story.prompt,
         age: Number(story.age) || 6,
         systemPrompt: scriptData.systemPrompt,
@@ -666,7 +639,7 @@ export class GenerationService {
       0,
     ).catch(() => {});
 
-    // Save review in script_data.lectorReview and update pipeline_steps
+    // Save review in script_data.lectorReview
     const updatedScriptData = {
       ...scriptData,
       lectorReview: review,
@@ -683,15 +656,9 @@ export class GenerationService {
       },
     };
 
-    // Update both new pipeline_steps column and legacy script_data
-    const storyForLectorReview = await this.prisma.story.findUnique({ where: { id: storyId } });
-    const currentSteps = storyForLectorReview?.pipeline_steps as any || [];
-    const newSteps = [...currentSteps, step];
-
     await this.prisma.$executeRawUnsafe(
-      `UPDATE stories SET script_data = $1::jsonb, pipeline_steps = $2::jsonb WHERE id = $3::uuid`,
+      `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
       JSON.stringify(updatedScriptData),
-      JSON.stringify(newSteps),
       storyId,
     );
 
@@ -754,15 +721,9 @@ export class GenerationService {
       },
     };
 
-    // Update both new pipeline_steps column and legacy script_data
-    const storyForLectorRevision = await this.prisma.story.findUnique({ where: { id: storyId } });
-    const currentSteps = storyForLectorRevision?.pipeline_steps as any || [];
-    const newSteps = [...currentSteps, step];
-
     await this.prisma.$executeRawUnsafe(
-      `UPDATE stories SET script_data = $1::jsonb, pipeline_steps = $2::jsonb WHERE id = $3::uuid`,
+      `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
       JSON.stringify(updatedScriptData),
-      JSON.stringify(newSteps),
       storyId,
     );
 
@@ -811,15 +772,9 @@ export class GenerationService {
       },
     };
 
-    // Update both new pipeline_steps column and legacy script_data
-    const storyForTtsOptimization = await this.prisma.story.findUnique({ where: { id: storyId } });
-    const currentSteps = storyForTtsOptimization?.pipeline_steps as any || [];
-    const newSteps = [...currentSteps, step];
-
     await this.prisma.$executeRawUnsafe(
-      `UPDATE stories SET script_data = $1::jsonb, pipeline_steps = $2::jsonb WHERE id = $3::uuid`,
+      `UPDATE stories SET script_data = $1::jsonb WHERE id = $2::uuid`,
       JSON.stringify(updatedScriptData),
-      JSON.stringify(newSteps),
       storyId,
     );
 
