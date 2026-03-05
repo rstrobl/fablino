@@ -7,13 +7,17 @@ export class WaitlistNotifyController {
 
   @Post()
   async registerEmail(@Body() dto: { email: string; storyId?: string; heroName?: string; heroAge?: string; prompt?: string }) {
-    // Update story with contact email if storyId provided
-    if (dto.storyId) {
-      await this.prisma.story.update({
-        where: { id: dto.storyId },
-        data: { requesterContact: dto.email },
-      });
-    }
+    // Store in requests table (linked to story if provided)
+    await this.prisma.request.create({
+      data: {
+        requesterContact: dto.email,
+        heroName: dto.heroName || null,
+        age: dto.heroAge ? parseFloat(dto.heroAge) : null,
+        prompt: dto.prompt || null,
+        storyId: dto.storyId || null,
+        status: 'waitlist',
+      },
+    });
 
     // Notify Robert via Telegram
     const botToken = process.env.TELEGRAM_BOT_TOKEN || '7864521445:AAHocdoKrms2HG3kshkoETC1kVAO5tAiUus';
@@ -34,10 +38,10 @@ export class WaitlistNotifyController {
 
   @Get(':storyId')
   async checkRegistration(@Param('storyId') storyId: string) {
-    const story = await this.prisma.story.findUnique({
-      where: { id: storyId },
+    const request = await this.prisma.request.findFirst({
+      where: { storyId, requesterContact: { not: null } },
       select: { requesterContact: true },
     });
-    return { registered: !!story?.requesterContact };
+    return { registered: !!request?.requesterContact };
   }
 }

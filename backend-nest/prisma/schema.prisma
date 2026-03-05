@@ -8,30 +8,26 @@ datasource db {
 }
 
 model Story {
-  id               String      @id @default(uuid()) @db.Uuid
-  title            String?
-  prompt           String?
-  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  audioPath        String?     @map("audio_path")
-  featured         Boolean     @default(false)
-  summary          String?
-  coverUrl         String?     @map("cover_url")
-  systemPrompt     String?     @map("system_prompt")
-  status           String?     @default("requested") @db.VarChar(20)
-  requesterName    String?     @map("requester_name") @db.VarChar(255)
-  requesterSource  String?     @map("requester_source") @db.VarChar(255)
-  requesterContact String?     @map("requester_contact") @db.VarChar(255)
-  interests        String?
-  age              Decimal?    @db.Decimal(3, 1)
-  scriptData       Json?       @map("script_data")
-  heroName         String?     @map("hero_name") @db.VarChar(100)
-  updatedAt        DateTime?   @default(now()) @map("updated_at") @db.Timestamptz(6)
-  durationSeconds  Int?        @map("duration_seconds")
-  characters       Character[]
-  costs            Cost[]
-  lines            Line[]
-  plays            Play[]
-  requests         Request[]
+  id              String      @id @default(uuid()) @db.Uuid
+  title           String?
+  prompt          String?
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  audioPath       String?     @map("audio_path")
+  featured        Boolean     @default(false)
+  summary         String?
+  coverUrl        String?     @map("cover_url")
+  systemPrompt    String?     @map("system_prompt")
+  status          String?     @default("requested") @db.VarChar(20)
+  age             Decimal?    @db.Decimal(3, 1)
+  scriptData      Json?       @map("script_data")
+  heroName        String?     @map("hero_name") @db.VarChar(100)
+  updatedAt       DateTime?   @default(now()) @map("updated_at") @db.Timestamptz(6)
+  durationSeconds Int?        @map("duration_seconds")
+  characters      Character[]
+  costs           Cost[]
+  lines           Line[]
+  plays           Play[]
+  requests        Request[]
 
   @@map("stories")
 }
