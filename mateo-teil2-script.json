@@ -1,0 +1,929 @@
+{
+  "title": "Mateo und der letzte Flug von Leonardo",
+  "scenes": [
+    {
+      "lines": [
+        {
+          "speaker": "Erzähler",
+          "emotion": "mysterious",
+          "text": "[whispering] Seit seiner Reise ins Paris von achtzehnhundertneunundachtzig war Mateo nicht mehr derselbe. Abends, wenn es still wurde, legte er die kleine mechanische Feder neben sein Bett — und lauschte ihrem leisen Ticken."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "thoughtful",
+          "text": "Manchmal klingt es fast so, als würdest du mir was erzählen wollen, kleine Feder."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "neutral",
+          "text": "Eines Abends, Mateo hatte gerade sein Buch über Leonardo da Vinci zugeklappt, begann die Feder wild zu vibrieren. Sie hüpfte auf dem Nachttisch hin und her wie ein gefangener Käfer."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "surprised",
+          "text": "[gasps] Was ist mit dir los? So hast du dich noch nie bewegt!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "tense",
+          "text": "Die Feder tickte schnell, dann langsam, dann schnell — wie ein Morsecode. Und plötzlich hörte Mateo eine dünne, blecherne Stimme."
+        },
+        {
+          "speaker": "Ticktack",
+          "emotion": "panicked",
+          "text": "[stammering] Mateo! Hörst du mich? Die Feder ist ein Sender — keine Zeit zum Erklären! Der Professor ist verschwunden!"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "shocked",
+          "text": "Ticktack? Wie... wie geht das? Verschwunden — was meinst du damit?"
+        },
+        {
+          "speaker": "Ticktack",
+          "emotion": "worried",
+          "text": "Der Graf! [stammering] Er hat eine zweite Zeitmaschine gebaut, eine kleine tragbare. Und damit ist er in die Vergangenheit gereist — nach Florenz, fünfzehnhundertfünf!"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "confused",
+          "text": "Florenz? Fünfzehnhundertfünf — das ist die Zeit von Leonardo da Vinci!"
+        },
+        {
+          "speaker": "Ticktack",
+          "emotion": "urgent",
+          "text": "Genau! Und der Professor ist ihm hinterher, um ihn aufzuhalten. Aber seit drei Tagen — kein Lebenszeichen. [sighs] Ich befürchte, der Graf hat ihn erwischt."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "determined",
+          "text": "Dann muss ich hin. Die Zeitmaschine im Museum — funktioniert sie noch?"
+        },
+        {
+          "speaker": "Ticktack",
+          "emotion": "nervous",
+          "text": "Ja, aber ich kann sie nur einmal aktivieren. Für Hin- und Rückweg musst du in Florenz eine Lösung finden. Die Feder führt dich — sie zeigt dir, wo der Professor zuletzt war."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "dramatic",
+          "text": "Mateo zog sich an, steckte die Feder in seine Jackentasche und schlich aus dem Haus. Das Museum lag nur drei Straßen weiter."
+        }
+      ]
+    },
+    {
+      "lines": [
+        {
+          "speaker": "Erzähler",
+          "emotion": "mysterious",
+          "text": "[whispering] Die Geheimtür hinter der Standuhr war noch da. Und die Zeitmaschine wartete — als hätte sie gewusst, dass Mateo zurückkommt."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "nervous",
+          "text": "Okay, Ticktack. Florenz, fünfzehnhundertfünf. Ich bin bereit."
+        },
+        {
+          "speaker": "Ticktack",
+          "emotion": "sad",
+          "text": "Pass auf dich auf. Und auf den Professor. [sighs] Ich kann nicht mitkommen — jemand muss die Maschine hier bewachen."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "dramatic",
+          "text": "Mateo legte den Hebel um. Die Kupferspulen begannen zu glühen, Zahnräder rasten ineinander — und dann kam der Blitz."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "warm",
+          "text": "Als er die Augen öffnete, roch es nach Farbe, Holz und warmem Stein. Sonnenlicht fiel durch hohe Fenster auf Dutzende von Skizzen, Modellen und halbfertigen Erfindungen."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "awestruck",
+          "text": "[gasps] Das ist eine Werkstatt. Aber nicht irgendeine — diese Zeichnungen... das sind Leonardos Skizzen!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "neutral",
+          "text": "An der Wand hingen Entwürfe von Flugmaschinen, Zahnrädern und anatomischen Studien. Und in der Ecke stand ein riesiges Gestell aus Holz und Leinwand — mit zwei gewaltigen Flügeln."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "excited",
+          "text": "Die große Flugmaschine! Der Grande Nibbio — der Große Milan! Den hab ich in meinem Buch gesehen!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "tense",
+          "text": "Schritte näherten sich. Die Tür flog auf, und ein großer Mann mit langem Bart und wachen Augen trat ein. Er trug eine lederne Arbeitsschürze und hatte Farbflecken an den Händen."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "suspicious",
+          "text": "Chi sei tu? Was machst du in meiner Werkstatt, ragazzo?"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "nervous",
+          "text": "[stammering] Ich... ich bin Mateo. Ich bin ein... Reisender. Und ich bewundere Eure Arbeit, Meister Leonardo."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "intrigued",
+          "text": "Ein Reisender, der meine Flugmaschine kennt? [chuckles] Die habe ich erst gestern fertig gezeichnet. Woher weißt du von ihr?"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "thoughtful",
+          "text": "Euer Ruf eilt Euch voraus, Meister. Man spricht in ganz... in ganz Europa davon."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "amused",
+          "text": "[chuckles] Schmeichler. Aber du hast neugierige Augen — das gefällt mir. Komm, sieh dir den Nibbio genauer an."
+        }
+      ]
+    },
+    {
+      "lines": [
+        {
+          "speaker": "Erzähler",
+          "emotion": "warm",
+          "text": "Leonardo führte Mateo durch seine Werkstatt. In einer Ecke stand etwas, das Mateo sofort erkannte — eine Rüstung, die keine war."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "amazed",
+          "text": "[gasps] Der mechanische Ritter! Den habt Ihr gebaut?"
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "proud",
+          "text": "Mein Automa — ja. Zahnräder, Seile und Federkraft. Er kann sich setzen, den Arm heben und den Kopf drehen. Aber er ist nur ein Spielzeug für den Herzog."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "thoughtful",
+          "text": "Ein Spielzeug? Das ist die erste Maschine, die sich wie ein Mensch bewegt! Das ist... das ist der Anfang von allem."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "curious",
+          "text": "Der Anfang von allem? Du redest seltsam, ragazzo. Als wüsstest du mehr, als du sagst."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "tense",
+          "text": "Bevor Mateo antworten konnte, tickte die Feder in seiner Tasche wild los. Sie zog nach links, wie eine Kompassnadel."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "alert",
+          "text": "Meister Leonardo — kennt Ihr einen Mann mit Zylinder und Gehstock? Einen Grafen, der sich für Eure Erfindungen interessiert?"
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "annoyed",
+          "text": "[grumbles] Der Conte! Ja — er nennt sich Conte di Ruggine. Seit einer Woche taucht er hier auf, bietet Gold für meine Pläne. Besonders für den Nibbio."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "tense",
+          "text": "Conte di Ruggine... Rost-Graf. Das ist er — Graf von Rostheim!"
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "surprised",
+          "text": "Du kennst ihn?"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "serious",
+          "text": "Er ist gefährlich, Meister. Er will Eure Erfindungen stehlen — und er hat möglicherweise einen Freund von mir gefangen."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "angry",
+          "text": "[grumbles] Das erklärt die Einbruchspuren an meiner Hintertür. Und warum Teile meiner Skizzen fehlen!"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "determined",
+          "text": "Welche Skizzen fehlen?"
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "worried",
+          "text": "Die Steuerung des Nibbio. Ohne sie ist die Flugmaschine ein Segel im Wind — sie kann starten, aber nicht landen."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "ominous",
+          "text": "[whispering] Die Feder tickte immer schneller. Sie zeigte nach Norden — zum Hügel von Fiesole, wo Leonardo seinen großen Flugversuch geplant hatte."
+        }
+      ]
+    },
+    {
+      "lines": [
+        {
+          "speaker": "Erzähler",
+          "emotion": "neutral",
+          "text": "Mateo und Leonardo machten sich auf den Weg nach Fiesole. Die Feder tickte gleichmäßig wie ein Herzschlag — solange sie in die richtige Richtung gingen."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "curious",
+          "text": "Meister, warum wollt Ihr fliegen? Alle sagen, es ist unmöglich."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "passionate",
+          "text": "Weil die Vögel es können! Wenn man den Flügelschlag versteht — die Luft, den Auftrieb, das Gewicht — dann kann der Mensch es auch. Es ist Mathematik, keine Magie."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "thoughtful",
+          "text": "Ihr habt recht. In meiner... in meiner Heimat fliegen die Menschen tatsächlich. Jeden Tag. Mit Maschinen."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "stunned",
+          "text": "[gasps] ... Wirklich? Wie? Mit Flügelschlag oder mit festen Flügeln?"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "careful",
+          "text": "Mit festen Flügeln. Die Geschwindigkeit erzeugt den Auftrieb — nicht der Flügelschlag."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "excited",
+          "text": "[laughs] Feste Flügel! Natürlich! Wie beim Gleiten des Milans! Der schlägt auch nicht immer — er nutzt den Wind!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "neutral",
+          "text": "Am Fuß des Hügels angekommen, entdeckten sie Fußspuren im Lehm — die Abdrücke eines Gehstocks neben schweren Stiefeln."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "grim",
+          "text": "Der Conte. Er ist hier."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "worried",
+          "text": "Und diese zweiten Spuren daneben — die sind schmaler. Jemand wurde mitgeschleift."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "tense",
+          "text": "Sie folgten den Spuren einen steilen Pfad hinauf. Oben, in einer alten Scheune, brannte Licht."
+        }
+      ]
+    },
+    {
+      "lines": [
+        {
+          "speaker": "Erzähler",
+          "emotion": "tense",
+          "text": "[whispering] Durch eine Ritze in der Scheunenwand konnten sie hineinsehen. Und was Mateo sah, ließ seinen Atem stocken."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "shocked",
+          "text": "[whispering] Da ist er — Professor Chronos! Er ist an einen Stuhl gebunden!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "neutral",
+          "text": "Der Professor saß erschöpft aber aufrecht auf einem Holzstuhl. Sein Monokel war zerbrochen. Der Graf stand vor einem Tisch voller Werkzeuge und Leonardos gestohlener Skizzen."
+        },
+        {
+          "speaker": "Graf von Rostheim",
+          "emotion": "menacing",
+          "text": "Zum letzten Mal, Chronos — wie funktioniert die tragbare Zeitmaschine? Sie hat mich hierher gebracht, aber sie springt nicht mehr an."
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "defiant",
+          "text": "[chuckles] Tja, Graf, vielleicht hätten Sie die Bedienungsanleitung lesen sollen — bevor Sie sie gestohlen haben."
+        },
+        {
+          "speaker": "Graf von Rostheim",
+          "emotion": "angry",
+          "text": "[shouting] Spotten Sie nicht! Ich habe Leonardos Flugpläne. Wenn ich die in die Zukunft bringe, werde ich als größter Erfinder aller Zeiten gelten!"
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "calm",
+          "text": "Sie wollen mit gestohlenen Ideen berühmt werden? Das ist erbärmlich — selbst für Sie."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "furious",
+          "text": "[whispering] Meine Pläne! Er will mit meiner Arbeit prahlen? Questo mascalzone!"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "focused",
+          "text": "[whispering] Meister, wartet. Wir brauchen einen Plan. Der Graf hat bestimmt die Tür bewacht."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "scheming",
+          "text": "[whispering] Siehst du den Heuballen über dem Tor? Ein Seil hält ihn oben. Wenn jemand das Seil löst..."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "hesitant",
+          "text": "[whispering] Ein Heuballen auf den Kopf? Das ist... ziemlich direkt."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "mischievous",
+          "text": "[chuckles] [whispering] Ich bin Ingenieur, kein Diplomat. Aber du hast recht — wir brauchen eine Ablenkung."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "planning",
+          "text": "[whispering] Die tragbare Zeitmaschine auf dem Tisch — die funktioniert nicht, hat der Graf gesagt. Aber er weiß nicht warum. Wenn ich dem Professor ein Zeichen geben kann, kann er dem Grafen erzählen, dass die Maschine von außen aktiviert werden muss."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "impressed",
+          "text": "[whispering] Und der Graf rennt raus, um sie zu aktivieren — und ich lasse den Heuballen fallen."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "nervous",
+          "text": "[whispering] Genau. Ich brauche nur die Feder... sie tickt auf einer Frequenz, die der Professor erkennt."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "tense",
+          "text": "Mateo hielt die Feder an die Scheunenwand und drückte sie dreimal kurz. Drinnen hob Professor Chronos den Kopf — seine Augen weiteten sich."
+        }
+      ]
+    },
+    {
+      "lines": [
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "cunning",
+          "text": "[sighs] Na schön, Graf. Ich sage Ihnen, warum die Maschine nicht funktioniert. Sie braucht Sonnenlicht — direkte Strahlung auf die Kupferzellen. Drinnen springt sie nie an."
+        },
+        {
+          "speaker": "Graf von Rostheim",
+          "emotion": "suspicious",
+          "text": "Sonnenlicht? Das klingt zu einfach."
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "matter-of-fact",
+          "text": "Glauben Sie, was Sie wollen. Aber Sie stehen seit drei Tagen hier im Dunkeln und drücken auf Knöpfe. Läuft ja großartig für Sie."
+        },
+        {
+          "speaker": "Graf von Rostheim",
+          "emotion": "frustrated",
+          "text": "[grumbles] Fein. Aber wenn das ein Trick ist, Chronos..."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "tense",
+          "text": "Der Graf griff die tragbare Zeitmaschine — kaum größer als eine Aktentasche — und stapfte zum Scheunentor. Er schob den Riegel zurück und trat ins Freie."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "focused",
+          "text": "[whispering] Jetzt!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "dramatic",
+          "text": "Leonardo zog das Seil. Der Heuballen krachte herab — nicht auf den Grafen, aber direkt vor das Tor. Eine Staubwolke hüllte alles ein."
+        },
+        {
+          "speaker": "Graf von Rostheim",
+          "emotion": "shocked",
+          "text": "[shouting] Was zum — ? Ein Hinterhalt!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "fast-paced",
+          "text": "Mateo rannte durch die Seitentür in die Scheune. Er zog sein Taschenmesser und schnitt die Seile durch."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "urgent",
+          "text": "Professor! Schnell, können Sie laufen?"
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "relieved",
+          "text": "[laughs] Mateo! Mein lieber Junge — ich wusste, dass du die Feder verstehst!"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "hurried",
+          "text": "Später! Wir müssen hier weg, bevor der Graf sich aus dem Heu gräbt!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "urgent",
+          "text": "Sie rannten aus der Scheune. Leonardo hatte die gestohlenen Skizzen vom Tisch gerafft und unter seinen Arm geklemmt."
+        },
+        {
+          "speaker": "Graf von Rostheim",
+          "emotion": "furious",
+          "text": "[shouting] Chronos! Du und dein Zeitreise-Bengel! Ihr entkommt mir nicht!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "tense",
+          "text": "Hinter ihnen kämpfte sich der Graf durch das Heu. Er hatte die tragbare Zeitmaschine noch immer in der Hand."
+        }
+      ]
+    },
+    {
+      "lines": [
+        {
+          "speaker": "Erzähler",
+          "emotion": "neutral",
+          "text": "Sie flüchteten den Hügel hinab zurück zur Werkstatt. Professor Chronos humpelte, aber er gab nicht auf."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "worried",
+          "text": "Professor, wie kommen wir zurück? Ticktack sagte, die Museumsmaschine hat nur für die Hinreise gereicht."
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "thinking",
+          "text": "Die tragbare Maschine — der Graf hat sie noch. Aber sie funktioniert tatsächlich nicht mehr. Die Energiezelle ist leer."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "curious",
+          "text": "Was für eine Energiezelle? Beschreibt sie mir."
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "explaining",
+          "text": "Eine Kupferspirale um einen Eisenkern, geladen durch elektromagnetische Induktion. Stark vereinfacht — ein Magnet, der sich in einer Spule dreht."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "excited",
+          "text": "[gasps] Magnete und Kupfer? Ich habe Experimente damit gemacht! In meiner Werkstatt liegt ein Magnetstein aus dem Arno — der stärkste, den ich je gefunden habe."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "hopeful",
+          "text": "Wenn wir den Magneten schnell genug in einer Kupferspule drehen, erzeugen wir Strom! Das ist das Prinzip eines Generators!"
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "impressed",
+          "text": "[chuckles] Dein Physikunterricht macht sich bezahlt, Mateo."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "determined",
+          "text": "Dann bauen wir einen Generator. Ich habe Kupferdraht, Zahnräder und eine Handkurbel. Wie viel Energie braucht ihr?"
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "calculating",
+          "text": "Viel. Mehr als eine Handkurbel liefern kann. Wir bräuchten eine enorme Drehkraft — wie eine Windmühle oder..."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "eureka",
+          "text": "[gasps] Oder eine Flugmaschine! Meister Leonardo — der Nibbio! Wenn er fliegt, drehen sich die Propeller im Gegenwind. Diese Drehkraft könnten wir nutzen!"
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "stunned",
+          "text": "Die Propeller als Generator... [laughs] Ragazzo, du bist entweder verrückt oder genial!"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "grinning",
+          "text": "Warum nicht beides?"
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "worried",
+          "text": "Aber der Nibbio wurde noch nie geflogen. Und die Steuerungsskizzen — Leonardo, habt Ihr sie?"
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "confident",
+          "text": "Die Skizzen habe ich zurück. Und ich brauche sie nicht — sie sind hier drin."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "neutral",
+          "text": "Er tippte sich an die Stirn."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "serious",
+          "text": "Aber das Fliegen — das ist gefährlich. Wer steuert den Nibbio?"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "brave",
+          "text": "Ich. Ich bin leicht genug, und ich weiß, wie Aerodynamik funktioniert. Feste Flügel, Auftrieb durch Geschwindigkeit — erinnert Ihr Euch?"
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "conflicted",
+          "text": "[sighs] Du bist ein Kind."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "resolute",
+          "text": "Und Ihr seid ein Genie, das eine Flugmaschine gebaut hat. Zusammen schaffen wir das."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "decided",
+          "text": "Dann bauen wir den Generator ein — und morgen früh, bei Sonnenaufgang, fliegt der Nibbio."
+        }
+      ]
+    },
+    {
+      "lines": [
+        {
+          "speaker": "Erzähler",
+          "emotion": "warm",
+          "text": "Die ganze Nacht arbeiteten sie. Leonardo wickelte Kupferdraht um den Eisenkern, während Mateo und der Professor die Zahnrad-Übersetzung berechneten."
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "focused",
+          "text": "Wenn der Propeller dreihundert Umdrehungen pro Minute erreicht, sollte die Spannung reichen. Theoretisch."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "nervous",
+          "text": "Theoretisch ist mir gerade nicht genug, Professor."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "philosophical",
+          "text": "Jede Erfindung war zuerst Theorie, ragazzo. Ich habe den Fallschirm entworfen — auf dem Papier funktioniert er. Ob er in der Luft funktioniert? [chuckles] Das weiß nur die Luft."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "ominous",
+          "text": "Kurz vor Morgengrauen entdeckte Mateo Fußspuren vor dem Werkstattfenster. Der Abdruck eines Gehstocks — frisch im Morgentau."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "alarmed",
+          "text": "Er war hier! Der Graf hat uns beobachtet — er weiß von unserem Plan!"
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "grim",
+          "text": "Dann wird er am Hügel auf uns warten. Er lässt uns die Arbeit machen und schnappt sich die Maschine, wenn sie geladen ist."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "angry",
+          "text": "[grumbles] Nicht mit mir. Dieser Conte wird sich wünschen, er wäre in seiner eigenen Zeit geblieben."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "thinking",
+          "text": "Wartet — wir können das nutzen. Wenn er am Hügel wartet, erwartet er, dass wir den Nibbio dort starten. Aber was, wenn wir nicht von Fiesole starten?"
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "surprised",
+          "text": "Nicht von Fiesole? Aber der Hügel gibt uns die Höhe für den Start!"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "clever",
+          "text": "Was ist mit dem Turm des Palazzo Vecchio? Der ist fast hundert Meter hoch — und er steht mitten in der Stadt. Bis der Graf dort ankommt..."
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "delighted",
+          "text": "[laughs] Sind wir längst in der Luft! Mateo, du bist brillant!"
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "thoughtful",
+          "text": "Der Palazzo... ja, das könnte funktionieren. Aber wir müssen den Nibbio dort hochschaffen — ohne dass jemand Fragen stellt."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "grinning",
+          "text": "Meister Leonardo — wenn jemand in Florenz eine riesige Maschine durch die Straßen transportiert, werden die Leute fragen. Aber wenn Ihr sagt, es ist eine neue Erfindung für den Herzog..."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "amused",
+          "text": "[chuckles] Dann lassen sie mich in Ruhe. Ich habe schon seltsamere Dinge durch Florenz geschleppt."
+        }
+      ]
+    },
+    {
+      "lines": [
+        {
+          "speaker": "Erzähler",
+          "emotion": "exciting",
+          "text": "In der Morgendämmerung trugen sie die zerlegte Flugmaschine zum Palazzo Vecchio. Leonardo hatte zwei seiner Gehilfen gerufen, die keine Fragen stellten — sie waren Einiges gewohnt."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "neutral",
+          "text": "Oben auf dem Turm bauten sie den Nibbio zusammen. Der Wind wehte kräftig — perfekt zum Fliegen."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "serious",
+          "text": "Die Steuerung: Links ziehen für links, rechts für rechts. Das Seil am Bauch kippt die Nase — nach vorne zum Sinken, nach hinten zum Steigen. Und der Hebel links aktiviert den Generator."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "nervous",
+          "text": "[sighs] Links, rechts, Bauchseil, Hebel links. Verstanden."
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "encouraging",
+          "text": "Du musst nur lang genug gleiten, bis der Propeller genug Umdrehungen hat. Wenn die Feder zu leuchten beginnt, ist die Energiezelle voll."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "determined",
+          "text": "Und dann?"
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "gentle",
+          "text": "Dann drückst du den roten Knopf an der Zeitmaschine. Sie ist an deinem Gürtel befestigt. Der Blitz kommt — und du bist zuhause."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "emotional",
+          "text": "[sighs] Mateo — in meinem ganzen Leben hat mir niemand so viel über das Fliegen beigebracht wie du heute Nacht. Feste Flügel... ich werde daran weiterarbeiten."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "moved",
+          "text": "Und die Welt wird sich daran erinnern, Meister. Das verspreche ich."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "dramatic",
+          "text": "Mateo kletterte in das Geschirr der Flugmaschine. Die Holzflügel ächzten im Wind. Unter ihm lag Florenz — Kirchtürme, rote Dächer, der Arno wie ein silbernes Band."
+        },
+        {
+          "speaker": "Graf von Rostheim",
+          "emotion": "shouting",
+          "text": "[shouting] Da oben! Auf dem Turm! Haltet ihn auf!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "tense",
+          "text": "Unten auf dem Platz stand der Graf. Er musste den Transport bemerkt haben und war vom Hügel heruntergerannt. Zwei Wachen folgten ihm zur Turmtür."
+        },
+        {
+          "speaker": "Professor Chronos",
+          "emotion": "urgent",
+          "text": "[shouting] Jetzt, Mateo! Spring!"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "scared",
+          "text": "Das ist ganz schön hoch..."
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "firm",
+          "text": "Vertrau den Flügeln, ragazzo. Vertrau der Luft."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "breathless",
+          "text": "Mateo holte tief Luft — und sprang. Einen furchtbaren Moment lang fiel er. Der Boden raste auf ihn zu."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "terrified",
+          "text": "[gasps] Nase hoch! Seil nach hinten!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "triumphant",
+          "text": "Er riss am Bauchseil. Die Nase des Nibbio hob sich — und plötzlich trug ihn der Wind. Die Flügel fingen die Luft, und Mateo flog. Er flog wirklich!"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "ecstatic",
+          "text": "[laughs] Es funktioniert! Ich fliege!"
+        },
+        {
+          "speaker": "Leonardo",
+          "emotion": "overjoyed",
+          "text": "[laughs] [shouting] Er fliegt! Mein Nibbio fliegt!"
+        }
+      ]
+    },
+    {
+      "lines": [
+        {
+          "speaker": "Erzähler",
+          "emotion": "majestic",
+          "text": "Mateo glitt über die Dächer von Florenz. Unter ihm blieben Menschen stehen und zeigten staunend nach oben. Der Wind sang in den Kupferdrähten des Generators."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "focused",
+          "text": "Der Propeller dreht sich... schneller... noch schneller! Komm schon, Feder — fang an zu leuchten!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "tense",
+          "text": "Aber der Nibbio verlor an Höhe. Ohne Motor sank er langsam, wie ein Papierflugzeug am Ende seines Fluges."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "anxious",
+          "text": "Ich brauche mehr Höhe — mehr Wind! Dort, die warme Luft über der Schmiede!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "exciting",
+          "text": "Er steuerte auf eine Schmiede zu, aus deren Schornstein heiße Luft aufstieg. Eine Thermik! Die warme Luft trug den Nibbio nach oben wie eine unsichtbare Hand."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "relieved",
+          "text": "Ja! Die Thermik trägt mich! Wie ein Greifvogel — genau wie Leonardo es sich vorgestellt hat!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "building",
+          "text": "In seiner Tasche begann die Feder schwach zu glimmen. Erst orange, dann heller — wie eine kleine Glut."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "hopeful",
+          "text": "Sie leuchtet! Noch ein bisschen... nur noch ein bisschen mehr!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "tense",
+          "text": "Die Thermik ließ nach. Der Nibbio sackte wieder ab. Die Stadtmauer kam näher — dahinter lagen Felder und der Arno."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "desperate",
+          "text": "Noch nicht genug! Ich brauche noch dreißig Sekunden!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "dramatic",
+          "text": "Da sah er den Arno unter sich. Die Sonne hatte das Wasser erwärmt — und über dem Fluss stieg warme, feuchte Luft auf. Eine letzte Thermik."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "determined",
+          "text": "Der Fluss! Leonardo — du hattest recht, die Natur macht alles!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "climactic",
+          "text": "Er steuerte über den Arno. Die warme Luft hob den Nibbio ein letztes Mal. Der Propeller heulte — und die Feder explodierte in gleißendem weißem Licht."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "triumphant",
+          "text": "Voll geladen! Professor — Ticktack — ich komme nach Hause!"
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "dramatic",
+          "text": "Er drückte den roten Knopf. Der vertraute Blitz hüllte ihn ein. Das Letzte, was er sah, war Florenz von oben — goldene Dächer, der silberne Arno, und auf dem Turm des Palazzo Vecchio zwei winzige Gestalten, die ihm zuwinkten."
+        }
+      ]
+    },
+    {
+      "lines": [
+        {
+          "speaker": "Erzähler",
+          "emotion": "gentle",
+          "text": "Mateo landete unsanft auf dem Boden der Museumswerkstatt. Kein Nibbio mehr, keine Flügel — nur die Feder in seiner Hand, die zufrieden vor sich hin tickte."
+        },
+        {
+          "speaker": "Ticktack",
+          "emotion": "overjoyed",
+          "text": "[laughs] Du bist zurück! Und der Professor?"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "happy",
+          "text": "Befreit! Er ist bei Leonardo in Sicherheit. Aber der Graf hat noch die tragbare Zeitmaschine — ohne Energie, aber trotzdem."
+        },
+        {
+          "speaker": "Ticktack",
+          "emotion": "thoughtful",
+          "text": "Ohne Energie sitzt er in fünfzehnhundertfünf fest. [chuckles] Kein Zylinder-Geschäft im Florenz der Renaissance — das geschieht ihm recht!"
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "laughing",
+          "text": "[laughs] Conte di Ruggine, gestrandet in der Vergangenheit. Das wäre fast lustig, wenn er nicht so gefährlich wäre."
+        },
+        {
+          "speaker": "Ticktack",
+          "emotion": "serious",
+          "text": "Der Professor findet einen Weg, ihn zurückzuholen. Irgendwann. Auf seine Art. Aber erstmal ist er sicher — und du auch."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "warm",
+          "text": "Mateo lächelte. In seiner Tasche tickte die Feder weiter — ruhig und gleichmäßig, wie ein zweiter Herzschlag."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "content",
+          "text": "Weißt du, was das Verrückteste ist, Ticktack? Ich bin mit einer Maschine geflogen, die Leonardo da Vinci gebaut hat. Fünfhundert Jahre bevor das erste Flugzeug abhob."
+        },
+        {
+          "speaker": "Ticktack",
+          "emotion": "proud",
+          "text": "Und du hast ihm gezeigt, dass er recht hatte. Dass der Mensch fliegen kann."
+        },
+        {
+          "speaker": "Mateo",
+          "emotion": "thoughtful",
+          "text": "Ob er es weitergebaut hat? Mit festen Flügeln?"
+        },
+        {
+          "speaker": "Ticktack",
+          "emotion": "mysterious",
+          "text": "[whispering] Wer weiß? Die Geschichte hat ihre eigenen Geheimnisse. Vielleicht findest du es heraus — beim nächsten Mal."
+        },
+        {
+          "speaker": "Erzähler",
+          "emotion": "closing",
+          "text": "Mateo verließ das Museum in der warmen Nachtluft. Über ihm funkelten die Sterne — und für einen kurzen Moment bildete er sich ein, zwischen ihnen den Schatten eines großen Vogels zu sehen, der lautlos über den Himmel glitt."
+        }
+      ]
+    }
+  ],
+  "summary": "Als Ticktacks Feder einen Notruf sendet, reist Mateo ins Florenz von fünfzehnhundertfünf — und muss mit Leonardo da Vinci eine Flugmaschine bauen, um Professor Chronos zu retten.",
+  "characters": [
+    {
+      "name": "Erzähler",
+      "emoji": "📖",
+      "gender": "adult_m",
+      "traits": ["ruhig", "warm"],
+      "description": "allwissender Geschichtenerzähler"
+    },
+    {
+      "name": "Mateo",
+      "emoji": "👦",
+      "gender": "child_m",
+      "traits": ["neugierig", "mutig", "clever"],
+      "description": "technikbegeisterter Junge mit braunen Locken"
+    },
+    {
+      "name": "Professor Chronos",
+      "emoji": "👨‍🔬",
+      "gender": "adult_m",
+      "traits": ["verrückt", "liebevoll", "verschmitzt"],
+      "description": "exzentrischer Erfinder mit wildem weißen Haar und Monokel"
+    },
+    {
+      "name": "Ticktack",
+      "emoji": "🦉",
+      "gender": "creature",
+      "traits": ["fröhlich", "albern"],
+      "description": "kleine mechanische Eule aus Zahnrädern und Kupfer"
+    },
+    {
+      "name": "Graf von Rostheim",
+      "emoji": "🎩",
+      "gender": "adult_m",
+      "traits": ["arrogant", "gerissen"],
+      "description": "schmieriger Industrieller mit Zylinder und Gehstock"
+    },
+    {
+      "name": "Leonardo",
+      "emoji": "🎨",
+      "gender": "adult_m",
+      "traits": ["genial", "neugierig", "leidenschaftlich"],
+      "description": "Leonardo da Vinci — Erfinder, Künstler, Universalgelehrter mit langem Bart und Farbflecken"
+    }
+  ]
+}

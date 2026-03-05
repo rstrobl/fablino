@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchVoices } from '../api';
 import { Pencil, Play, Pause, Loader2, Plus, Trash2, Save } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 interface VoiceData {
@@ -334,8 +335,13 @@ function AddVoiceForm({ onAdded }: { onAdded: () => void }) {
 export function Voices() {
   const qc = useQueryClient();
   const { data: voices = [], isLoading } = useQuery<VoiceData[]>({ queryKey: ['voices'], queryFn: fetchVoices as any });
+  const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilter] = useState('');
-  const [langFilter, setLangFilter] = useState('de');
+  const [langFilter, setLangFilter] = useState(searchParams.get('lang') || 'de');
+
+  useEffect(() => {
+    setSearchParams(prev => { prev.set('lang', langFilter); return prev; }, { replace: true });
+  }, [langFilter]);
 
   const langFiltered = voices.filter(v => v.language === langFilter);
   const groups = GROUP_ORDER.filter(g => langFiltered.some(v => voiceGroup(v) === g));
@@ -373,7 +379,7 @@ export function Voices() {
         {groups.map(g => (
           <button key={g} onClick={() => setFilter(g)}
             className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${filter === g ? 'bg-brand/15 border-brand text-brand' : 'bg-surface border-border text-text-muted hover:bg-surface-hover'}`}>
-            {GROUP_LABELS[g] || g} ({voices.filter(v => voiceGroup(v) === g).length})
+            {GROUP_LABELS[g] || g} ({langFiltered.filter(v => voiceGroup(v) === g).length})
           </button>
         ))}
       </div>

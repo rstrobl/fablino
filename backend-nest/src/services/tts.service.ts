@@ -29,7 +29,7 @@ export class TtsService {
   private async loadVoices(): Promise<DbVoice[]> {
     return this.prisma.$queryRaw<DbVoice[]>`
       SELECT voice_id, name, gender, age_min, age_max, types, voice_character, is_narrator, active
-      FROM voices WHERE active = true ORDER BY name
+      FROM voices WHERE active = true AND (language = 'de' OR language IS NULL) ORDER BY name
     `;
   }
 
